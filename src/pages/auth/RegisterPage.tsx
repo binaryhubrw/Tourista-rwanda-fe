@@ -6,11 +6,13 @@ import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Button, Input } from '@/components/ui';
+import { PayoutFields } from '@/components/business/PayoutFields';
+import { payoutErrors } from '@/utils/payment';
 import { AuthShell } from './AuthShell';
 import { cn } from '@/utils/cn';
 
 type Role = 'tourist' | 'business_owner';
-type Errors = Partial<Record<'name' | 'email' | 'password' | 'confirm' | 'form', string>>;
+type Errors = Partial<Record<'name' | 'email' | 'password' | 'confirm' | 'businessName' | 'bankAccount' | 'mtnNumber' | 'airtelNumber' | 'form', string>>;
 
 export default function RegisterPage() {
   useDocumentTitle('Sign up');
@@ -18,7 +20,7 @@ export default function RegisterPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', businessName: '', bankAccount: '', mtnNumber: '', airtelNumber: '' });
   const [role, setRole] = useState<Role>(params.get('role') === 'business_owner' ? 'business_owner' : 'tourist');
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
@@ -32,11 +34,19 @@ export default function RegisterPage() {
     if (!/^\S+@\S+\.\S+$/.test(form.email)) er.email = 'Enter a valid email address.';
     if (form.password.length < 8) er.password = 'Use at least 8 characters.';
     if (form.confirm !== form.password) er.confirm = "The passwords don't match.";
+    if (role === 'business_owner' && form.businessName.trim().length < 2) er.businessName = 'Enter the name of your business.';
+    if (role === 'business_owner') Object.assign(er, payoutErrors(form));
     setErrors(er);
     if (Object.keys(er).length) return;
     setLoading(true);
     try {
-      const user = await register({ name: form.name, email: form.email, password: form.password, role });
+      const user = await register({
+        name: form.name, email: form.email, password: form.password, role,
+        businessName: form.businessName.trim() || undefined,
+        bankAccount: form.bankAccount.replace(/\s/g, '') || undefined,
+        mtnNumber: form.mtnNumber.trim() || undefined,
+        airtelNumber: form.airtelNumber.trim() || undefined,
+      });
       toast.success('Account created. Welcome to Tourista Rwanda.');
       navigate(role === 'business_owner' ? '/business-dashboard/business/new' : dashboardPathFor(user.role), { replace: true });
     } catch (err) {
@@ -69,6 +79,12 @@ export default function RegisterPage() {
           </div>
         </fieldset>
         <Input label="Full name" required autoComplete="name" value={form.name} onChange={set('name')} error={errors.name} />
+        {role === 'business_owner' && (
+          <>
+            <Input label="Business name" required value={form.businessName} onChange={set('businessName')} error={errors.businessName} hint="The company. You can add several listings under it later." />
+            <PayoutFields values={form} onChange={(payout) => setForm({ ...form, ...payout })} errors={errors} />
+          </>
+        )}
         <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={set('email')} error={errors.email} />
         <Input label="Password" type="password" required autoComplete="new-password" value={form.password} onChange={set('password')} error={errors.password} />
         <Input label="Confirm password" type="password" required autoComplete="new-password" value={form.confirm} onChange={set('confirm')} error={errors.confirm} />

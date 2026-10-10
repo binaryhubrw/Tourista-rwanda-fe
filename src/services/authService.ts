@@ -19,7 +19,21 @@ function persist(res: AuthResponse) {
 export function getStoredUser(): User | null {
   try {
     const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
+    if (!raw) return null;
+    const user = JSON.parse(raw) as User;
+    if (user.role === 'business_owner' && (!user.businessName || !user.bankAccount || !user.mtnNumber || !user.airtelNumber)) {
+      const row = read('users').find((u) => u.id === user.id);
+      if (row) {
+        return {
+          ...user,
+          businessName: user.businessName ?? row.businessName,
+          bankAccount: user.bankAccount ?? row.bankAccount,
+          mtnNumber: user.mtnNumber ?? row.mtnNumber,
+          airtelNumber: user.airtelNumber ?? row.airtelNumber,
+        };
+      }
+    }
+    return user;
   } catch {
     return null;
   }
@@ -33,14 +47,22 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return persist({ token: `mock.${user.id}`, user: strip(user) });
 }
 
-export async function register(input: { name: string; email: string; password: string; role: Exclude<UserRole, 'admin'> }): Promise<AuthResponse> {
+export async function register(input: { name: string; email: string; password: string; role: Exclude<UserRole, 'admin'>; businessName?: string; bankAccount?: string; mtnNumber?: string; airtelNumber?: string }): Promise<AuthResponse> {
   if (!USE_MOCK) return persist(await api.post<AuthResponse>('/auth/register/', input));
   await delay(600);
   const users = read('users');
   if (users.some((u) => u.email.toLowerCase() === input.email.trim().toLowerCase())) {
     throw { message: 'An account with this email already exists. Log in instead.' };
   }
-  const user = { id: makeId('user'), name: input.name.trim(), email: input.email.trim(), password: input.password, role: input.role, joinedAt: new Date().toISOString() };
+  const user = {
+    id: makeId('user'), name: input.name.trim(), email: input.email.trim(), password: input.password, role: input.role, joinedAt: new Date().toISOString(),
+    ...(input.role === 'business_owner' ? {
+      businessName: input.businessName?.trim() || input.name.trim(),
+      bankAccount: input.bankAccount?.trim(),
+      mtnNumber: input.mtnNumber?.trim(),
+      airtelNumber: input.airtelNumber?.trim(),
+    } : {}),
+  };
   write('users', [...users, user]);
   return persist({ token: `mock.${user.id}`, user: strip(user) });
 }

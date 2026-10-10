@@ -6,7 +6,7 @@ interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (input: { name: string; email: string; password: string; role: Exclude<UserRole, 'admin'> }) => Promise<User>;
+  register: (input: { name: string; email: string; password: string; role: Exclude<UserRole, 'admin'>; businessName?: string; bankAccount?: string; mtnNumber?: string; airtelNumber?: string }) => Promise<User>;
   updateUser: (user: User) => Promise<void>;
   logout: () => void;
 }

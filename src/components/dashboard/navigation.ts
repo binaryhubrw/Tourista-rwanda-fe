@@ -88,6 +88,12 @@ export const roleLabel: Record<UserRole, string> = {
   admin: 'Admin',
 };
 
+/** Role line for a signed-in owner, e.g. "Business owner · Virunga Hospitality". */
+export function ownerRoleCaption(businessName?: string) {
+  const name = businessName?.trim();
+  return name ? `${roleLabel.business_owner} · ${name}` : roleLabel.business_owner;
+}
+
 /** The sections and links a given role is allowed to see. Empty sections are dropped. */
 export function navigationFor(role: UserRole): SidebarSection[] {
   const base = dashboardPathFor(role);

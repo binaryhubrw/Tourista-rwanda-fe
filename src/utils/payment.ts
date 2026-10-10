@@ -1,4 +1,11 @@
-import type { PaymentMethod } from '@/types';
+import type { PaymentMethod, User } from '@/types';
+
+export type PayoutTarget = {
+  businessName: string;
+  bankAccount?: string;
+  mtnNumber?: string;
+  airtelNumber?: string;
+};
 
 export const paymentMethodLabel: Record<PaymentMethod, string> = {
   card: 'Credit / debit card',
@@ -69,6 +76,40 @@ export function expiryValid(v: string) {
 
 export const paymentReference = (method: PaymentMethod) =>
   `${method === 'card' ? 'CRD' : method === 'mtn' ? 'MOMO' : 'AIR'}-${Date.now().toString(36).toUpperCase().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
+
+export function payoutFromUser(user: Pick<User, 'businessName' | 'name' | 'bankAccount' | 'mtnNumber' | 'airtelNumber'>): PayoutTarget {
+  return { businessName: user.businessName?.trim() || user.name, bankAccount: user.bankAccount, mtnNumber: user.mtnNumber, airtelNumber: user.airtelNumber };
+}
+
+export function payoutAccount(payout: PayoutTarget | undefined, method: PaymentMethod) {
+  if (!payout) return '';
+  if (method === 'card') return payout.bankAccount?.trim() ?? '';
+  if (method === 'mtn') return payout.mtnNumber?.trim() ?? '';
+  return payout.airtelNumber?.trim() ?? '';
+}
+
+export function maskBank(account: string) {
+  const digits = account.replace(/\D/g, '');
+  if (digits.length < 8) return account.trim();
+  return `${digits.slice(0, 4)} •••• ${digits.slice(-4)}`;
+}
+
+export function formatPayoutAccount(method: PaymentMethod, account: string) {
+  return method === 'card' ? maskBank(account) : formatMobile(account);
+}
+
+export function validateBankAccount(value: string) {
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 20;
+}
+
+export function payoutErrors(payout: { bankAccount: string; mtnNumber: string; airtelNumber: string }) {
+  const errors: Partial<Record<'bankAccount' | 'mtnNumber' | 'airtelNumber', string>> = {};
+  if (!validateBankAccount(payout.bankAccount)) errors.bankAccount = 'Enter a bank account of 10 to 20 digits.';
+  if (mobileNetwork(payout.mtnNumber) !== 'mtn') errors.mtnNumber = 'Enter an MTN number starting with 078 or 079.';
+  if (mobileNetwork(payout.airtelNumber) !== 'airtel') errors.airtelNumber = 'Enter an Airtel number starting with 072 or 073.';
+  return errors;
+}
 
 /** Simulator test values, shown in the payment form. */
 export const TEST_CARD = '4242 4242 4242 4242';

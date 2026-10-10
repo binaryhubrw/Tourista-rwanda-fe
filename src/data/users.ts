@@ -5,7 +5,7 @@ export const DEMO_PASSWORD = 'password';
 /** Accounts shown on the login page so anyone can try each role. */
 export const DEMO_ACCOUNTS: { role: UserRole; label: string; email: string; description: string }[] = [
   { role: 'tourist', label: 'Tourist', email: 'tourist@tourista.rw', description: 'Trips, bookings, favorites and reviews' },
-  { role: 'business_owner', label: 'Business owner', email: 'business@tourista.rw', description: 'Listings, services, bookings and revenue' },
+  { role: 'business_owner', label: 'Business owner', email: 'business@tourista.rw', description: 'Virunga Hospitality — listings, bookings and revenue' },
   { role: 'admin', label: 'Admin', email: 'admin@tourista.rw', description: 'Platform analytics, users and moderation' },
 ];
 
@@ -13,7 +13,7 @@ type SeedUser = User & { password: string };
 
 const demoUsers: SeedUser[] = [
   { id: 'user-tourist-1', name: 'Amani Kayitesi', email: 'tourist@tourista.rw', password: DEMO_PASSWORD, role: 'tourist', country: 'Rwanda', phone: '+250 788 000 111', joinedAt: '2025-11-02' },
-  { id: 'user-business-1', name: 'Claudine Uwase', email: 'business@tourista.rw', password: DEMO_PASSWORD, role: 'business_owner', country: 'Rwanda', phone: '+250 788 123 401', joinedAt: '2025-09-14' },
+  { id: 'user-business-1', name: 'Claudine Uwase', email: 'business@tourista.rw', password: DEMO_PASSWORD, role: 'business_owner', businessName: 'Virunga Hospitality', country: 'Rwanda', phone: '+250 788 123 401', bankAccount: '4001234567890123', mtnNumber: '+250 788 123 401', airtelNumber: '+250 733 123 401', joinedAt: '2025-09-14' },
   { id: 'user-admin-1', name: 'Tourista Admin', email: 'admin@tourista.rw', password: DEMO_PASSWORD, role: 'admin', country: 'Rwanda', joinedAt: '2025-06-01' },
 ];
 
@@ -42,7 +42,17 @@ const others: [string, string, string, UserRole, string, string][] = [
   ['u-rdb', 'Visit Rwanda Desk', 'desk@tourista.rw', 'admin', 'Rwanda', '2025-06-01'],
 ];
 
+const brandFromEmail: Record<string, { businessName: string; bankAccount: string; mtnNumber: string; airtelNumber: string }> = {
+  'jeanpaul@umurage.rw': { businessName: 'Umurage', bankAccount: '4001987654321098', mtnNumber: '+250 788 111 001', airtelNumber: '+250 733 111 001' },
+  'esther@agaseke.rw': { businessName: 'Agaseke', bankAccount: '4001555666777888', mtnNumber: '+250 789 222 002', airtelNumber: '+250 732 222 002' },
+  'eric@kivubikes.rw': { businessName: 'Kivu Bikes', bankAccount: '4001444333222111', mtnNumber: '+250 788 333 003', airtelNumber: '+250 733 333 003' },
+  'alice@inzukitchen.rw': { businessName: 'Inzu Kitchen', bankAccount: '4001222111000999', mtnNumber: '+250 789 444 004', airtelNumber: '+250 732 444 004' },
+};
+
 export const usersSeed: SeedUser[] = [
   ...demoUsers,
-  ...others.map(([id, name, email, role, country, joinedAt]) => ({ id, name, email, role, country, joinedAt, password: DEMO_PASSWORD })),
+  ...others.map(([id, name, email, role, country, joinedAt]) => ({
+    id, name, email, role, country, joinedAt, password: DEMO_PASSWORD,
+    ...(role === 'business_owner' && brandFromEmail[email] ? brandFromEmail[email] : {}),
+  })),
 ];

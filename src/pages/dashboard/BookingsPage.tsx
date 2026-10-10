@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarCheck, CalendarClock, CreditCard, Wallet, XCircle } from 'lucide-react';
 import type { Booking, Payment } from '@/types';
-import { getBookings, payBooking, updateBookingStatus } from '@/services';
+import { getBookings, getPayoutForBusiness, payBooking, updateBookingStatus } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
@@ -26,6 +26,7 @@ export default function BookingsPage() {
   const [cancelling, setCancelling] = useState<{ rows: Booking[]; done?: () => void } | null>(null);
   const [paying, setPaying] = useState<Booking | null>(null);
   const [busy, setBusy] = useState(false);
+  const payout = useAsync(() => (paying?.businessId ? getPayoutForBusiness(paying.businessId) : Promise.resolve(null)), [paying?.businessId]);
 
   const all = data ?? [];
   const list = useMemo(() => all.filter((b) => filter === 'All' || b.status === filter), [all, filter]);
@@ -114,7 +115,7 @@ export default function BookingsPage() {
             <p className="mb-5 rounded-xl bg-brand-50 px-4 py-3 text-sm text-ink">
               {paying.serviceName} · {formatDate(paying.date)}{paying.endDate && ` → ${formatDate(paying.endDate)}`} · <strong>{formatRwf(paying.totalRwf)}</strong>
             </p>
-            <PaymentForm amountRwf={paying.totalRwf} defaultPhone={paying.customerPhone} onPaid={onPaid} />
+            <PaymentForm amountRwf={paying.totalRwf} defaultPhone={paying.customerPhone} payout={payout.data} onPaid={onPaid} />
           </>
         )}
       </Modal>

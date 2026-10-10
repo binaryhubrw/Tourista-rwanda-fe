@@ -6,7 +6,7 @@ import { AirtelLogo, CardIcon, MastercardLogo, MtnLogo, VisaLogo } from './Payme
 import { cn } from '@/utils/cn';
 import { formatRwf } from '@/utils/format';
 import {
-  DECLINED_CARD, TEST_CARD, cardBrand, expiryValid, formatCardNumber, formatMobile, luhnValid, maskCard, maskMobile, mobileNetwork, paymentMethodLabel, paymentReference,
+  DECLINED_CARD, TEST_CARD, cardBrand, expiryValid, formatCardNumber, formatMobile, formatPayoutAccount, luhnValid, maskCard, maskMobile, mobileNetwork, paymentMethodLabel, paymentReference, payoutAccount, type PayoutTarget,
 } from '@/utils/payment';
 
 interface Props {
@@ -16,6 +16,8 @@ interface Props {
   onPaid: (payment: Payment) => void | Promise<void>;
   /** Label for the pay button, e.g. "Pay and confirm". */
   payLabel?: string;
+  /** Business accounts that receive the money. */
+  payout?: PayoutTarget | null;
 }
 
 type Phase = 'form' | 'processing' | 'awaiting-approval' | 'failed' | 'success';
@@ -32,7 +34,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Simulated checkout. Nothing is charged: card payments succeed unless the
  * test decline number is used; mobile money shows a simulated phone prompt.
  */
-export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel }: Props) {
+export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel, payout }: Props) {
   const [method, setMethod] = useState<PaymentMethod>(() => mobileNetwork(defaultPhone) ?? 'mtn');
   const [card, setCard] = useState({ number: '', name: '', expiry: '', cvc: '' });
   const [phone, setPhone] = useState(mobileNetwork(defaultPhone) ? defaultPhone : '');
@@ -71,8 +73,17 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel }: 
     return !Object.keys(e).length;
   };
 
+  const destination = payoutAccount(payout ?? undefined, method);
+  const destinationLabel = payout && destination
+    ? `${payout.businessName} · ${method === 'card' ? 'bank account' : paymentMethodLabel[method]}`
+    : undefined;
+
   const finish = async (account: string) => {
-    const payment: Payment = { method, status: 'Paid', account, reference: paymentReference(method), amountRwf, paidAt: new Date().toISOString() };
+    const payment: Payment = {
+      method, status: 'Paid', account, reference: paymentReference(method), amountRwf, paidAt: new Date().toISOString(),
+      sentTo: destination ? formatPayoutAccount(method, destination) : undefined,
+      sentToLabel: destinationLabel,
+    };
     setPhase('success');
     await onPaid(payment);
   };
@@ -145,7 +156,7 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel }: 
           <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">Simulated phone</p>
           <div className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-ink">
             <p className="flex items-center gap-2 font-semibold">{method === 'mtn' ? <MtnLogo className="h-6 w-9 rounded" /> : <AirtelLogo className="h-6 w-9 rounded" />}{paymentMethodLabel[method]}</p>
-            <p className="mt-1">Pay {formatRwf(amountRwf)} to TOURISTA RWANDA?</p>
+            <p className="mt-1">Pay {formatRwf(amountRwf)} to {payout?.businessName ?? 'TOURISTA RWANDA'}{destination ? ` (${formatPayoutAccount(method, destination)})` : ''}?</p>
             <p className="mt-2 text-xs text-slate-500">Enter PIN to confirm</p>
             <div className="mt-1 flex justify-center gap-1.5" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <span key={i} className="h-2 w-2 rounded-full bg-brand-600" />)}</div>
           </div>
@@ -163,6 +174,14 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel }: 
       {phase === 'failed' && (
         <p role="alert" className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{failure}
+        </p>
+      )}
+
+      {payout && (
+        <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm text-ink">
+          {destination
+            ? <>This payment is sent to <strong>{payout.businessName}</strong> ({formatPayoutAccount(method, destination)}).</>
+            : <>{payout.businessName} has not added a {method === 'card' ? 'bank account' : paymentMethodLabel[method] + ' number'} yet. Choose another method or ask the host to add payout details.</>}
         </p>
       )}
 
@@ -214,7 +233,7 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel }: 
 
       <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-1.5 text-xs text-slate-500"><ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden />Simulated payment. No real money is charged.</p>
-        <Button size="lg" onClick={pay}><Lock className="h-4 w-4" aria-hidden />{payLabel ?? `Pay ${formatRwf(amountRwf)}`}</Button>
+        <Button size="lg" onClick={pay} disabled={!!payout && !destination}><Lock className="h-4 w-4" aria-hidden />{payLabel ?? `Pay ${formatRwf(amountRwf)}`}</Button>
       </div>
     </div>
   );

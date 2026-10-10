@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import type { Payment } from '@/types';
-import { getBookingById, getBusinessesByOwner, payBooking, updateBookingStatus } from '@/services';
+import { getBookingById, getBusinessesByOwner, getPayoutForBusiness, payBooking, updateBookingStatus } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -30,6 +30,7 @@ export default function BookingDetailsPage() {
     }
     return booking;
   }, [id, user?.id, user?.role]);
+  const payout = useAsync(() => (booking?.businessId ? getPayoutForBusiness(booking.businessId) : Promise.resolve(null)), [booking?.businessId]);
   const [paying, setPaying] = useState(false);
   const [busy, setBusy] = useState(false);
   useDocumentTitle(booking ? `Booking ${booking.id.toUpperCase()}` : 'Booking');
@@ -111,7 +112,10 @@ export default function BookingDetailsPage() {
               <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Status</dt><dd className="font-semibold text-ink">{booking.payment.status}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Method</dt><dd className="font-semibold text-ink">{paymentMethodLabel[booking.payment.method]}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-slate-500">Account</dt><dd className="font-semibold text-ink">{booking.payment.account}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-slate-500">Paid from</dt><dd className="font-semibold text-ink">{booking.payment.account}</dd></div>
+                {booking.payment.sentTo && (
+                  <div className="flex justify-between gap-4"><dt className="text-slate-500">Sent to</dt><dd className="text-right font-semibold text-ink">{booking.payment.sentToLabel ?? booking.payment.sentTo}<span className="block text-xs font-normal text-slate-500">{booking.payment.sentToLabel ? booking.payment.sentTo : ''}</span></dd></div>
+                )}
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Reference</dt><dd className="font-semibold text-ink">{booking.payment.reference}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Paid</dt><dd className="font-semibold text-ink">{formatRwf(booking.payment.amountRwf)} on {formatDate(booking.payment.paidAt)}</dd></div>
               </dl>
@@ -130,7 +134,7 @@ export default function BookingDetailsPage() {
         <p className="mb-5 rounded-xl bg-brand-50 px-4 py-3 text-sm text-ink">
           {booking.serviceName} · {formatDate(booking.date)} · <strong>{formatRwf(booking.totalRwf)}</strong>
         </p>
-        <PaymentForm amountRwf={booking.totalRwf} defaultPhone={booking.customerPhone} onPaid={onPaid} />
+        <PaymentForm amountRwf={booking.totalRwf} defaultPhone={booking.customerPhone} payout={payout.data} onPaid={onPaid} />
       </Modal>
     </>
   );

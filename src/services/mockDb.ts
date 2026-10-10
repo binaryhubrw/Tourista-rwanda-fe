@@ -21,7 +21,7 @@ interface Collections {
   users: (User & { password: string })[];
 }
 
-const VERSION = 'v4';
+const VERSION = 'v6';
 const seeds: Collections = {
   locations: locationsSeed,
   experiences: experiencesSeed,

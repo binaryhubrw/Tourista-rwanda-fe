@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { Avatar, LoadingSpinner } from '@/components/ui';
-import { DashboardHeader, Sidebar, activeLink, navigationFor, roleLabel } from '@/components/dashboard';
+import { DashboardHeader, Sidebar, activeLink, navigationFor, ownerRoleCaption, roleLabel } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
 
 const COLLAPSED_KEY = 'tourista.sidebar.collapsed';
@@ -31,6 +31,7 @@ export function DashboardLayout() {
   const role = user!.role;
   const sections = useMemo(() => navigationFor(role), [role]);
   const current = activeLink(sections, pathname);
+  const roleCaption = role === 'business_owner' ? ownerRoleCaption(user!.businessName) : roleLabel[role];
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
@@ -67,7 +68,7 @@ export function DashboardLayout() {
 
       <Sidebar
         sections={sections}
-        label={`${roleLabel[role]} navigation`}
+        label={`${roleCaption} navigation`}
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
         mobileOpen={mobileOpen}
@@ -77,7 +78,7 @@ export function DashboardLayout() {
             <Avatar name={user!.name} src={user!.avatar} size={36} className="!bg-white !text-brand-600" />
             <div className={cn('min-w-0 flex-1 leading-tight', isCollapsed && 'lg:hidden')}>
               <p className="truncate text-sm font-semibold text-white">{user!.name}</p>
-              <p className="truncate text-xs text-white/80">{roleLabel[role]}</p>
+              <p className="truncate text-xs text-white/80" title={roleCaption}>{roleCaption}</p>
             </div>
             <button onClick={handleLogout} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/10 hover:text-white" aria-label="Log out" title="Log out">
               <LogOut className="h-[18px] w-[18px]" />
@@ -91,6 +92,7 @@ export function DashboardLayout() {
           user={user!}
           basePath={dashboardPathFor(role)}
           pageTitle={current?.label}
+          roleCaption={roleCaption}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}
           onOpenMobile={() => setMobileOpen(true)}

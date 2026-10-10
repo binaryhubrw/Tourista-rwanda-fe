@@ -12,6 +12,14 @@ export interface User {
   phone?: string;
   country?: string;
   joinedAt: string;
+  /** Trading name of the company. One business can have many listings. */
+  businessName?: string;
+  /** Bank account that receives card payments. */
+  bankAccount?: string;
+  /** MTN MoMo number that receives MTN payments. */
+  mtnNumber?: string;
+  /** Airtel Money number that receives Airtel payments. */
+  airtelNumber?: string;
 }
 
 export interface Coordinates {
@@ -204,11 +212,15 @@ export type PaymentMethod = 'card' | 'mtn' | 'airtel';
 export interface Payment {
   method: PaymentMethod;
   status: 'Paid' | 'Refunded';
-  /** Masked card number or mobile money number. */
+  /** Masked card number or mobile money number of the guest. */
   account: string;
   reference: string;
   amountRwf: number;
   paidAt: string;
+  /** Masked business account the money was sent to. */
+  sentTo?: string;
+  /** e.g. "Virunga Hospitality · MTN MoMo". */
+  sentToLabel?: string;
 }
 
 export interface BookingLine {

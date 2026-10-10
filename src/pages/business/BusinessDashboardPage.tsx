@@ -21,7 +21,7 @@ export default function BusinessDashboardPage() {
   if (!loading && !data?.businesses.length) {
     return (
       <>
-        <PageHeader title={`Welcome, ${firstName}`} intro="List your business so travellers can find and book you." />
+        <PageHeader title={`Welcome, ${firstName}`} intro={user!.businessName ? `${user!.businessName} has no listings yet. Add one so travellers can book you.` : 'Add a listing so travellers can find and book you.'} />
         <StatGrid>
           <StatCard label="Listings" icon={Store} value={0} hint="Add your first listing" />
           <StatCard label="Bookings" icon={CalendarCheck} tone="teal" value={0} />
@@ -47,6 +47,12 @@ export default function BusinessDashboardPage() {
   const monthlyBookings = byMonth(bookings, (b) => b.createdAt, { bookings: () => 1 });
   const statusData = BOOKING_STATUSES.map((s) => ({ name: s, value: bookings.filter((b) => b.status === s).length, color: bookingStatusColor[s] }));
   const byService = countBy(confirmed, (b) => b.serviceName ?? b.targetName, (b) => b.totalRwf);
+  const byListing = businesses
+    .map((listing) => ({
+      name: listing.name,
+      revenue: sum(confirmed.filter((b) => b.businessId === listing.id || b.targetId === listing.id), (b) => b.totalRwf),
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
   const avgRating = reviews.length ? average(reviews.map((r) => r.rating)) : 0;
   const ratingDist = [5, 4, 3, 2, 1].map((n) => ({ stars: `${n} star${n > 1 ? 's' : ''}`, reviews: reviews.filter((r) => r.rating === n).length }));
   const main = businesses[0];
@@ -55,8 +61,8 @@ export default function BusinessDashboardPage() {
     <>
       <PageHeader
         title={`Welcome, ${firstName}`}
-        intro={loading ? 'Loading your business…' : pending.length ? `${pending.length} booking${pending.length > 1 ? "s are" : " is"} waiting for the guest's payment.` : 'Every booking is paid and confirmed.'}
-        action={<><ButtonLink to="/business-dashboard/services" variant="secondary">Manage services</ButtonLink><ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink></>}
+        intro={loading ? 'Loading your business…' : `${user!.businessName ? `${user!.businessName} · ` : ''}${businesses.length} listing${businesses.length === 1 ? '' : 's'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
+        action={<ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink>}
       />
 
       <StatGrid>
@@ -78,6 +84,23 @@ export default function BusinessDashboardPage() {
               <DonutChart data={statusData} centerValue={String(bookings.length)} centerLabel="bookings" height={200} />
             </ChartCard>
           </div>
+
+          <ChartCard className="mt-6" title="Revenue per listing" description={`Confirmed bookings · ${formatRwf(sum(confirmed, (b) => b.totalRwf))} in total`}>
+            {byListing.length ? (
+              <BarsChart
+                data={byListing}
+                xKey="name"
+                layout="vertical"
+                series={[{ key: 'revenue', label: 'Revenue' }]}
+                valueFormatter={formatRwf}
+                axisFormatter={formatRwfShort}
+                height={Math.max(220, byListing.length * 56)}
+                categoryWidth={160}
+              />
+            ) : (
+              <p className="py-10 text-center text-sm text-slate-500">Revenue will split across listings once travellers book.</p>
+            )}
+          </ChartCard>
 
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
             <ChartCard title="Guests per month" description="People on confirmed bookings">

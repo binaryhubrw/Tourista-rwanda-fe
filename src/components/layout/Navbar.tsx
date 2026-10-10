@@ -20,6 +20,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 export function Navbar() {
   const { user, logout } = useAuth();
   const { favorites } = useFavorites();
+  const ownedLabel = user?.role === 'business_owner' ? (user.businessName ?? '') : '';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,7 +92,7 @@ export function Navbar() {
               </button>
               {menuOpen && (
                 <div role="menu" className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lift">
-                  <p className="px-3 py-2 text-sm text-slate-500">Signed in as <span className="block truncate font-semibold text-ink">{user.email}</span></p>
+                  <p className="px-3 py-2 text-sm text-slate-500">Signed in as <span className="block truncate font-semibold text-ink">{user.email}</span>{ownedLabel && <span className="mt-1 block truncate text-xs text-slate-500">Owner of {ownedLabel}</span>}</p>
                   <Link role="menuitem" to={`${dashboardPathFor(user.role)}/profile`} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-brand-50"><UserIcon className="h-4 w-4 text-brand-600" />Profile</Link>
                   <Link role="menuitem" to={dashboardPathFor(user.role)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-brand-50"><LayoutDashboard className="h-4 w-4 text-brand-600" />Dashboard</Link>
                   <button role="menuitem" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"><LogOut className="h-4 w-4" />Log out</button>
@@ -143,7 +144,7 @@ export function Navbar() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-3 px-1 pb-2">
                     <Avatar name={user.name} />
-                    <div className="min-w-0"><p className="truncate font-semibold">{user.name}</p><p className="truncate text-sm text-slate-500">{user.email}</p></div>
+                    <div className="min-w-0"><p className="truncate font-semibold">{user.name}</p><p className="truncate text-sm text-slate-500">{ownedLabel ? `Owner of ${ownedLabel}` : user.email}</p></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Link to={`${dashboardPathFor(user.role)}/profile`} className={buttonClass('secondary', 'md')}>Profile</Link>

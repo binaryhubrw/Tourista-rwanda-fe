@@ -32,7 +32,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(mail, pass);
-      toast.success(`Welcome back, ${user.name.split(' ')[0]}.`);
+      const hello = user.role === 'business_owner' && user.businessName
+        ? `Welcome back, ${user.name.split(' ')[0]}. You own ${user.businessName}.`
+        : `Welcome back, ${user.name.split(' ')[0]}.`;
+      toast.success(hello);
       // Only honour the redirect if it's inside this user's own dashboard or the public site.
       const home = dashboardPathFor(user.role);
       const isOtherDashboard = from && ['/dashboard', '/business-dashboard', '/admin'].some((p) => from.startsWith(p) && !from.startsWith(home));
@@ -69,7 +72,8 @@ export default function LoginPage() {
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon className="h-[18px] w-[18px]" aria-hidden /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-ink">{d.label}</p>
-                    <p className="truncate font-mono text-xs text-slate-600">{d.email}</p>
+                    <p className="truncate text-xs text-slate-600">{d.description}</p>
+                    <p className="truncate font-mono text-xs text-slate-500">{d.email}</p>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button type="button" onClick={() => fillDemo(d.email)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 px-2.5 text-xs font-semibold text-ink hover:border-brand-600 hover:text-brand-700" aria-label={`Fill in the ${d.label} demo account`}>

@@ -10,6 +10,7 @@ interface Props {
   user: User;
   basePath: string;
   pageTitle?: string;
+  roleCaption?: string;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onOpenMobile: () => void;
@@ -17,7 +18,8 @@ interface Props {
 }
 
 /** Sticky top bar of the dashboard shell. */
-export function DashboardHeader({ user, basePath, pageTitle, collapsed, onToggleCollapsed, onOpenMobile, onLogout }: Props) {
+export function DashboardHeader({ user, basePath, pageTitle, roleCaption, collapsed, onToggleCollapsed, onOpenMobile, onLogout }: Props) {
+  const caption = roleCaption ?? roleLabel[user.role];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
@@ -50,7 +52,7 @@ export function DashboardHeader({ user, basePath, pageTitle, collapsed, onToggle
 
         <nav aria-label="Breadcrumb" className="ml-1 min-w-0">
           <ol className="flex items-center gap-1.5 text-sm">
-            <li className="hidden sm:block"><Link to={basePath} className="font-medium text-slate-500 hover:text-brand-700">{roleLabel[user.role]}</Link></li>
+            <li className="hidden min-w-0 sm:block"><Link to={basePath} className="block max-w-[280px] truncate font-medium text-slate-500 hover:text-brand-700" title={caption}>{caption}</Link></li>
             {pageTitle && (
               <>
                 <li aria-hidden className="hidden text-slate-300 sm:block"><ChevronRight className="h-4 w-4" /></li>
@@ -69,8 +71,8 @@ export function DashboardHeader({ user, basePath, pageTitle, collapsed, onToggle
             <button onClick={() => setMenuOpen((o) => !o)} className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2 hover:bg-slate-100" aria-haspopup="menu" aria-expanded={menuOpen}>
               <Avatar name={user.name} src={user.avatar} size={34} />
               <span className="hidden text-left leading-tight md:block">
-                <span className="block max-w-[160px] truncate text-sm font-semibold text-ink">{user.name}</span>
-                <span className="block text-xs text-slate-500">{roleLabel[user.role]}</span>
+                <span className="block max-w-[220px] truncate text-sm font-semibold text-ink">{user.name}</span>
+                <span className="block max-w-[220px] truncate text-xs text-slate-500" title={caption}>{caption}</span>
               </span>
               <ChevronDown className={cn('h-4 w-4 text-slate-500 transition-transform', menuOpen && 'rotate-180')} aria-hidden />
             </button>

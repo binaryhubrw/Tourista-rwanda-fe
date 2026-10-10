@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Minus, Plus } from 'lucide-react';
 import type { Booking, BookingLine, Payment, Service } from '@/types';
-import { createBooking, getBookings, getBusinessById, getExperienceById, getLocationById } from '@/services';
+import { createBooking, getBookings, getBusinessById, getExperienceById, getLocationById, getPayoutForBusiness } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -12,7 +12,7 @@ import { PaymentForm } from '@/components/payment/PaymentForm';
 import { formatDate, formatRwf, todayIso } from '@/utils/format';
 import { addDaysIso, guidedVisitPrice, periodNoun, pricingMode, quote } from '@/utils/pricing';
 import { isNightTakenFor, isStayRangeTaken, remaining } from '@/utils/availability';
-import { paymentMethodLabel } from '@/utils/payment';
+import { paymentMethodLabel, type PayoutTarget } from '@/utils/payment';
 import { cn } from '@/utils/cn';
 import NotFoundPage from './NotFoundPage';
 
@@ -26,6 +26,7 @@ interface Bookable {
   subtitle: string;
   businessId?: string;
   services: Service[];
+  payout?: PayoutTarget | null;
 }
 
 async function loadBookable(type: TargetType, id: string): Promise<Bookable> {
@@ -35,7 +36,7 @@ async function loadBookable(type: TargetType, id: string): Promise<Bookable> {
   }
   if (type === 'business') {
     const b = await getBusinessById(id);
-    return { id, type, name: b.name, image: b.image, subtitle: `${b.listingKind ?? b.propertyType ?? b.category}, ${b.district}`, businessId: b.id, services: b.services };
+    return { id, type, name: b.name, image: b.image, subtitle: `${b.listingKind ?? b.propertyType ?? b.category}, ${b.district}`, businessId: b.id, services: b.services, payout: await getPayoutForBusiness(b.id) };
   }
   const l = await getLocationById(id);
   return {
@@ -219,6 +220,7 @@ export default function BookingPage() {
           ))}
           <div className="flex justify-between gap-4"><dt className="text-slate-500">Date</dt><dd className="text-right font-semibold">{needsRange && confirmed.endDate ? `${formatDate(confirmed.date)} → ${formatDate(confirmed.endDate)}` : formatDate(confirmed.date)}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-slate-500">Paid with</dt><dd className="text-right font-semibold">{paymentMethodLabel[p.method]} ({p.account})</dd></div>
+          {p.sentTo && <div className="flex justify-between gap-4"><dt className="text-slate-500">Sent to</dt><dd className="text-right font-semibold">{p.sentToLabel ?? p.sentTo}</dd></div>}
           <div className="flex justify-between gap-4"><dt className="text-slate-500">Payment ref</dt><dd className="font-semibold">{p.reference}</dd></div>
           <div className="flex justify-between border-t border-slate-100 pt-3"><dt className="text-slate-500">Status</dt><dd><Badge tone="success">Confirmed · Paid</Badge></dd></div>
           <div className="flex justify-between"><dt className="font-semibold">Total paid</dt><dd className="font-display text-lg font-bold">{formatRwf(confirmed.totalRwf)}</dd></div>
@@ -342,7 +344,7 @@ export default function BookingPage() {
             <div>
               <h2 className="font-display text-xl font-bold text-ink">Pay to confirm your booking</h2>
               <p className="mb-5 mt-1 text-sm text-slate-600">Nothing is reserved until this payment goes through.</p>
-              <PaymentForm amountRwf={total} defaultPhone={info.phone} onPaid={onPaid} payLabel={`Pay ${formatRwf(total)} and confirm`} />
+              <PaymentForm amountRwf={total} defaultPhone={info.phone} payout={item.payout} onPaid={onPaid} payLabel={`Pay ${formatRwf(total)} and confirm`} />
             </div>
           )}
 

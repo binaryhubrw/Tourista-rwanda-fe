@@ -3,6 +3,8 @@ import { USE_MOCK } from './config';
 import { api } from './apiClient';
 import { delay, notFound, read, write } from './mockDb';
 import { makeId } from '@/utils/id';
+import { getUserById } from './userService';
+import { payoutFromUser, type PayoutTarget } from '@/utils/payment';
 
 export async function getBusinesses(): Promise<Business[]> {
   if (!USE_MOCK) return api.get<Business[]>('/businesses/');
@@ -20,6 +22,16 @@ export async function getBusinessesByOwner(ownerId: string): Promise<Business[]>
   if (!USE_MOCK) return api.get<Business[]>(`/businesses/?owner=${ownerId}`);
   await delay();
   return read('businesses').filter((b) => b.ownerId === ownerId);
+}
+
+export async function getPayoutForBusiness(businessId: string): Promise<PayoutTarget | null> {
+  const listing = await getBusinessById(businessId);
+  if (!listing.ownerId) return { businessName: listing.name };
+  try {
+    return payoutFromUser(await getUserById(listing.ownerId));
+  } catch {
+    return { businessName: listing.name };
+  }
 }
 
 export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'createdAt'>;
