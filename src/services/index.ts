@@ -4,6 +4,7 @@ export * from './businessService';
 export * from './reviewService';
 export * from './itineraryService';
 export * from './bookingService';
+export * from './favoriteService';
 export * from './statisticsService';
 export * from './searchService';
 export * from './userService';

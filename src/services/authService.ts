@@ -1,10 +1,8 @@
 import type { User, UserRole } from '@/types';
-import { TOKEN_KEY, USE_MOCK } from './config';
+import { TOKEN_KEY, USER_KEY, USE_MOCK } from './config';
 import { api } from './apiClient';
 import { delay, read, write } from './mockDb';
 import { makeId } from '@/utils/id';
-
-const USER_KEY = 'tourista.user';
 
 export interface AuthResponse { token: string; user: User }
 
@@ -18,10 +16,16 @@ function persist(res: AuthResponse) {
 
 export function getStoredUser(): User | null {
   try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!USE_MOCK && token?.startsWith('mock.')) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      return null;
+    }
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
     const user = JSON.parse(raw) as User;
-    if (user.role === 'business_owner' && (!user.businessName || !user.bankAccount || !user.mtnNumber || !user.airtelNumber)) {
+    if (USE_MOCK && user.role === 'business_owner' && (!user.businessName || !user.bankAccount || !user.mtnNumber || !user.airtelNumber)) {
       const row = read('users').find((u) => u.id === user.id);
       if (row) {
         return {
@@ -67,8 +71,18 @@ export async function register(input: { name: string; email: string; password: s
   return persist({ token: `mock.${user.id}`, user: strip(user) });
 }
 
+export async function fetchMe(): Promise<User> {
+  const user = await api.get<User>('/auth/me/');
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  return user;
+}
+
 export async function updateProfile(user: User): Promise<User> {
-  if (!USE_MOCK) return api.patch<User>('/auth/me/', user);
+  if (!USE_MOCK) {
+    const updated = await api.patch<User>('/auth/me/', user);
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
+    return updated;
+  }
   await delay();
   write('users', read('users').map((u) => (u.id === user.id ? { ...u, ...user } : u)));
   localStorage.setItem(USER_KEY, JSON.stringify(user));

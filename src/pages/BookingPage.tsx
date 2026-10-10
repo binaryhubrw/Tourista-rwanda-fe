@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Minus, Plus } from 'lucide-react';
 import type { Booking, BookingLine, Payment, Service } from '@/types';
-import { createBooking, getBookings, getBusinessById, getExperienceById, getLocationById, getPayoutForBusiness } from '@/services';
+import { createBooking, getAvailability, getBusinessById, getExperienceById, getLocationById, getPayoutForBusiness } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -80,7 +80,7 @@ export default function BookingPage() {
   const validType = (['location', 'experience', 'business'] as const).includes(type as TargetType);
   const { data, loading, error, reload } = useAsync(async () => {
     if (!validType) throw { message: 'not found' };
-    const [item, bookings] = await Promise.all([loadBookable(type as TargetType, id), getBookings()]);
+    const [item, bookings] = await Promise.all([loadBookable(type as TargetType, id), getAvailability({ targetId: id })]);
     return { item, bookings: bookings.filter((booking) => booking.businessId === id || booking.targetId === id) };
   }, [type, id]);
   const item = data?.item;

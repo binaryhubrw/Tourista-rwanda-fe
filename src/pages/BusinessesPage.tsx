@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Search, Store } from 'lucide-react';
-import { getBookings, getBusinesses } from '@/services';
+import { getAvailability, getBusinesses } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { BusinessCard, ServiceCard } from '@/components/cards';
@@ -22,7 +22,7 @@ type CardItem =
 export default function BusinessesPage() {
   useDocumentTitle('Listings & services');
   const { data, loading, error, reload } = useAsync(async () => {
-    const [businesses, bookings] = await Promise.all([getBusinesses(), getBookings()]);
+    const [businesses, bookings] = await Promise.all([getBusinesses(), getAvailability()]);
     return { businesses, bookings };
   });
   const [kind, setKind] = useState<(typeof kinds)[number]>('All');

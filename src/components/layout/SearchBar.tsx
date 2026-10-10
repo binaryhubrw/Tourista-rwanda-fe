@@ -1,9 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Store, X } from 'lucide-react';
-import { searchSync, type SearchScope } from '@/services/searchService';
+import { search, searchSync, type SearchScope } from '@/services/searchService';
+import { USE_MOCK } from '@/services/config';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/utils/cn';
+import type { SearchResult } from '@/types';
 
 export const scopeOptions: { value: SearchScope; label: string }[] = [
   { value: 'all', label: 'All listings' },
@@ -30,8 +32,24 @@ export function SearchBar({ variant = 'compact', placeholder = 'What do you want
   const wrapRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const debounced = useDebounce(query, 150);
+  const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
 
-  const suggestions = useMemo(() => (debounced.trim().length >= 2 ? searchSync(debounced, scope, 6) : []), [debounced, scope]);
+  useEffect(() => {
+    const q = debounced.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    if (USE_MOCK) {
+      setSuggestions(searchSync(q, scope, 6));
+      return;
+    }
+    let cancelled = false;
+    search(q, scope)
+      .then((rows) => { if (!cancelled) setSuggestions(rows.slice(0, 6)); })
+      .catch(() => { if (!cancelled) setSuggestions([]); });
+    return () => { cancelled = true; };
+  }, [debounced, scope]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => !wrapRef.current?.contains(e.target as Node) && setOpen(false);

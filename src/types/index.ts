@@ -20,6 +20,13 @@ export interface User {
   mtnNumber?: string;
   /** Airtel Money number that receives Airtel payments. */
   airtelNumber?: string;
+  preferences?: {
+    bookingEmails?: boolean;
+    reviewReplies?: boolean;
+    newsletter?: boolean;
+    currency?: string;
+    language?: string;
+  };
 }
 
 export interface Coordinates {

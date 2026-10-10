@@ -12,6 +12,24 @@ export async function getBookingById(id: string): Promise<Booking> {
   return read('bookings').find((b) => b.id === id) ?? notFound('Booking');
 }
 
+/** Public, PII-free confirmed bookings used to grey out dates and remaining units. */
+export async function getAvailability(filter: { businessId?: string; targetId?: string } = {}): Promise<Booking[]> {
+  if (!USE_MOCK) {
+    const qs = new URLSearchParams();
+    if (filter.businessId) qs.set('businessId', filter.businessId);
+    if (filter.targetId) qs.set('targetId', filter.targetId);
+    const query = qs.toString();
+    return api.get<Booking[]>(query ? `/bookings/availability/?${query}` : '/bookings/availability/');
+  }
+  await delay();
+  return read('bookings').filter((b) => {
+    if (b.status !== 'Confirmed') return false;
+    if (filter.businessId && b.businessId !== filter.businessId && b.targetId !== filter.businessId) return false;
+    if (filter.targetId && b.targetId !== filter.targetId && b.businessId !== filter.targetId) return false;
+    return true;
+  });
+}
+
 function requestWindow(date: string, endDate: string | undefined, service: Service) {
   const mode = pricingMode(service.unit);
   if (!endDate) return { start: date, end: addDaysIso(date, 1) };
@@ -19,7 +37,13 @@ function requestWindow(date: string, endDate: string | undefined, service: Servi
 }
 
 export async function getBookings(filter: { userId?: string; businessIds?: string[] } = {}): Promise<Booking[]> {
-  if (!USE_MOCK) return api.get<Booking[]>(filter.userId ? '/bookings/' : '/bookings/?scope=business');
+  if (!USE_MOCK) {
+    const qs = new URLSearchParams();
+    if (filter.userId) qs.set('userId', filter.userId);
+    if (filter.businessIds?.length) qs.set('businessIds', filter.businessIds.join(','));
+    const query = qs.toString();
+    return api.get<Booking[]>(query ? `/bookings/?${query}` : '/bookings/');
+  }
   await delay();
   return read('bookings')
     .filter((b) => (!filter.userId || b.userId === filter.userId) && (!filter.businessIds || (b.businessId && filter.businessIds.includes(b.businessId))))

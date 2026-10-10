@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MapPin, Phone, Mail, Leaf, ChevronLeft, User, BedDouble, DoorOpen, Check, Search } from 'lucide-react';
-import { getBookings, getBusinessById } from '@/services';
+import { getAvailability, getBusinessById } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FavoriteButton } from '@/components/cards';
@@ -27,7 +27,7 @@ export default function BusinessDetailsPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { data, loading, error, reload } = useAsync(async () => {
-    const [b, bookings] = await Promise.all([getBusinessById(id), getBookings()]);
+    const [b, bookings] = await Promise.all([getBusinessById(id), getAvailability({ businessId: id })]);
     return { b, bookings: bookings.filter((item) => item.businessId === id || item.targetId === id) };
   }, [id]);
   const [photo, setPhoto] = useState(0);

@@ -20,30 +20,32 @@ npm run build            # type-check + production build
 
 The login page also has one-click buttons for these. Settings → "Reset demo data" restores the sample data.
 
-## Connecting the Django backend
+## Connecting the Node API (`tourista-be`)
 
-All data goes through `src/services/`. Each function (e.g. `getLocations()`, `createItinerary()`) returns mock data when `VITE_USE_MOCK=true` and calls the API otherwise:
+All data goes through `src/services/`. Each function returns mock data when `VITE_USE_MOCK=true` and calls the API otherwise. Keep mock on until Mongo + `npm run dev` in `tourista-be` are up, so the UI stays filled.
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000/api
 VITE_USE_MOCK=false
 ```
 
-`src/services/apiClient.ts` sends `Authorization: Bearer <token>` (works with `djangorestframework-simplejwt`). Expected endpoints:
+`src/services/apiClient.ts` sends `Authorization: Bearer <token>`. CORS on the API should allow `http://localhost:5173`. Expected endpoints:
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /auth/login/`, `POST /auth/register/`, `PATCH /auth/me/`, `POST /auth/password-reset/`, `POST /auth/password-reset/confirm/` (login/register return `{ token, user }`) |
-| Locations | `GET /locations/`, `GET /locations/:id/` |
+| Auth | `POST /auth/login/`, `POST /auth/register/`, `GET /auth/me/`, `PATCH /auth/me/`, `POST /auth/password-reset/`, `POST /auth/password-reset/confirm/` (login/register return `{ token, user }`) |
+| Locations | `GET /locations/`, `GET /locations/:id/`, `POST /locations/`, `POST /locations/bulk/` |
 | Experiences | `GET /experiences/`, `GET /experiences/:id/` |
-| Businesses | `GET /businesses/`, `GET /businesses/:id/`, `GET /businesses/?owner=:id`, `POST /businesses/`, `PATCH /businesses/:id/` |
+| Businesses | `GET /businesses/`, `GET /businesses/:id/`, `GET /businesses/?owner=:id`, `GET /businesses/:id/payout/`, `POST /businesses/`, `PATCH /businesses/:id/`, `POST /businesses/bulk/` |
 | Reviews | `GET /reviews/?targetId=&userId=`, `POST /reviews/`, `DELETE /reviews/:id/` |
 | Itineraries | `GET/POST /itineraries/`, `GET/PUT/DELETE /itineraries/:id/` |
-| Bookings | `GET /bookings/`, `POST /bookings/`, `PATCH /bookings/:id/` (`{ status }`) |
+| Bookings | `GET /bookings/availability/`, `GET /bookings/?userId=&businessIds=`, `GET /bookings/:id/`, `POST /bookings/`, `POST /bookings/:id/pay/`, `PATCH /bookings/:id/` (`{ status: 'Canceled' }`) |
+| Users | `GET /users/`, `GET /users/:id/`, `POST /users/`, `POST /users/bulk/`, `DELETE /users/:id/` |
+| Favorites | `GET /favorites/`, `POST /favorites/`, `DELETE /favorites/:itemId/` |
 | Analytics | `GET /analytics/overview/` |
 | Search | `GET /search/?q=&scope=` |
 
-Response shapes are the TypeScript interfaces in `src/types/index.ts`. Install `django-cors-headers` on the backend and allow `http://localhost:5173`.
+Response shapes are the TypeScript interfaces in `src/types/index.ts`.
 
 ## Structure
 
@@ -65,4 +67,4 @@ src/
 ## Notes
 - **Images:** replace the URLs in `src/data/images.ts` with licensed Rwanda photography. A branded placeholder shows if any image fails.
 - **Map:** `RwandaMap` is a lightweight SVG map. To use Google Maps/Leaflet, build a component with the same props (`points`, `selectedId`, `onSelect`).
-- **Payments** are intentionally not implemented; bookings are requests (Pending → Confirmed/Canceled).
+- **Payments** are simulated in the API (`PAYMENT_PROVIDER=simulated`). The UI still collects card / MTN / Airtel details the same way.

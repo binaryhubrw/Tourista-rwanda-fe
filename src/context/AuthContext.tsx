@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User, UserRole } from '@/types';
+import { TOKEN_KEY, USE_MOCK } from '@/services/config';
 import * as authService from '@/services/authService';
 
 interface AuthContextValue {
@@ -18,6 +19,11 @@ export const dashboardPathFor = (role: UserRole) =>
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => authService.getStoredUser());
+
+  useEffect(() => {
+    if (USE_MOCK || !localStorage.getItem(TOKEN_KEY)) return;
+    authService.fetchMe().then(setUser).catch(() => setUser(null));
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await authService.login(email, password);

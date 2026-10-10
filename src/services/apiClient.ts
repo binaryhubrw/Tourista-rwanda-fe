@@ -1,10 +1,21 @@
-import { API_BASE_URL, TOKEN_KEY } from './config';
+import { API_BASE_URL, TOKEN_KEY, USER_KEY } from './config';
 import type { ApiError } from '@/types';
 
-/**
- * Thin fetch wrapper for the Django REST API.
- * Sends the JWT as `Authorization: Bearer <token>` (djangorestframework-simplejwt style).
- */
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'];
+
+function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+function expireSession() {
+  clearSession();
+  const path = window.location.pathname;
+  if (AUTH_PAGES.some((p) => path === p || path.startsWith(`${p}/`))) return;
+  window.location.assign('/login');
+}
+
+/** Thin fetch wrapper for the Node API. Sends `Authorization: Bearer <token>`. */
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -16,6 +27,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     },
   });
   if (!res.ok) {
+    if (res.status === 401 && token) expireSession();
     let message = `Request failed (${res.status})`;
     try {
       const body = await res.json();

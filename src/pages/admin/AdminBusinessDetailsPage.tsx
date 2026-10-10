@@ -95,7 +95,7 @@ export default function AdminBusinessDetailsPage() {
   useDocumentTitle(data ? data.listing.name : 'Business');
   useEffect(() => { setPhoto(0); setView('overview'); }, [id]);
 
-  if (loading) return <LoadingSpinner label="Loading business" />;
+  if (loading) return <Loading label="Loading business" />;
   if (error || !data) return <ErrorState message={error ?? 'That business was not found.'} onRetry={error ? reload : () => navigate('/admin/businesses')} />;
 
   const { listing, listings, bookings, reviews, owner } = data;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { getBookings, getBusinesses, getLocations } from '@/services';
+import { getAvailability, getBusinesses, getLocations } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { BusinessCard } from '@/components/cards';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
@@ -84,7 +84,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, loading, error, reload } = useAsync(async () => {
-    const [l, b, bookings] = await Promise.all([getLocations(), getBusinesses(), getBookings()]);
+    const [l, b, bookings] = await Promise.all([getLocations(), getBusinesses(), getAvailability()]);
     return {
       locations: l,
       items: buildExploreItems(l, [], b, bookings).filter((item) => item.type === 'business'),

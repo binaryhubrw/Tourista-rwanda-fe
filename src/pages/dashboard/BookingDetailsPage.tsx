@@ -35,7 +35,7 @@ export default function BookingDetailsPage() {
   const [busy, setBusy] = useState(false);
   useDocumentTitle(booking ? `Booking ${booking.id.toUpperCase()}` : 'Booking');
 
-  if (loading) return <LoadingSpinner label="Loading booking" />;
+  if (loading) return <Loading label="Loading booking" />;
   if (error || !booking || !user) return <ErrorState message={error ?? 'Booking was not found.'} onRetry={reload} />;
 
   const lines = bookingLines(booking);

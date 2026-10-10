@@ -7,7 +7,8 @@ import { makeId } from '@/utils/id';
 export async function getReviews(filter?: { targetId?: string; userId?: string }): Promise<Review[]> {
   if (!USE_MOCK) {
     const qs = new URLSearchParams(Object.entries(filter ?? {}).filter(([, v]) => v) as [string, string][]);
-    return api.get<Review[]>(`/reviews/?${qs}`);
+    const query = qs.toString();
+    return api.get<Review[]>(query ? `/reviews/?${query}` : '/reviews/');
   }
   await delay(250);
   return read('reviews')

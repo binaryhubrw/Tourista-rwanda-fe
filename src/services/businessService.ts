@@ -25,6 +25,13 @@ export async function getBusinessesByOwner(ownerId: string): Promise<Business[]>
 }
 
 export async function getPayoutForBusiness(businessId: string): Promise<PayoutTarget | null> {
+  if (!USE_MOCK) {
+    try {
+      return await api.get<PayoutTarget>(`/businesses/${businessId}/payout/`);
+    } catch {
+      return null;
+    }
+  }
   const listing = await getBusinessById(businessId);
   if (!listing.ownerId) return { businessName: listing.name };
   try {

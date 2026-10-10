@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Bell, Coins, Languages } from 'lucide-react';
 import { PageHeader, StatCard, StatGrid } from '@/components/dashboard';
@@ -13,7 +15,12 @@ const currencies = [{ value: 'RWF', label: 'Rwandan franc (RWF)' }, { value: 'US
 export default function SettingsPage() {
   useDocumentTitle('Settings');
   const toast = useToast();
-  const [prefs, setPrefs] = useState({ bookingEmails: true, reviewReplies: true, newsletter: false, currency: 'RWF', language: 'en' });
+  const { user, updateUser } = useAuth();
+  const [prefs, setPrefs] = useState({
+    bookingEmails: true, reviewReplies: true, newsletter: false, currency: 'RWF', language: 'en',
+    ...user?.preferences,
+  });
+  const [saving, setSaving] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
 
   const toggles: { key: 'bookingEmails' | 'reviewReplies' | 'newsletter'; label: string; text: string }[] = [
@@ -50,7 +57,20 @@ export default function SettingsPage() {
           <h2 className="font-display text-lg font-bold text-ink sm:col-span-2">Preferences</h2>
           <Select label="Language" value={prefs.language} onChange={(e) => setPrefs({ ...prefs, language: e.target.value })} options={languages} />
           <Select label="Currency" value={prefs.currency} onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })} options={currencies} />
-          <div className="sm:col-span-2"><Button onClick={() => toast.success('Settings saved.')}>Save settings</Button></div>
+          <div className="sm:col-span-2">
+            <Button disabled={saving} onClick={async () => {
+              if (!user) return toast.success('Settings saved.');
+              setSaving(true);
+              try {
+                await updateUser({ ...user, preferences: prefs });
+                toast.success('Settings saved.');
+              } catch (err) {
+                toast.error(errorMessage(err));
+              } finally {
+                setSaving(false);
+              }
+            }}>Save settings</Button>
+          </div>
         </section>
         {USE_MOCK && (
           <section className="rounded-3xl border border-red-100 bg-white p-5 sm:p-7">

@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Favorite } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { USE_MOCK } from '@/services/config';
+import { addFavorite, getFavorites, removeFavorite as deleteFavorite } from '@/services/favoriteService';
 
 type FavoriteInput = Omit<Favorite, 'id' | 'addedAt'>;
 
@@ -21,30 +24,67 @@ function load(): Favorite[] {
   }
 }
 
-// Favorites live in the browser for now; swap load/save for /favorites/ API calls later.
+function saveLocal(favorites: Favorite[]) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(favorites));
+  } catch { /* ignore */ }
+}
+
 export function FavoritesProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  const useApi = !USE_MOCK && isAuthenticated;
   const [favorites, setFavorites] = useState<Favorite[]>(load);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(favorites));
-    } catch { /* ignore */ }
-  }, [favorites]);
+    if (!useApi) {
+      setFavorites(load());
+      return;
+    }
+    let cancelled = false;
+    const local = load();
+    (async () => {
+      try {
+        await Promise.all(local.map((item) => addFavorite({
+          itemId: item.itemId, itemType: item.itemType, title: item.title, subtitle: item.subtitle, image: item.image, href: item.href,
+        }).catch(() => undefined)));
+        const remote = await getFavorites();
+        if (!cancelled) {
+          setFavorites(remote);
+          saveLocal([]);
+        }
+      } catch {
+        if (!cancelled) setFavorites(load());
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [useApi]);
+
+  useEffect(() => {
+    if (!useApi) saveLocal(favorites);
+  }, [favorites, useApi]);
 
   const isFavorite = useCallback((id: string) => favorites.some((f) => f.itemId === id), [favorites]);
 
   const toggleFavorite = useCallback(
     (item: FavoriteInput) => {
       const exists = favorites.some((f) => f.itemId === item.itemId);
-      setFavorites((prev) =>
-        exists ? prev.filter((f) => f.itemId !== item.itemId) : [{ ...item, id: `fav-${item.itemId}`, addedAt: new Date().toISOString() }, ...prev],
-      );
+      const next = exists
+        ? favorites.filter((f) => f.itemId !== item.itemId)
+        : [{ ...item, id: `fav-${item.itemId}`, addedAt: new Date().toISOString() }, ...favorites];
+      setFavorites(next);
+      if (useApi) {
+        const op = exists ? deleteFavorite(item.itemId) : addFavorite(item);
+        op.catch(() => setFavorites(favorites));
+      }
       return !exists;
     },
-    [favorites],
+    [favorites, useApi],
   );
 
-  const removeFavorite = useCallback((id: string) => setFavorites((prev) => prev.filter((f) => f.itemId !== id)), []);
+  const removeFavorite = useCallback((id: string) => {
+    setFavorites((prev) => prev.filter((f) => f.itemId !== id));
+    if (useApi) deleteFavorite(id).catch(() => undefined);
+  }, [useApi]);
 
   const value = useMemo(() => ({ favorites, isFavorite, toggleFavorite, removeFavorite }), [favorites, isFavorite, toggleFavorite, removeFavorite]);
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
