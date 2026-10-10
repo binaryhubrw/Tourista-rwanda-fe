@@ -5,7 +5,7 @@ import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Button, Input, buttonClass } from '@/components/ui';
+import { Button, Input, LoadingOverlay, buttonClass } from '@/components/ui';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/data/users';
 import type { UserRole } from '@/types';
 import { cn } from '@/utils/cn';
@@ -90,7 +90,8 @@ export default function LoginPage() {
         </ul>
       </section>
 
-      <form onSubmit={(e) => { e.preventDefault(); signIn(email, password); }} className="space-y-3" noValidate>
+      <form onSubmit={(e) => { e.preventDefault(); signIn(email, password); }} className="relative space-y-3" noValidate>
+        <LoadingOverlay show={loading} label="Signing in" />
         {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
         <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <div className="relative">

@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { Link, type LinkProps } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { LoadingMark } from './Loading';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'light' | 'outlineLight';
 type Size = 'sm' | 'md' | 'lg';
@@ -37,7 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 ) {
   return (
     <button ref={ref} type={type} className={buttonClass(variant, size, className)} disabled={disabled || loading} {...rest}>
-      {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+      {loading && <LoadingMark size="sm" tone={variant === 'primary' || variant === 'danger' || variant === 'outlineLight' ? 'current' : 'brand'} />}
       {children}
     </button>
   );

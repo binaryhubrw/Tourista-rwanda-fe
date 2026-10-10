@@ -3,7 +3,7 @@ import { getReviews } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { ReviewCard } from '@/components/cards';
-import { CardSkeletonGrid, Container, EmptyState, ErrorState, PageHeader, fieldClass } from '@/components/ui';
+import { Container, EmptyState, ErrorState, Loading, PageHeader, fieldClass } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 export default function ReviewsPage() {
@@ -35,7 +35,7 @@ export default function ReviewsPage() {
             </select>
           </label>
         </div>
-        {loading ? <CardSkeletonGrid count={4} className="lg:grid-cols-2" /> : error ? <ErrorState message={error} onRetry={reload} /> : !list.length ? (
+        {loading ? <Loading variant="section" label="Loading reviews" /> : error ? <ErrorState message={error} onRetry={reload} /> : !list.length ? (
           <EmptyState title="No reviews match this filter" />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">{list.map((r) => <ReviewCard key={r.id} review={r} showTarget />)}</div>

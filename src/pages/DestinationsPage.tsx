@@ -3,7 +3,7 @@ import { getLocations } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { DestinationCard } from '@/components/cards';
-import { CardSkeletonGrid, Container, EmptyState, ErrorState, PageHeader, fieldClass } from '@/components/ui';
+import { Container, EmptyState, ErrorState, Loading, PageHeader, fieldClass } from '@/components/ui';
 import { sortItems, sortOptions, type SortKey } from '@/utils/explore';
 import type { LocationCategory } from '@/types';
 import { cn } from '@/utils/cn';
@@ -40,7 +40,7 @@ export default function DestinationsPage() {
             </select>
           </label>
         </div>
-        {loading ? <CardSkeletonGrid /> : error ? <ErrorState message={error} onRetry={reload} /> : list.length === 0 ? <EmptyState title="No destinations in this category yet" /> : (
+        {loading ? <Loading variant="section" label="Loading destinations" /> : error ? <ErrorState message={error} onRetry={reload} /> : list.length === 0 ? <EmptyState title="No destinations in this category yet" /> : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{list.map((l) => <DestinationCard key={l.id} location={l} />)}</div>
         )}
       </Container>

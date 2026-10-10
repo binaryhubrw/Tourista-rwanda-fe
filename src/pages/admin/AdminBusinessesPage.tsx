@@ -9,7 +9,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ErrorState, Modal, Select } from '@/components/ui';
+import { Badge, Button, ErrorState, Loading, Modal, Select } from '@/components/ui';
 import { BulkImportModal, DataTable, PageHeader, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
 import { BADGE_OPTIONS, BUSINESS_CATEGORIES, BusinessForm, PROPERTY_TYPES } from '../business/BusinessForm';
 import { images } from '@/data/images';
@@ -135,6 +135,7 @@ export default function AdminBusinessesPage() {
   };
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   const has = (badge: SustainabilityBadge) => all.filter((b) => b.badges.includes(badge)).length;
   const rated = all.filter((b) => b.rating > 0);
@@ -151,16 +152,15 @@ export default function AdminBusinessesPage() {
       />
 
       <StatGrid>
-        <StatCard label="Businesses" icon={Building2} loading={loading} value={all.length} hint={`${all.filter((b) => b.category === 'Accommodation').length} places to stay`} />
-        <StatCard label="Eco-certified" icon={Leaf} tone="teal" loading={loading} value={has('Eco-certified')} hint={all.length ? `${Math.round((has('Eco-certified') / all.length) * 100)}% of businesses` : undefined} />
-        <StatCard label="Women-led" icon={HeartHandshake} tone="violet" loading={loading} value={has('Women-led')} hint={`${has('Community-owned')} community-owned`} />
-        <StatCard label="Average rating" icon={Star} tone="amber" loading={loading} value={rated.length ? average(rated.map((b) => b.rating)).toFixed(2) : '—'} />
+        <StatCard label="Businesses" icon={Building2} value={all.length} hint={`${all.filter((b) => b.category === 'Accommodation').length} places to stay`} />
+        <StatCard label="Eco-certified" icon={Leaf} tone="teal" value={has('Eco-certified')} hint={all.length ? `${Math.round((has('Eco-certified') / all.length) * 100)}% of businesses` : undefined} />
+        <StatCard label="Women-led" icon={HeartHandshake} tone="violet" value={has('Women-led')} hint={`${has('Community-owned')} community-owned`} />
+        <StatCard label="Average rating" icon={Star} tone="amber" value={rated.length ? average(rated.map((b) => b.rating)).toFixed(2) : '—'} />
       </StatGrid>
 
       <DataTable
         className="mt-6"
         data={list}
-        loading={loading}
         columns={columns}
         getRowId={(b) => b.id}
         initialSort={{ id: 'rating', desc: true }}

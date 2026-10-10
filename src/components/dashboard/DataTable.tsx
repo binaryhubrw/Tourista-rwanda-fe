@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Download, FileJson, FileSpreadsheet, Search, X } from 'lucide-react';
-import { EmptyState, fieldClass } from '@/components/ui';
+import { EmptyState, Loading, fieldClass } from '@/components/ui';
 import { exportRows, type ExportCell } from '@/utils/export';
 import { cn } from '@/utils/cn';
 import { Pagination } from './Pagination';
@@ -212,11 +212,11 @@ export function DataTable<T>({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              Array.from({ length: Math.min(pageSize, 6) }).map((_, i) => (
-                <tr key={i}>
-                  <td colSpan={colSpan} className="px-4 py-3.5"><div className="h-5 animate-pulse rounded-lg bg-slate-200/60" style={{ width: `${70 + ((i * 13) % 30)}%` }} /></td>
-                </tr>
-              ))
+              <tr>
+                <td colSpan={colSpan} className="p-2">
+                  <Loading variant="section" label="Loading" className="min-h-[12rem] py-8" />
+                </td>
+              </tr>
             ) : !pageRows.length ? (
               <tr>
                 <td colSpan={colSpan} className="p-4">

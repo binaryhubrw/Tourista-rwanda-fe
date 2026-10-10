@@ -2,7 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
-import { Avatar, LoadingSpinner } from '@/components/ui';
+import { Avatar, Loading } from '@/components/ui';
 import { DashboardHeader, Sidebar, activeLink, navigationFor, ownerRoleCaption, roleLabel } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
 
@@ -100,7 +100,7 @@ export function DashboardLayout() {
         />
         <main id="dashboard-main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
           <div className="mx-auto w-full max-w-[1440px]">
-            <Suspense fallback={<LoadingSpinner className="min-h-[50vh]" />}>
+            <Suspense fallback={<Loading />}>
               <Outlet />
             </Suspense>
           </div>

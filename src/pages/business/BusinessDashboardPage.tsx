@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Store, CalendarCheck, Star, Plus, Wallet, Clock, ArrowRight } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
-import { Badge, ButtonLink, EmptyState, ErrorState, Rating, Skeleton, SmartImage } from '@/components/ui';
+import { Badge, ButtonLink, EmptyState, ErrorState, Loading, Rating, SmartImage } from '@/components/ui';
 import {
   BarsChart, BookingStatusBadge, BOOKING_STATUSES, ChartCard, DonutChart, PageHeader, RankedList, SectionTitle, StatCard, StatGrid, TrendChart, bookingStatusColor,
 } from '@/components/dashboard';
@@ -17,8 +17,9 @@ export default function BusinessDashboardPage() {
   const firstName = user!.name.split(' ')[0];
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
-  if (!loading && !data?.businesses.length) {
+  if (!data?.businesses.length) {
     return (
       <>
         <PageHeader title={`Welcome, ${firstName}`} intro={user!.businessName ? `${user!.businessName} has no listings yet. Add one so travellers can book you.` : 'Add a listing so travellers can find and book you.'} />
@@ -61,21 +62,17 @@ export default function BusinessDashboardPage() {
     <>
       <PageHeader
         title={`Welcome, ${firstName}`}
-        intro={loading ? 'Loading your business…' : `${user!.businessName ? `${user!.businessName} · ` : ''}${businesses.length} listing${businesses.length === 1 ? '' : 's'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
+        intro={`${user!.businessName ? `${user!.businessName} · ` : ''}${businesses.length} listing${businesses.length === 1 ? '' : 's'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
         action={<ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink>}
       />
 
       <StatGrid>
-        <StatCard label="Revenue (30 days)" icon={Wallet} loading={loading} value={formatRwfShort(revenueTrend.current)} sparkline={monthly.map((m) => m.revenue)} trend={{ value: revenueTrend.change, label: 'vs previous 30 days' }} />
-        <StatCard label="New bookings (30 days)" icon={CalendarCheck} tone="teal" loading={loading} value={bookingTrend.current} sparkline={monthlyBookings.map((m) => m.bookings)} trend={{ value: bookingTrend.change, label: 'vs previous 30 days' }} to="/business-dashboard/bookings" />
-        <StatCard label="Awaiting payment" icon={Clock} tone="amber" loading={loading} value={pending.length} hint={pending.length ? 'Confirmed automatically once paid' : 'Nothing waiting'} to="/business-dashboard/bookings" />
-        <StatCard label="Average rating" icon={Star} tone="violet" loading={loading} value={avgRating ? avgRating.toFixed(1) : 'New'} hint={`${reviews.length} review${reviews.length === 1 ? '' : 's'}`} to="/business-dashboard/reviews" />
+        <StatCard label="Revenue (30 days)" icon={Wallet} value={formatRwfShort(revenueTrend.current)} sparkline={monthly.map((m) => m.revenue)} trend={{ value: revenueTrend.change, label: 'vs previous 30 days' }} />
+        <StatCard label="New bookings (30 days)" icon={CalendarCheck} tone="teal" value={bookingTrend.current} sparkline={monthlyBookings.map((m) => m.bookings)} trend={{ value: bookingTrend.change, label: 'vs previous 30 days' }} to="/business-dashboard/bookings" />
+        <StatCard label="Awaiting payment" icon={Clock} tone="amber" value={pending.length} hint={pending.length ? 'Confirmed automatically once paid' : 'Nothing waiting'} to="/business-dashboard/bookings" />
+        <StatCard label="Average rating" icon={Star} tone="violet" value={avgRating ? avgRating.toFixed(1) : 'New'} hint={`${reviews.length} review${reviews.length === 1 ? '' : 's'}`} to="/business-dashboard/reviews" />
       </StatGrid>
 
-      {loading ? (
-        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3"><Skeleton className="h-80 xl:col-span-2" /><Skeleton className="h-80" /></div>
-      ) : (
-        <>
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
             <ChartCard title="Revenue" description={`Confirmed bookings, last 12 months · ${formatRwf(sum(confirmed, (b) => b.totalRwf))} in total`} className="xl:col-span-2">
               <TrendChart data={monthly} xKey="month" series={[{ key: 'revenue', label: 'Revenue' }]} valueFormatter={formatRwf} axisFormatter={formatCompact} height={300} />
@@ -147,8 +144,6 @@ export default function BusinessDashboardPage() {
               </div>
             </section>
           </div>
-        </>
-      )}
     </>
   );
 }

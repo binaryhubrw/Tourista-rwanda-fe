@@ -7,7 +7,7 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ErrorState, LoadingSpinner, Modal } from '@/components/ui';
+import { Badge, Button, ErrorState, Loading, Modal } from '@/components/ui';
 import { PageHeader } from '@/components/dashboard';
 import { PaymentForm } from '@/components/payment/PaymentForm';
 import { bookingLines } from '@/utils/availability';

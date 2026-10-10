@@ -3,10 +3,10 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { ProtectedRoute } from './ProtectedRoute';
-import { LoadingSpinner } from '@/components/ui';
+import { Loading } from '@/components/ui';
+import ExplorePage from '@/pages/ExplorePage';
 
 // Route-level code splitting keeps the first load small on mobile networks.
-const ExplorePage = lazy(() => import('@/pages/ExplorePage'));
 const ExperienceDetailsPage = lazy(() => import('@/pages/ExperienceDetailsPage'));
 const BusinessDetailsPage = lazy(() => import('@/pages/BusinessDetailsPage'));
 const MapPage = lazy(() => import('@/pages/MapPage'));
@@ -57,7 +57,7 @@ function RedirectToListings() {
 
 export function AppRoutes() {
   return (
-    <Suspense fallback={<LoadingSpinner className="min-h-[60vh]" />}>
+    <Suspense fallback={<Loading />}>
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<Navigate to="/explore" replace />} />

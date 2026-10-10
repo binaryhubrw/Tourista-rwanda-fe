@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Pencil, Store, Package, Star, Leaf, BedDouble, UtensilsCrossed, Sparkles, CalendarCheck } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { DataTable, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
-import { Badge, ButtonLink, EmptyState, ErrorState, LoadingSpinner } from '@/components/ui';
+import { Badge, ButtonLink, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
 import { fromPrice, isRoom } from '@/utils/pricing';
 import { listingKindOf } from '@/utils/catalog';
@@ -32,7 +32,7 @@ export default function MyBusinessPage() {
   useDocumentTitle('Listings');
   const { data, loading, error, reload } = useOwnerActivity();
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <Loading label="Loading listings" />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
 
   const list = data?.businesses ?? [];

@@ -1,7 +1,8 @@
 import { useId, useRef, useState } from 'react';
-import { ImagePlus, Loader2, Star, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ImagePlus, Star, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { imageFileToDataUrl } from '@/utils/image';
 import { cn } from '@/utils/cn';
+import { LoadingMark } from './Loading';
 
 interface Props {
   /** Photo sources; the first one is the cover. */
@@ -62,7 +63,7 @@ export function ImageUpload({ value, onChange, max = 6, label = 'Photos', hint, 
           onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
           className={cn('flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors', dragging ? 'border-brand-600 bg-brand-50' : error ? 'border-red-300' : 'border-slate-300 hover:border-brand-400')}
         >
-          {processing > 0 ? <Loader2 className="h-7 w-7 animate-spin text-brand-600" aria-hidden /> : <ImagePlus className="h-7 w-7 text-brand-600" aria-hidden />}
+          {processing > 0 ? <LoadingMark size="md" /> : <ImagePlus className="h-7 w-7 text-brand-600" aria-hidden />}
           <p className="mt-2 text-sm text-ink">
             {processing > 0 ? `Processing ${processing} photo${processing > 1 ? 's' : ''}…` : <>Drag photos here or <button type="button" onClick={() => inputRef.current?.click()} className="font-semibold text-brand-600 underline-offset-2 hover:underline">browse files</button></>}
           </p>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Star, MessageSquare, ThumbsUp, CalendarDays } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { ErrorState, Skeleton } from '@/components/ui';
+import { ErrorState, Loading } from '@/components/ui';
 import { BarsChart, ChartCard, DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { reviewColumns, reviewSearchText } from '../shared/tableColumns';
 import { average, byMonth, periodTrend } from '@/utils/analytics';
@@ -20,6 +20,7 @@ export default function BusinessReviewsPage() {
   const list = useMemo(() => all.filter((r) => filter === 'All' || r.rating === Number(filter)), [all, filter]);
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   const avg = all.length ? average(all.map((r) => r.rating)) : 0;
   const fiveStar = all.filter((r) => r.rating === 5).length;
@@ -32,14 +33,13 @@ export default function BusinessReviewsPage() {
       <PageHeader title="Reviews" intro="What travellers say about your business." />
 
       <StatGrid>
-        <StatCard label="Average rating" icon={Star} tone="amber" loading={loading} value={avg ? avg.toFixed(1) : 'New'} hint="Out of 5 stars" />
-        <StatCard label="Total reviews" icon={MessageSquare} loading={loading} value={all.length} sparkline={monthly.map((m) => m.reviews)} />
-        <StatCard label="5-star reviews" icon={ThumbsUp} tone="teal" loading={loading} value={all.length ? `${Math.round((fiveStar / all.length) * 100)}%` : '—'} hint={`${fiveStar} of ${all.length}`} />
-        <StatCard label="Last 90 days" icon={CalendarDays} tone="violet" loading={loading} value={recent.current} trend={{ value: recent.change, label: 'vs previous 90 days' }} />
+        <StatCard label="Average rating" icon={Star} tone="amber" value={avg ? avg.toFixed(1) : 'New'} hint="Out of 5 stars" />
+        <StatCard label="Total reviews" icon={MessageSquare} value={all.length} sparkline={monthly.map((m) => m.reviews)} />
+        <StatCard label="5-star reviews" icon={ThumbsUp} tone="teal" value={all.length ? `${Math.round((fiveStar / all.length) * 100)}%` : '—'} hint={`${fiveStar} of ${all.length}`} />
+        <StatCard label="Last 90 days" icon={CalendarDays} tone="violet" value={recent.current} trend={{ value: recent.change, label: 'vs previous 90 days' }} />
       </StatGrid>
 
-      {loading ? <Skeleton className="mt-6 h-64" /> : (
-        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
           <ChartCard title="Rating distribution">
             <BarsChart data={dist} xKey="stars" layout="vertical" series={[{ key: 'reviews', label: 'Reviews' }]} height={220} categoryWidth={64} />
           </ChartCard>
@@ -47,12 +47,10 @@ export default function BusinessReviewsPage() {
             <BarsChart data={monthly} xKey="month" series={[{ key: 'reviews', label: 'Reviews' }]} height={220} />
           </ChartCard>
         </div>
-      )}
 
       <DataTable
         className="mt-6"
         data={list}
-        loading={loading}
         columns={columns}
         getRowId={(r) => r.id}
         initialSort={{ id: 'date', desc: true }}

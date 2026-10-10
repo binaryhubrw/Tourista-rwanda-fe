@@ -3,7 +3,7 @@ import { Users, MapPin, Store, CalendarCheck, AlertTriangle, ArrowRight, Wallet,
 import { getBookings, getTourismStatistics, getUsers } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Avatar, ButtonLink, ErrorState, Skeleton } from '@/components/ui';
+import { Avatar, ButtonLink, ErrorState, Loading } from '@/components/ui';
 import { AddNewMenu, BarsChart, ChartCard, DonutChart, PageHeader, RankedList, SectionTitle, StatCard, StatGrid, TrendChart, roleLabel } from '@/components/dashboard';
 import { ADMIN_ADD_NEW } from './addNewItems';
 import { byMonth, percentChange, periodTrend } from '@/utils/analytics';
@@ -17,8 +17,9 @@ export default function AdminDashboardPage() {
   });
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading || !data?.stats) return <Loading />;
 
-  const stats = data?.stats;
+  const stats = data.stats;
   const t = stats?.totals;
   const trend = stats?.monthlyTrend ?? [];
   const visitors = trend.map((m) => m.domestic + m.international);
@@ -37,16 +38,12 @@ export default function AdminDashboardPage() {
       <PageHeader title="Tourism overview" intro="Platform activity across Rwanda over the last 12 months." action={<><ButtonLink to="/admin/analytics" variant="secondary">Detailed analytics</ButtonLink><AddNewMenu items={ADMIN_ADD_NEW} /></>} />
 
       <StatGrid>
-        <StatCard label="Visitors this month" icon={Users} loading={loading} value={formatCompact(lastMonth)} sparkline={visitors} trend={{ value: percentChange(lastMonth, prevMonth), label: 'vs last month' }} hint={t && `${formatCompact(t.tourists)} registered tourists`} />
-        <StatCard label="Bookings (30 days)" icon={CalendarCheck} tone="teal" loading={loading} value={bookingTrend.current} sparkline={monthlyBookings.map((m) => m.bookings)} trend={{ value: bookingTrend.change, label: 'vs previous 30 days' }} to="/admin/bookings" />
-        <StatCard label="Listed businesses" icon={Store} tone="violet" loading={loading} value={t?.businesses} hint={impact && `${impact.womenLedBusinesses} women-led nationwide`} to="/admin/businesses" />
-        <StatCard label="Destinations" icon={MapPin} tone="amber" loading={loading} value={t?.locations} hint={t && `${formatCompact(t.reviews)} reviews written`} to="/admin/locations" />
+        <StatCard label="Visitors this month" icon={Users} value={formatCompact(lastMonth)} sparkline={visitors} trend={{ value: percentChange(lastMonth, prevMonth), label: 'vs last month' }} hint={t && `${formatCompact(t.tourists)} registered tourists`} />
+        <StatCard label="Bookings (30 days)" icon={CalendarCheck} tone="teal" value={bookingTrend.current} sparkline={monthlyBookings.map((m) => m.bookings)} trend={{ value: bookingTrend.change, label: 'vs previous 30 days' }} to="/admin/bookings" />
+        <StatCard label="Listed businesses" icon={Store} tone="violet" value={t?.businesses} hint={impact && `${impact.womenLedBusinesses} women-led nationwide`} to="/admin/businesses" />
+        <StatCard label="Destinations" icon={MapPin} tone="amber" value={t?.locations} hint={t && `${formatCompact(t.reviews)} reviews written`} to="/admin/locations" />
       </StatGrid>
 
-      {loading || !stats ? (
-        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3"><Skeleton className="h-80 xl:col-span-2" /><Skeleton className="h-80" /></div>
-      ) : (
-        <>
           {busiest && (
             <p role="status" className="mt-6 flex items-start gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-5 py-3 text-sm text-ink">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden />
@@ -107,8 +104,6 @@ export default function AdminDashboardPage() {
               </ul>
             </section>
           </div>
-        </>
-      )}
     </>
   );
 }

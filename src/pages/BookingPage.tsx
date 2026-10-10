@@ -7,7 +7,7 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ButtonLink, Container, DatePicker, ErrorState, Input, LoadingSpinner, SmartImage, Textarea } from '@/components/ui';
+import { Badge, Button, ButtonLink, Container, DatePicker, ErrorState, Input, Loading, SmartImage, Textarea } from '@/components/ui';
 import { PaymentForm } from '@/components/payment/PaymentForm';
 import { formatDate, formatRwf, todayIso } from '@/utils/format';
 import { addDaysIso, guidedVisitPrice, periodNoun, pricingMode, quote } from '@/utils/pricing';
@@ -144,7 +144,7 @@ export default function BookingPage() {
 
   const total = lines.reduce((sum, line) => sum + line.priced.total, 0);
 
-  if (loading) return <LoadingSpinner label="Preparing your booking" />;
+  if (loading) return <Loading label="Preparing your booking" />;
   if (error?.includes('not found')) return <NotFoundPage what="item to book" />;
   if (error || !item || !data) return <Container className="py-16"><ErrorState message={error ?? undefined} onRetry={reload} /></Container>;
 

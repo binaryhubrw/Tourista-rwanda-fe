@@ -3,7 +3,7 @@ import { getExperiences } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { ExperienceCard } from '@/components/cards';
-import { CardSkeletonGrid, Container, EmptyState, ErrorState, PageHeader } from '@/components/ui';
+import { Container, EmptyState, ErrorState, Loading, PageHeader } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 export default function ExperiencesPage() {
@@ -29,7 +29,7 @@ export default function ExperiencesPage() {
             Community-led only
           </label>
         </div>
-        {loading ? <CardSkeletonGrid /> : error ? <ErrorState message={error} onRetry={reload} /> : list.length === 0 ? <EmptyState title="No experiences match" message="Try another type or include all hosts." /> : (
+        {loading ? <Loading variant="section" label="Loading experiences" /> : error ? <ErrorState message={error} onRetry={reload} /> : list.length === 0 ? <EmptyState title="No experiences match" message="Try another type or include all hosts." /> : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{list.map((e) => <ExperienceCard key={e.id} experience={e} />)}</div>
         )}
       </Container>

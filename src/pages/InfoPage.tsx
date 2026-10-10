@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/context/ToastContext';
-import { Button, Container, Input, PageHeader, Textarea } from '@/components/ui';
+import { Button, Container, Input, LoadingOverlay, PageHeader, Textarea } from '@/components/ui';
 
 const pages: Record<string, { title: string; intro: string; body: string[] }> = {
   about: { title: 'About Tourista Rwanda', intro: 'A digital platform for sustainable and inclusive tourism.', body: [
@@ -43,6 +43,7 @@ function ContactForm() {
         toast.success('Message sent. We reply within two working days.');
       }}
     >
+      <LoadingOverlay show={sending} label="Sending message" />
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name" required name="name" />
         <Input label="Email" type="email" required name="email" />

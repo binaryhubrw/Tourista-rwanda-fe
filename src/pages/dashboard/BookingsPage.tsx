@@ -6,7 +6,7 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Button, ButtonLink, ConfirmModal, ErrorState, Modal } from '@/components/ui';
+import { Button, ButtonLink, ConfirmModal, ErrorState, Loading, Modal } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { PaymentForm } from '@/components/payment/PaymentForm';
 import { BookingViewLink, bookingColumns, bookingSearchText, statusOptions, type StatusFilter } from '../shared/tableColumns';
@@ -67,22 +67,22 @@ export default function BookingsPage() {
   };
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   return (
     <>
       <PageHeader title="Bookings" intro="Bookings are confirmed once they're paid. Cancel an upcoming booking to get a refund." action={<ButtonLink to="/explore" variant="secondary">Book something new</ButtonLink>} />
 
       <StatGrid>
-        <StatCard label="All bookings" icon={CalendarCheck} loading={loading} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed`} />
-        <StatCard label="Upcoming stays & trips" icon={CalendarClock} tone="teal" loading={loading} value={upcoming.length} hint={upcoming[0] ? `Next: ${upcoming[0].targetName}, ${formatDate(upcoming[0].date)}` : 'Nothing confirmed yet'} />
-        <StatCard label="Awaiting payment" icon={CreditCard} tone="amber" loading={loading} value={unpaid.length} hint={unpaid.length ? `${formatRwf(sum(unpaid, (b) => b.totalRwf))} to pay` : 'Nothing to pay'} />
-        <StatCard label="Total paid" icon={Wallet} tone="violet" loading={loading} value={formatRwfShort(sum(all.filter((b) => b.payment?.status === 'Paid'), (b) => b.totalRwf))} hint="Refunds excluded" />
+        <StatCard label="All bookings" icon={CalendarCheck} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed`} />
+        <StatCard label="Upcoming stays & trips" icon={CalendarClock} tone="teal" value={upcoming.length} hint={upcoming[0] ? `Next: ${upcoming[0].targetName}, ${formatDate(upcoming[0].date)}` : 'Nothing confirmed yet'} />
+        <StatCard label="Awaiting payment" icon={CreditCard} tone="amber" value={unpaid.length} hint={unpaid.length ? `${formatRwf(sum(unpaid, (b) => b.totalRwf))} to pay` : 'Nothing to pay'} />
+        <StatCard label="Total paid" icon={Wallet} tone="violet" value={formatRwfShort(sum(all.filter((b) => b.payment?.status === 'Paid'), (b) => b.totalRwf))} hint="Refunds excluded" />
       </StatGrid>
 
       <DataTable
         className="mt-6"
         data={list}
-        loading={loading}
         columns={columns}
         getRowId={(b) => b.id}
         initialSort={{ id: 'date', desc: true }}

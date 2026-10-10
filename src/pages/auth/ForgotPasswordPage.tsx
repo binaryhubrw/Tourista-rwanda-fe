@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { MailCheck } from 'lucide-react';
 import { authService } from '@/services';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Button, ButtonLink, Input } from '@/components/ui';
+import { Button, ButtonLink, Input, LoadingOverlay } from '@/components/ui';
 import { AuthShell } from './AuthShell';
 
 export default function ForgotPasswordPage() {
@@ -37,7 +37,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell title="Reset your password" intro="Enter your email and we'll send you a link to choose a new password.">
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="relative space-y-4" noValidate>
+        <LoadingOverlay show={loading} label="Sending link" />
         <Input label="Email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={error} />
         <Button type="submit" size="lg" loading={loading} className="w-full">Send reset link</Button>
         <p className="text-center text-sm"><Link to="/login" className="font-semibold text-brand-600 hover:underline">Back to log in</Link></p>

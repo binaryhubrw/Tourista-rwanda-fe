@@ -4,7 +4,7 @@ import { ChevronLeft, Pencil, Phone, Mail, MapPin, BedDouble, Sparkles, Utensils
 import { getBookings, getReviews } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Badge, ButtonLink, ErrorState, LoadingSpinner, Rating, SmartImage, spanLabel } from '@/components/ui';
+import { Badge, ButtonLink, ErrorState, Loading, Rating, SmartImage, spanLabel } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
 import { BookingViewLink, bookingColumns, bookingSearchText } from '../shared/tableColumns';
@@ -73,7 +73,7 @@ export default function OwnerListingDetailsPage() {
   useDocumentTitle(listing ? listing.name : 'Listing');
   useEffect(() => { setPhoto(0); setView('overview'); }, [id]);
 
-  if (biz.loading || extra.loading) return <LoadingSpinner />;
+  if (biz.loading || extra.loading) return <Loading label="Loading listing" />;
   if (biz.error) return <ErrorState message={biz.error} onRetry={biz.reload} />;
   if (!listing) return <ErrorState message="That listing was not found." onRetry={() => navigate('/business-dashboard/business')} />;
   if (extra.error || !extra.data) return <ErrorState message={extra.error ?? undefined} onRetry={extra.reload} />;

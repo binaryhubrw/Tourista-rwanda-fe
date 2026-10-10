@@ -7,7 +7,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { ItineraryCard } from '@/components/cards';
-import { ButtonLink, ConfirmModal, EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import { ButtonLink, ConfirmModal, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { daysBetween, formatDate, todayIso } from '@/utils/format';
 
@@ -35,6 +35,7 @@ export default function MyItinerariesPage() {
   };
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   const list = data ?? [];
   const today = todayIso();
@@ -47,14 +48,14 @@ export default function MyItinerariesPage() {
       <PageHeader title="Itineraries" intro="Open a trip to edit stops, dates and notes." action={<ButtonLink to="/itinerary"><Plus className="h-4 w-4" aria-hidden />New itinerary</ButtonLink>} />
 
       <StatGrid>
-        <StatCard label="Trips planned" icon={Map} loading={loading} value={list.length} />
-        <StatCard label="Upcoming trips" icon={CalendarClock} tone="teal" loading={loading} value={upcoming.length} hint={upcoming[0] ? `${upcoming[0].title} starts ${formatDate(upcoming[0].startDate)}` : 'No trips scheduled'} />
-        <StatCard label="Days planned" icon={CalendarDays} tone="violet" loading={loading} value={days} hint="Across all itineraries" />
-        <StatCard label="Destinations covered" icon={MapPin} tone="amber" loading={loading} value={places.size} hint="Unique places in your trips" />
+        <StatCard label="Trips planned" icon={Map} value={list.length} />
+        <StatCard label="Upcoming trips" icon={CalendarClock} tone="teal" value={upcoming.length} hint={upcoming[0] ? `${upcoming[0].title} starts ${formatDate(upcoming[0].startDate)}` : 'No trips scheduled'} />
+        <StatCard label="Days planned" icon={CalendarDays} tone="violet" value={days} hint="Across all itineraries" />
+        <StatCard label="Destinations covered" icon={MapPin} tone="amber" value={places.size} hint="Unique places in your trips" />
       </StatGrid>
 
       <div className="mt-6">
-        {loading ? <div className="grid gap-4 xl:grid-cols-2"><Skeleton className="h-48" /><Skeleton className="h-48" /></div> : !list.length ? (
+        {!list.length ? (
           <EmptyState title="No itineraries yet" message="Plan your first trip: pick destinations and arrange them day by day." action={<ButtonLink to="/itinerary">Build an itinerary</ButtonLink>} />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">{list.map((i) => <ItineraryCard key={i.id} itinerary={i} onDelete={setTarget} />)}</div>

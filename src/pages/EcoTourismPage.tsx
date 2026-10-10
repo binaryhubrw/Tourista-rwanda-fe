@@ -3,7 +3,7 @@ import { getBusinesses } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { BusinessCard } from '@/components/cards';
-import { CardSkeletonGrid, Container, ErrorState, HillLines, SectionHeader } from '@/components/ui';
+import { Container, ErrorState, HillLines, Loading, SectionHeader } from '@/components/ui';
 
 const principles = [
   { icon: Recycle, title: 'Reduce waste', text: 'Plastic bags have been banned since 2008 and bags are checked at the airport. Carry a refillable bottle; most lodges have filtered water stations.' },
@@ -59,7 +59,7 @@ export default function EcoTourismPage() {
       <section className="bg-brand-50 py-16 sm:py-20" aria-labelledby="eco-stays">
         <Container>
           <SectionHeader title="Eco-friendly accommodation" intro="Lodges and guesthouses that use solar power, harvest rainwater, grow their own food and hire locally." />
-          {stays.loading ? <CardSkeletonGrid count={3} /> : stays.error ? <ErrorState message={stays.error} onRetry={stays.reload} /> : (
+          {stays.loading ? <Loading variant="section" label="Loading stays" /> : stays.error ? <ErrorState message={stays.error} onRetry={stays.reload} /> : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{stays.data?.map((b) => <BusinessCard key={b.id} business={b} />)}</div>
           )}
         </Container>

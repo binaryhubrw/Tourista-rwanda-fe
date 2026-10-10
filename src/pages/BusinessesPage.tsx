@@ -5,7 +5,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { BusinessCard, ServiceCard } from '@/components/cards';
 import { Pagination } from '@/components/dashboard';
-import { ButtonLink, CardSkeletonGrid, Container, EmptyState, ErrorState, PageHeader, fieldClass } from '@/components/ui';
+import { ButtonLink, Container, EmptyState, ErrorState, Loading, PageHeader, fieldClass } from '@/components/ui';
 import type { SustainabilityBadge } from '@/types';
 import { availableServices, hasAvailability } from '@/utils/availability';
 import { listingKindOf } from '@/utils/catalog';
@@ -84,7 +84,7 @@ export default function BusinessesPage() {
             <button key={c} role="tab" aria-selected={kind === c} onClick={() => { setPage(1); setKind(c); }} className={cn('shrink-0 rounded-full border px-4 py-2 text-sm font-semibold', kind === c ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700 hover:border-brand-400')}>{c}</button>
           ))}
         </div>
-        {loading ? <CardSkeletonGrid /> : error ? <ErrorState message={error} onRetry={reload} /> : list.length === 0 ? (
+        {loading ? <Loading variant="section" label="Loading businesses" /> : error ? <ErrorState message={error} onRetry={reload} /> : list.length === 0 ? (
           <EmptyState title="Nothing is available" message="Try another kind, or check back when a booked room or service is free again." />
         ) : (
           <>

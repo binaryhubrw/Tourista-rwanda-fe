@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services';
 import { useToast } from '@/context/ToastContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Button, ButtonLink, EmptyState, Input } from '@/components/ui';
+import { Button, ButtonLink, EmptyState, Input, LoadingOverlay } from '@/components/ui';
 import { AuthShell } from './AuthShell';
 
 export default function ResetPasswordPage() {
@@ -41,7 +41,8 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell title="Choose a new password" intro="Make it at least 8 characters.">
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="relative space-y-4" noValidate>
+        <LoadingOverlay show={loading} label="Updating password" />
         <Input label="New password" type="password" required autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} error={errors.pw} />
         <Input label="Confirm new password" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={errors.confirm} />
         <Button type="submit" size="lg" loading={loading} className="w-full">Update password</Button>

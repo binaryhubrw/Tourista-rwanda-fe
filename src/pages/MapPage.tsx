@@ -5,7 +5,7 @@ import { getBusinesses } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { RwandaMap, MapLegend, kindStyle, type MapPoint, type MapPointKind } from '@/components/map/RwandaMap';
-import { Badge, Button, ButtonLink, EmptyState, ErrorState, LoadingSpinner, Rating, SmartImage, fieldClass } from '@/components/ui';
+import { Badge, Button, ButtonLink, EmptyState, ErrorState, Loading, Rating, SmartImage, fieldClass } from '@/components/ui';
 import { useToast } from '@/context/ToastContext';
 import { distanceKm, KIGALI } from '@/utils/geo';
 import type { Coordinates } from '@/types';
@@ -84,7 +84,7 @@ export default function MapPage() {
     setMobileView('map');
   };
 
-  if (loading) return <LoadingSpinner label="Loading the map" />;
+  if (loading) return <Loading label="Loading the map" />;
   if (error) return <div className="p-8"><ErrorState message={error} onRetry={reload} /></div>;
 
   const list = (

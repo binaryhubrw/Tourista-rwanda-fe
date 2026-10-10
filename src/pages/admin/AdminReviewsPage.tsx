@@ -7,7 +7,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Button, ConfirmModal, ErrorState, Input, Modal, RatingInput, Select, Textarea } from '@/components/ui';
+import { Button, ConfirmModal, ErrorState, Input, Loading, Modal, RatingInput, Select, Textarea } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { reviewColumns, reviewSearchText } from '../shared/tableColumns';
 import { average, periodTrend } from '@/utils/analytics';
@@ -84,22 +84,22 @@ export default function AdminReviewsPage() {
   };
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   return (
     <>
       <PageHeader title="Reviews" intro="Moderate what travellers publish. Low ratings are worth a closer look." action={<Button onClick={() => { setFormErrors({}); setAdding(true); }}><Plus className="h-4 w-4" aria-hidden />Add review</Button>} />
 
       <StatGrid>
-        <StatCard label="Total reviews" icon={MessageSquare} loading={loading} value={all.length} />
-        <StatCard label="Average rating" icon={Star} tone="amber" loading={loading} value={all.length ? average(all.map((r) => r.rating)).toFixed(2) : '—'} hint="Across all places" />
-        <StatCard label="Low ratings (1–2★)" icon={Flag} tone="rose" loading={loading} value={all.filter(isLow).length} hint="Check for issues or abuse" />
-        <StatCard label="Last 30 days" icon={CalendarDays} tone="teal" loading={loading} value={recent.current} trend={{ value: recent.change, label: 'vs previous 30 days' }} />
+        <StatCard label="Total reviews" icon={MessageSquare} value={all.length} />
+        <StatCard label="Average rating" icon={Star} tone="amber" value={all.length ? average(all.map((r) => r.rating)).toFixed(2) : '—'} hint="Across all places" />
+        <StatCard label="Low ratings (1–2★)" icon={Flag} tone="rose" value={all.filter(isLow).length} hint="Check for issues or abuse" />
+        <StatCard label="Last 30 days" icon={CalendarDays} tone="teal" value={recent.current} trend={{ value: recent.change, label: 'vs previous 30 days' }} />
       </StatGrid>
 
       <DataTable
         className="mt-6"
         data={list}
-        loading={loading}
         columns={columns}
         getRowId={(r) => r.id}
         initialSort={{ id: 'date', desc: true }}

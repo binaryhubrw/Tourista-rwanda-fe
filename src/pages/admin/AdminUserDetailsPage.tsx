@@ -3,7 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { getBookings, getBusinessesByOwner, getUserById } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Avatar, Badge, ErrorState, LoadingSpinner } from '@/components/ui';
+import { Avatar, Badge, ErrorState, Loading } from '@/components/ui';
 import { DataTable, PageHeader, roleLabel, type Column } from '@/components/dashboard';
 import { ListingViewLink, bookingColumns, bookingSearchText } from '../shared/tableColumns';
 import type { Business } from '@/types';
@@ -32,7 +32,7 @@ export default function AdminUserDetailsPage() {
   }, [id]);
   useDocumentTitle(data ? data.user.name : 'User');
 
-  if (loading) return <LoadingSpinner label="Loading user" />;
+  if (loading) return <Loading label="Loading user" />;
   if (error || !data) return <ErrorState message={error ?? 'User was not found.'} onRetry={reload} />;
 
   const { user, bookings, businesses } = data;

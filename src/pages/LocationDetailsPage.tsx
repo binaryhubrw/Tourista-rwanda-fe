@@ -7,7 +7,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FavoriteButton, ExperienceCard, BusinessCard } from '@/components/cards';
 import { ReviewsSection } from '@/components/reviews/ReviewsSection';
 import { RwandaMap } from '@/components/map/RwandaMap';
-import { Badge, ButtonLink, Container, ErrorState, Rating, Skeleton, SmartImage, buttonClass } from '@/components/ui';
+import { Badge, ButtonLink, Container, ErrorState, Loading, Rating, SmartImage, buttonClass } from '@/components/ui';
 import { distanceKm } from '@/utils/geo';
 import { priceLabel } from '@/utils/format';
 import NotFoundPage from './NotFoundPage';
@@ -32,15 +32,7 @@ export default function LocationDetailsPage() {
       .slice(0, 4);
   }, [location, related.data]);
 
-  if (loading) {
-    return (
-      <Container className="py-8">
-        <Skeleton className="aspect-[21/9] w-full rounded-3xl" />
-        <Skeleton className="mt-6 h-10 w-1/2" />
-        <Skeleton className="mt-3 h-5 w-1/3" />
-      </Container>
-    );
-  }
+  if (loading) return <Loading label="Loading destination" />;
   if (error?.includes('not found')) return <NotFoundPage what="destination" />;
   if (error || !location) return <Container className="py-16"><ErrorState message={error ?? undefined} onRetry={reload} /></Container>;
 

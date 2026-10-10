@@ -7,7 +7,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { PageHeader } from '@/components/dashboard';
-import { ButtonLink, ErrorState, LoadingSpinner } from '@/components/ui';
+import { ButtonLink, ErrorState, Loading } from '@/components/ui';
 import { BusinessForm } from './BusinessForm';
 import { useOwnerBusinesses } from './useOwnerBusinesses';
 import type { BusinessInput } from '@/services/businessService';

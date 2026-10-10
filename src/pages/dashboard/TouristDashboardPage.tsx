@@ -6,7 +6,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { ItineraryCard } from '@/components/cards';
-import { ButtonLink, EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import { ButtonLink, EmptyState, ErrorState, Loading } from '@/components/ui';
 import {
   BarsChart, BookingStatusBadge, BOOKING_STATUSES, ChartCard, DonutChart, PageHeader, RankedList, SectionTitle, StatCard, StatGrid, bookingStatusColor,
 } from '@/components/dashboard';
@@ -24,6 +24,7 @@ export default function TouristDashboardPage() {
   }, [uid]);
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   const itineraries = data?.itineraries ?? [];
   const bookings = data?.bookings ?? [];
@@ -49,16 +50,12 @@ export default function TouristDashboardPage() {
       />
 
       <StatGrid>
-        <StatCard label="Trips planned" icon={Map} loading={loading} value={itineraries.length} hint={`${upcomingTrips.length} upcoming`} to="/dashboard/itineraries" />
-        <StatCard label="Upcoming bookings" icon={CalendarCheck} tone="teal" loading={loading} value={upcoming.length} hint={upcoming[0] ? `Next: ${formatDate(upcoming[0].date)}` : 'Nothing booked yet'} to="/dashboard/bookings" />
-        <StatCard label="Total spent" icon={Wallet} tone="violet" loading={loading} value={formatRwfShort(spent)} sparkline={monthly.map((m) => m.spend)} trend={{ value: spendTrend.change, label: 'vs previous 90 days', upIsGood: false }} />
-        <StatCard label="Reviews written" icon={MessageSquare} tone="amber" loading={loading} value={reviews.length} hint={reviews.length ? `Average ${average(reviews.map((r) => r.rating)).toFixed(1)} stars given` : 'Share your first review'} to="/dashboard/reviews" />
+        <StatCard label="Trips planned" icon={Map} value={itineraries.length} hint={`${upcomingTrips.length} upcoming`} to="/dashboard/itineraries" />
+        <StatCard label="Upcoming bookings" icon={CalendarCheck} tone="teal" value={upcoming.length} hint={upcoming[0] ? `Next: ${formatDate(upcoming[0].date)}` : 'Nothing booked yet'} to="/dashboard/bookings" />
+        <StatCard label="Total spent" icon={Wallet} tone="violet" value={formatRwfShort(spent)} sparkline={monthly.map((m) => m.spend)} trend={{ value: spendTrend.change, label: 'vs previous 90 days', upIsGood: false }} />
+        <StatCard label="Reviews written" icon={MessageSquare} tone="amber" value={reviews.length} hint={reviews.length ? `Average ${average(reviews.map((r) => r.rating)).toFixed(1)} stars given` : 'Share your first review'} to="/dashboard/reviews" />
       </StatGrid>
 
-      {loading ? (
-        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3"><Skeleton className="h-80 xl:col-span-2" /><Skeleton className="h-80" /></div>
-      ) : (
-        <>
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
             <ChartCard title="Spending by month" description="Value of your bookings over the last 12 months (excluding cancellations)" className="xl:col-span-2">
               <BarsChart data={monthly} xKey="month" series={[{ key: 'spend', label: 'Spent' }]} valueFormatter={formatRwf} axisFormatter={formatCompact} />
@@ -103,8 +100,6 @@ export default function TouristDashboardPage() {
               <div className="grid gap-4 xl:grid-cols-2">{itineraries.slice(0, 2).map((i) => <ItineraryCard key={i.id} itinerary={i} />)}</div>
             )}
           </section>
-        </>
-      )}
     </>
   );
 }

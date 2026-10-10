@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Review, ReviewTargetType } from '@/types';
-import { Button, RatingInput, Textarea, buttonClass } from '@/components/ui';
+import { Button, LoadingOverlay, RatingInput, Textarea, buttonClass } from '@/components/ui';
 import { createReview } from '@/services/reviewService';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -56,7 +56,8 @@ export function ReviewForm({ target, onCreated, onCancel }: Props) {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
+    <form onSubmit={submit} className="relative space-y-4" noValidate>
+      <LoadingOverlay show={submitting} label="Publishing review" />
       <RatingInput value={rating} onChange={setRating} error={errors.rating} />
       <Textarea
         label="Your review"

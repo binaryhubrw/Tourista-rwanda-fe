@@ -4,9 +4,8 @@ import type { Location, PaymentMethod } from '@/types';
 import { getBookings, getBusinesses, getLocations, getTourismStatistics } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Badge, ErrorState, Skeleton } from '@/components/ui';
-import { AddNewMenu, BOOKING_STATUSES, BarsChart, ChartCard, DataTable, DonutChart, FilterTabs, PageHeader, StatCard, StatGrid, TrendChart, bookingStatusColor, type Column } from '@/components/dashboard';
-import { ADMIN_ADD_NEW } from './addNewItems';
+import { Badge, ErrorState, Loading } from '@/components/ui';
+import { BOOKING_STATUSES, BarsChart, ChartCard, DataTable, DonutChart, FilterTabs, PageHeader, StatCard, StatGrid, TrendChart, bookingStatusColor, type Column } from '@/components/dashboard';
 import { average, byMonth, countBy, percentChange, sum } from '@/utils/analytics';
 import { formatCompact, formatRwfShort } from '@/utils/format';
 import { listingKindOf } from '@/utils/catalog';
@@ -53,8 +52,8 @@ export default function AdminAnalyticsPage() {
     Confirmed: (b) => +(b.status === 'Confirmed'),
     Pending: (b) => +(b.status === 'Pending'),
     Canceled: (b) => +(b.status === 'Canceled'),
-  }, months), [data, months]);
-  const paidMonths = useMemo(() => byMonth((data?.bookings ?? []).filter((b) => b.payment?.status === 'Paid'), (b) => b.createdAt, { revenue: (b) => b.totalRwf }, months), [data, months]);
+  }), [data]);
+  const paidMonths = useMemo(() => byMonth((data?.bookings ?? []).filter((b) => b.payment?.status === 'Paid'), (b) => b.createdAt, { revenue: (b) => b.totalRwf }), [data]);
   const byMethod = useMemo(() => {
     const paid = (data?.bookings ?? []).filter((b) => b.payment?.status === 'Paid');
     return (['mtn', 'airtel', 'card'] as PaymentMethod[]).map((method) => ({
@@ -64,6 +63,7 @@ export default function AdminAnalyticsPage() {
   }, [data]);
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading || !data) return <Loading />;
 
   const tot = trend.reduce((s, m) => ({ d: s.d + m.domestic, i: s.i + m.international }), { d: 0, i: 0 });
   const prevTot = previous.reduce((s, m) => s + m.domestic + m.international, 0);
@@ -77,27 +77,24 @@ export default function AdminAnalyticsPage() {
 
   return (
     <>
+      <div className="mb-3 flex flex-wrap items-center justify-start gap-2">
+        <FilterTabs label="Analytics view" value={view} onChange={setView} options={views.map((item) => ({ value: item.value, label: item.label }))} />
+        {view === 'visitors' && <FilterTabs label="Time range" value={range} onChange={setRange} options={ranges.map((r) => ({ value: r.value, label: r.label }))} />}
+      </div>
       <PageHeader
         title="Tourism analytics"
         intro="Switch between visitor demand, the business catalogue, and how bookings are paid."
-        action={<>
-          <FilterTabs label="Analytics view" value={view} onChange={setView} options={views.map((item) => ({ value: item.value, label: item.label }))} />
-          {view !== 'businesses' && <FilterTabs label="Time range" value={range} onChange={setRange} options={ranges.map((r) => ({ value: r.value, label: r.label }))} />}
-          <AddNewMenu items={ADMIN_ADD_NEW} />
-        </>}
       />
 
       {view === 'visitors' && (
         <>
           <StatGrid>
-            <StatCard label="Visitors" icon={Users} loading={loading} value={formatCompact(total)} sparkline={trend.map((m) => m.domestic + m.international)} trend={previous.length === months ? { value: percentChange(total, prevTot), label: 'vs previous period' } : undefined} hint={rangeLabel} />
-            <StatCard label="Domestic share" icon={Home} tone="teal" loading={loading} value={total ? `${Math.round((tot.d / total) * 100)}%` : '—'} hint={`${formatCompact(tot.d)} domestic visitors`} />
-            <StatCard label="International visitors" icon={Plane} tone="violet" loading={loading} value={formatCompact(tot.i)} sparkline={trend.map((m) => m.international)} hint={rangeLabel} />
-            <StatCard label="Peak month" icon={TrendingUp} tone="amber" loading={loading} value={peak.month} hint={`${formatCompact(peak.domestic + peak.international)} visitors`} />
+            <StatCard label="Visitors" icon={Users} value={formatCompact(total)} sparkline={trend.map((m) => m.domestic + m.international)} trend={previous.length === months ? { value: percentChange(total, prevTot), label: 'vs previous period' } : undefined} hint={rangeLabel} />
+            <StatCard label="Domestic share" icon={Home} tone="teal" value={total ? `${Math.round((tot.d / total) * 100)}%` : '—'} hint={`${formatCompact(tot.d)} domestic visitors`} />
+            <StatCard label="International visitors" icon={Plane} tone="violet" value={formatCompact(tot.i)} sparkline={trend.map((m) => m.international)} hint={rangeLabel} />
+            <StatCard label="Peak month" icon={TrendingUp} tone="amber" value={peak.month} hint={`${formatCompact(peak.domestic + peak.international)} visitors`} />
           </StatGrid>
-          {loading || !data ? <Skeleton className="mt-6 h-96" /> : (
-            <>
-              <div className="mt-6 grid grid-cols-1 gap-6">
+          <div className="mt-6 grid grid-cols-1 gap-6">
                 <ChartCard title="Domestic vs international visitors" description={`${total.toLocaleString()} visitors in the ${rangeLabel}`}>
                   <TrendChart data={trend} xKey="month" series={[{ key: 'international', label: 'International' }, { key: 'domestic', label: 'Domestic' }]} axisFormatter={formatCompact} height={320} />
                 </ChartCard>
@@ -110,14 +107,11 @@ export default function AdminAnalyticsPage() {
                   <DonutChart data={data.stats.userInterests.map((i) => ({ name: i.name as string, value: i.value }))} valueFormatter={(v) => `${v}%`} height={220} />
                 </ChartCard>
               </div>
-            </>
-          )}
           <DataTable
             className="mt-6"
             title="Location performance"
             description="All listed locations. Select rows to export a subset."
             data={data?.locations ?? []}
-            loading={loading}
             columns={locationColumns}
             getRowId={(l) => l.id}
             initialSort={{ id: 'visits', desc: true }}
@@ -131,13 +125,12 @@ export default function AdminAnalyticsPage() {
       {view === 'businesses' && (
         <>
           <StatGrid>
-            <StatCard label="Businesses" icon={Building2} loading={loading} value={businesses.length} hint={`${businesses.filter((b) => b.category === 'Accommodation').length} places to stay`} />
-            <StatCard label="Kinds" icon={Home} tone="teal" loading={loading} value={byKind.length} hint="Houses, hotels, restaurants and the rest" />
-            <StatCard label="Eco-certified" icon={Leaf} tone="violet" loading={loading} value={businesses.filter((b) => b.badges.includes('Eco-certified')).length} />
-            <StatCard label="Average rating" icon={TrendingUp} tone="amber" loading={loading} value={rated.length ? average(rated.map((b) => b.rating)).toFixed(2) : '—'} />
+            <StatCard label="Businesses" icon={Building2} value={businesses.length} hint={`${businesses.filter((b) => b.category === 'Accommodation').length} places to stay`} />
+            <StatCard label="Kinds" icon={Home} tone="teal" value={byKind.length} hint="Houses, hotels, restaurants and the rest" />
+            <StatCard label="Eco-certified" icon={Leaf} tone="violet" value={businesses.filter((b) => b.badges.includes('Eco-certified')).length} />
+            <StatCard label="Average rating" icon={TrendingUp} tone="amber" value={rated.length ? average(rated.map((b) => b.rating)).toFixed(2) : '—'} />
           </StatGrid>
-          {loading || !data ? <Skeleton className="mt-6 h-96" /> : (
-            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
               <ChartCard title="Businesses by kind" description="How the catalogue is split" className="xl:col-span-2">
                 <BarsChart data={byKind} xKey="name" layout="vertical" series={[{ key: 'value', label: 'Businesses' }]} height={Math.max(220, byKind.length * 36)} categoryWidth={140} />
               </ChartCard>
@@ -148,33 +141,28 @@ export default function AdminAnalyticsPage() {
                 <DonutChart data={byBadge} centerValue={String(businesses.filter((b) => b.badges.length).length)} centerLabel="badged" height={220} />
               </ChartCard>
             </div>
-          )}
         </>
       )}
 
       {view === 'bookings' && (
         <>
           <StatGrid>
-            <StatCard label="Bookings" icon={CalendarCheck} loading={loading} value={bookings.length} sparkline={bookingMonths.map((m) => m.Confirmed + m.Pending + m.Canceled)} hint={rangeLabel} />
-            <StatCard label="Paid value" icon={Wallet} tone="violet" loading={loading} value={formatRwfShort(paidTotal)} sparkline={paidMonths.map((m) => m.revenue)} hint={rangeLabel} />
-            <StatCard label="Awaiting payment" icon={CalendarCheck} tone="amber" loading={loading} value={bookings.filter((b) => b.status === 'Pending').length} />
-            <StatCard label="Canceled" icon={TrendingUp} tone="rose" loading={loading} value={bookings.length ? `${Math.round((bookings.filter((b) => b.status === 'Canceled').length / bookings.length) * 100)}%` : '—'} />
+            <StatCard label="Bookings" icon={CalendarCheck} value={bookings.length} sparkline={bookingMonths.map((m) => m.Confirmed + m.Pending + m.Canceled)} />
+            <StatCard label="Paid value" icon={Wallet} tone="violet" value={formatRwfShort(paidTotal)} sparkline={paidMonths.map((m) => m.revenue)} />
+            <StatCard label="Awaiting payment" icon={CalendarCheck} tone="amber" value={bookings.filter((b) => b.status === 'Pending').length} />
+            <StatCard label="Canceled" icon={TrendingUp} tone="rose" value={bookings.length ? `${Math.round((bookings.filter((b) => b.status === 'Canceled').length / bookings.length) * 100)}%` : '—'} />
           </StatGrid>
-          {loading || !data ? <Skeleton className="mt-6 h-96" /> : (
-            <>
-              <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
-                <ChartCard title="Bookings per month" description={`By status, ${rangeLabel}`} className="xl:col-span-2">
+          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+                <ChartCard title="Bookings per month" description="By status" className="xl:col-span-2">
                   <BarsChart data={bookingMonths} xKey="month" stacked series={BOOKING_STATUSES.map((status) => ({ key: status, label: status, color: bookingStatusColor[status] }))} height={280} />
                 </ChartCard>
                 <ChartCard title="Payments by method" description="Value of paid bookings">
                   <DonutChart data={byMethod} valueFormatter={formatRwfShort} centerValue={formatRwfShort(paidTotal).replace('RWF ', '')} centerLabel="RWF paid" height={200} />
                 </ChartCard>
               </div>
-              <ChartCard className="mt-6" title="Paid value per month" description={`Confirmed payments over the ${rangeLabel}`}>
+              <ChartCard className="mt-6" title="Paid value per month" description="Confirmed payments">
                 <TrendChart data={paidMonths} xKey="month" series={[{ key: 'revenue', label: 'Paid' }]} valueFormatter={formatRwfShort} axisFormatter={formatCompact} height={280} />
               </ChartCard>
-            </>
-          )}
         </>
       )}
     </>

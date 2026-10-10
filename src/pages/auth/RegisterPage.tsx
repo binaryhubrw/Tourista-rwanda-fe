@@ -5,7 +5,7 @@ import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, LoadingOverlay } from '@/components/ui';
 import { PayoutFields } from '@/components/business/PayoutFields';
 import { payoutErrors } from '@/utils/payment';
 import { AuthShell } from './AuthShell';
@@ -63,7 +63,8 @@ export default function RegisterPage() {
 
   return (
     <AuthShell fit title="Create your account" intro="Join as a traveller or list your tourism business.">
-      <form onSubmit={submit} className="space-y-2.5 sm:space-y-3" noValidate>
+      <form onSubmit={submit} className="relative space-y-2.5 sm:space-y-3" noValidate>
+        <LoadingOverlay show={loading} label="Creating account" />
         {errors.form && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{errors.form}</p>}
         <fieldset>
           <legend className="mb-1.5 text-sm font-semibold text-ink">I am a</legend>

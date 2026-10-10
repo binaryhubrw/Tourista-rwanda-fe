@@ -6,7 +6,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FavoriteButton } from '@/components/cards';
 import { ReviewsSection } from '@/components/reviews/ReviewsSection';
-import { Badge, Button, Container, ErrorState, LoadingSpinner, Rating, SmartImage, buttonClass } from '@/components/ui';
+import { Badge, Button, Container, ErrorState, Loading, Rating, SmartImage, buttonClass } from '@/components/ui';
 import { formatRwf, todayIso } from '@/utils/format';
 import { addDaysIso, fromPrice, isRoom } from '@/utils/pricing';
 import { remaining } from '@/utils/availability';
@@ -62,7 +62,7 @@ export default function BusinessDetailsPage() {
     }).filter((item) => item.items.length);
   }, [b, offerQuery, section]);
 
-  if (loading) return <LoadingSpinner label="Loading business" />;
+  if (loading) return <Loading label="Loading business" />;
   if (error?.includes('not found')) return <NotFoundPage what="business" />;
   if (error || !b || !data) return <Container className="py-16"><ErrorState message={error ?? undefined} onRetry={reload} /></Container>;
 

@@ -4,7 +4,7 @@ import { ChevronLeft, Phone, Mail, MapPin, BedDouble, Sparkles, UtensilsCrossed,
 import { getBookings, getBusinessById, getBusinessesByOwner, getReviews, getUserById } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Badge, ButtonLink, ErrorState, LoadingSpinner, Rating, SmartImage, spanLabel } from '@/components/ui';
+import { Badge, ButtonLink, ErrorState, Loading, Rating, SmartImage, spanLabel } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
 import { BookingViewLink, ListingViewLink, bookingColumns, bookingSearchText, reviewColumns, reviewSearchText } from '../shared/tableColumns';
 import { formatRwf } from '@/utils/format';

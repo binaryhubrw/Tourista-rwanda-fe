@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDownRight, ArrowUpRight, Minus, type LucideIcon } from 'lucide-react';
+import { Loading } from '@/components/ui/Loading';
 import { cn } from '@/utils/cn';
 
 type Tone = 'brand' | 'teal' | 'amber' | 'rose' | 'violet' | 'slate';
@@ -91,9 +92,8 @@ export function StatCard({ label, value, icon: Icon, hint, trend, tone = 'brand'
         <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-xl', t.chip)}><Icon className="h-5 w-5" aria-hidden /></span>
       </div>
       {loading ? (
-        <div className="mt-1 space-y-2" aria-label="Loading">
-          <div className="h-8 w-24 animate-pulse rounded-lg bg-slate-200/70" />
-          <div className="h-3 w-32 animate-pulse rounded bg-slate-200/70" />
+        <div className="mt-3" aria-label="Loading">
+          <Loading variant="inline" label="Loading" className="justify-start py-2" />
         </div>
       ) : (
         <>

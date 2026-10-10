@@ -8,7 +8,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Avatar, Badge, Button, ConfirmModal, ErrorState, Input, Modal, Select } from '@/components/ui';
+import { Avatar, Badge, Button, ConfirmModal, ErrorState, Input, Loading, Modal, Select } from '@/components/ui';
 import { BulkImportModal, DataTable, FilterTabs, PageHeader, StatCard, StatGrid, roleLabel, type Column, type ImportField } from '@/components/dashboard';
 import { byMonth, periodTrend } from '@/utils/analytics';
 import { formatDate } from '@/utils/format';

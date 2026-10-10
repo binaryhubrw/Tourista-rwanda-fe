@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, Lock, ShieldCheck, Smartphone, XCircle } from 'lucide-react';
+import { CheckCircle2, Lock, ShieldCheck, Smartphone, XCircle } from 'lucide-react';
 import type { Payment, PaymentMethod } from '@/types';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, Loading } from '@/components/ui';
 import { AirtelLogo, CardIcon, MastercardLogo, MtnLogo, VisaLogo } from './PaymentIcons';
 import { cn } from '@/utils/cn';
 import { formatRwf } from '@/utils/format';
@@ -132,10 +132,9 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel, pa
 
   if (phase === 'processing') {
     return (
-      <div role="status" className="flex flex-col items-center py-10 text-center">
-        <Loader2 className="h-10 w-10 animate-spin text-brand-600" aria-hidden />
-        <p className="mt-3 font-semibold text-ink">{method === 'card' ? 'Contacting your bank…' : 'Processing…'}</p>
-        <p className="text-sm text-slate-500">Don't close this page.</p>
+      <div>
+        <Loading variant="section" label={method === 'card' ? 'Contacting your bank' : 'Processing payment'} className="min-h-0 py-8" />
+        <p className="text-center text-sm text-slate-500">Don't close this page.</p>
       </div>
     );
   }

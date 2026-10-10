@@ -29,10 +29,14 @@ export default {
       keyframes: {
         'toast-in': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         'modal-in': { from: { opacity: '0', transform: 'scale(.97)' }, to: { opacity: '1', transform: 'scale(1)' } },
+        'load-spin': { to: { transform: 'rotate(360deg)' } },
+        'load-pulse': { '0%, 100%': { transform: 'scale(0.72)', opacity: '0.55' }, '50%': { transform: 'scale(1)', opacity: '1' } },
       },
       animation: {
         'toast-in': 'toast-in .2s ease-out',
         'modal-in': 'modal-in .18s ease-out',
+        'load-spin': 'load-spin .85s linear infinite',
+        'load-pulse': 'load-pulse 1.15s ease-in-out infinite',
       },
     },
   },

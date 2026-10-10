@@ -3,14 +3,16 @@
 // touching components. If any URL fails, <SmartImage> shows a branded fallback.
 const u = (id: string, w = 1200) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=75`;
 
-const file = (name: string, w = 1800) => `https://commons.wikimedia.org/wiki/Special:FilePath/${name}?width=${w}`;
+const file = (name: string, w = 1800) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}?width=${w}`;
 
 /** Landmark photos for the home hero. Each URL was checked to return an image. */
 export const heroSlides = [
-  { src: file('KIGALI_NIGHT.jpg'), alt: 'Kigali at night, with the Convention Centre dome lit above the city', place: 'Kigali Convention Centre at night', position: '68% 16%' },
+  { src: file('Kigali_Convention_center,_Rwanda.jpg'), alt: 'The lit dome of the Kigali Convention Centre at dusk', place: 'Kigali Convention Centre', position: '18% 30%' },
   { src: file('Amahoro_Stadium.jpg'), alt: 'Amahoro Stadium lit green and blue at night', place: 'Amahoro Stadium at night', position: '88% 10%' },
   { src: file('Bk_arena.jpg'), alt: 'The glass front of BK Arena in Kigali', place: 'BK Arena', position: 'center' },
   { src: file('Volcanoes_National_Park_Rwanda.jpg'), alt: 'Volcanoes rising over green farmland in Volcanoes National Park', place: 'Volcanoes National Park', position: 'center' },
+  { src: file('Gorillas-moving.jpg'), alt: 'Mountain gorillas moving through ferns in Volcanoes National Park', place: 'Mountain gorillas', position: 'center 42%' },
+  { src: file('Lake Kivu (20875703429).jpg'), alt: 'Green hills meeting the water of Lake Kivu', place: 'Lake Kivu', position: 'center' },
   { src: file('Nyungwe_Canopy_Walk.jpg'), alt: 'A canopy walkway through the forest of Nyungwe National Park', place: 'Nyungwe National Park', position: 'center' },
 ];
 

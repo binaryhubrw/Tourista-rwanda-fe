@@ -5,7 +5,8 @@ import { getBookings, getBusinesses, getLocations } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { BusinessCard } from '@/components/cards';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
-import { Button, CardSkeletonGrid, EmptyState, ErrorState, fieldClass } from '@/components/ui';
+import { Button, EmptyState, ErrorState, fieldClass } from '@/components/ui';
+import { ExploreReveal } from '@/components/ExploreReveal';
 import { buildExploreItems, featuredRank, locationHaystack, sortItems, sortOptions, termsMatch, type ExploreItem, type SortKey } from '@/utils/explore';
 import { cn } from '@/utils/cn';
 
@@ -190,8 +191,10 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
               <button type="button" onClick={() => onQuery('')} className="font-semibold text-brand-600 hover:underline">Clear search</button>
             </p>
           )}
-          <p className="mb-4 text-sm text-slate-600" aria-live="polite">{loading ? 'Loading listings…' : `${visible.length} of ${results.length} listing${results.length === 1 ? '' : 's'}`}</p>
-          {loading ? <CardSkeletonGrid count={6} className="xl:grid-cols-3 lg:grid-cols-2" /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
+          {!loading && (
+            <p className="mb-4 text-sm text-slate-600" aria-live="polite">{`${visible.length} of ${results.length} listing${results.length === 1 ? '' : 's'}`}</p>
+          )}
+          {loading ? <ExploreReveal /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
             <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setFilters({}); onQuery(''); clearPlace(); }}>Clear search and filters</Button>} />
           ) : (
             <>
@@ -199,8 +202,8 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
                 {visible.map((it) => it.type === 'business' ? <BusinessCard key={it.key} business={it.node} /> : null)}
               </div>
               {hasMore && (
-                <div ref={sentinelRef} className="mt-8 flex justify-center py-4" aria-live="polite">
-                  <p className="text-sm font-semibold text-brand-600">Loading more as you scroll…</p>
+                <div ref={sentinelRef} className="mt-8" aria-live="polite">
+                  <ExploreReveal count={3} compact />
                 </div>
               )}
             </>

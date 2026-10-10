@@ -1,15 +1,11 @@
 import type { ReactNode } from 'react';
-import { Loader2, Compass, AlertCircle, RotateCw } from 'lucide-react';
+import { Compass, AlertCircle, RotateCw } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '@/utils/cn';
+import { Loading } from './Loading';
 
 export function LoadingSpinner({ label = 'Loading', className }: { label?: string; className?: string }) {
-  return (
-    <div role="status" className={cn('flex items-center justify-center gap-3 py-16 text-brand-600', className)}>
-      <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-      <span className="text-sm font-medium">{label}…</span>
-    </div>
-  );
+  return <Loading label={label} className={className} />;
 }
 
 export function Skeleton({ className }: { className?: string }) {

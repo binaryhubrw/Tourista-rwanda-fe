@@ -5,7 +5,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FavoriteButton } from '@/components/cards';
 import { ReviewsSection } from '@/components/reviews/ReviewsSection';
-import { Badge, ButtonLink, Container, ErrorState, LoadingSpinner, Rating, SmartImage } from '@/components/ui';
+import { Badge, ButtonLink, Container, ErrorState, Loading, Rating, SmartImage } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
 import NotFoundPage from './NotFoundPage';
 
@@ -14,7 +14,7 @@ export default function ExperienceDetailsPage() {
   const { data: exp, loading, error, reload } = useAsync(() => getExperienceById(id), [id]);
   useDocumentTitle(exp?.title);
 
-  if (loading) return <LoadingSpinner label="Loading experience" />;
+  if (loading) return <Loading label="Loading experience" />;
   if (error?.includes('not found')) return <NotFoundPage what="experience" />;
   if (error || !exp) return <Container className="py-16"><ErrorState message={error ?? undefined} onRetry={reload} /></Container>;
 

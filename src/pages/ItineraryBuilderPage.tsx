@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { ItineraryTimeline, renumber } from '@/components/itinerary/ItineraryTimeline';
 import { ItineraryCard } from '@/components/cards';
-import { Button, ConfirmModal, Container, EmptyState, ErrorState, Input, LoadingSpinner, PageHeader, SmartImage, Textarea, fieldClass } from '@/components/ui';
+import { Button, ConfirmModal, Container, EmptyState, ErrorState, Input, Loading, PageHeader, SmartImage, Textarea, fieldClass } from '@/components/ui';
 import { daysBetween, formatDate } from '@/utils/format';
 import { makeId } from '@/utils/id';
 import NotFoundPage from './NotFoundPage';
@@ -154,7 +154,7 @@ export default function ItineraryBuilderPage() {
     setMode('view');
   };
 
-  if (!isNew && existing.loading) return <LoadingSpinner label="Loading itinerary" />;
+  if (!isNew && existing.loading) return <Loading label="Loading itinerary" />;
   if (!isNew && existing.error?.includes('not found')) return <NotFoundPage what="itinerary" />;
   if (!isNew && existing.error) return <Container className="py-16"><ErrorState message={existing.error} onRetry={existing.reload} /></Container>;
   if (!isNew && existing.data && user && existing.data.userId !== user.id) return <NotFoundPage what="itinerary" />;
@@ -227,7 +227,7 @@ export default function ItineraryBuilderPage() {
                 <input value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)} placeholder="Search destinations" className={`${fieldClass} h-10 rounded-full pl-9 text-sm`} />
               </label>
             </div>
-            {locations.loading ? <LoadingSpinner className="py-8" /> : locations.error ? <div className="p-4"><ErrorState message={locations.error} onRetry={locations.reload} /></div> : (
+            {locations.loading ? <Loading variant="section" label="Loading places" className="py-8" /> : locations.error ? <div className="p-4"><ErrorState message={locations.error} onRetry={locations.reload} /></div> : (
               <ul className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto">
                 {pickerResults.map((l) => {
                   const count = draft.stops.filter((s) => s.locationId === l.id).length;
@@ -255,7 +255,7 @@ export default function ItineraryBuilderPage() {
       {isNew && user && (
         <Container className="pb-16">
           <h2 className="mb-4 font-display text-2xl font-bold text-ink">My saved itineraries</h2>
-          {mine.loading ? <LoadingSpinner /> : mine.error ? <ErrorState message={mine.error} onRetry={mine.reload} /> : !mine.data?.length ? (
+          {mine.loading ? <Loading variant="section" label="Loading itineraries" /> : mine.error ? <ErrorState message={mine.error} onRetry={mine.reload} /> : !mine.data?.length ? (
             <EmptyState title="No saved itineraries yet" message="Your saved trips will appear here." />
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">{mine.data.map((it) => <ItineraryCard key={it.id} itinerary={it} onDelete={setConfirmDelete} />)}</div>

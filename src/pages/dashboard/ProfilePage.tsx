@@ -4,7 +4,7 @@ import { useToast } from '@/context/ToastContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { errorMessage, useAsync } from '@/hooks/useAsync';
 import { BadgeCheck, CalendarDays, Globe2, UserCheck } from 'lucide-react';
-import { Avatar, Button, Input } from '@/components/ui';
+import { Avatar, Button, Input, Loading, LoadingOverlay } from '@/components/ui';
 import { PageHeader, StatCard, StatGrid, ownerRoleCaption, roleLabel } from '@/components/dashboard';
 import { PayoutFields } from '@/components/business/PayoutFields';
 import { getBusinessesByOwner } from '@/services';
@@ -30,6 +30,8 @@ export default function ProfilePage() {
   const completeness = Math.round((ownerFields.filter(Boolean).length / ownerFields.length) * 100);
   const memberDays = Math.max(0, Math.floor((Date.now() - new Date(user!.joinedAt).getTime()) / 86_400_000));
   const listingCount = listings.data?.length ?? 0;
+
+  if (user!.role === 'business_owner' && listings.loading) return <Loading />;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +72,8 @@ export default function ProfilePage() {
           <Avatar name={user!.name} size={64} />
           <div><p className="font-display text-xl font-bold text-ink">{user!.name}</p><p className="text-sm text-slate-500">{caption}, member since {formatDate(user!.joinedAt, { month: 'long', year: 'numeric' })}</p></div>
         </div>
-        <form onSubmit={save} className="grid gap-4 sm:grid-cols-2" noValidate>
+        <form onSubmit={save} className="relative grid gap-4 sm:grid-cols-2" noValidate>
+          <LoadingOverlay show={saving} label="Saving profile" />
           <Input label="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={error && !form.businessName ? error : undefined} />
           <Input label="Email" type="email" value={form.email} disabled hint="Contact support to change your email." />
           {user!.role === 'business_owner' && (

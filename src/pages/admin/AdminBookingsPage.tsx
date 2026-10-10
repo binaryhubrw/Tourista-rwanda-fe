@@ -6,7 +6,7 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useToast } from '@/context/ToastContext';
-import { Button, ErrorState, Input, Modal, Select } from '@/components/ui';
+import { Button, ErrorState, Input, Loading, Modal, Select } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { BookingViewLink, bookingColumns, bookingSearchText, statusOptions, type StatusFilter } from '../shared/tableColumns';
 import { byMonth, periodTrend, sum } from '@/utils/analytics';
@@ -72,6 +72,7 @@ export default function AdminBookingsPage() {
   };
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
 
   const paid = all.filter((b) => b.payment?.status === 'Paid');
   const canceled = all.filter((b) => b.status === 'Canceled').length;
@@ -83,16 +84,15 @@ export default function AdminBookingsPage() {
       <PageHeader title="Bookings" intro="Every booking made through the platform. A booking is confirmed once it's paid." action={<Button onClick={() => { setErrors({}); setForm((f) => ({ ...f, start: '', end: '' })); setAdding(true); }} disabled={loading}><Plus className="h-4 w-4" aria-hidden />New booking</Button>} />
 
       <StatGrid>
-        <StatCard label="Total bookings" icon={CalendarCheck} loading={loading} value={all.length} sparkline={monthly.map((m) => m.Confirmed + m.Pending + m.Canceled)} />
-        <StatCard label="Payments (30 days)" icon={Wallet} tone="violet" loading={loading} value={formatRwfShort(valueTrend.current)} trend={{ value: valueTrend.change, label: 'vs previous 30 days' }} hint={`${formatRwfShort(sum(paid, (b) => b.totalRwf))} all time`} />
-        <StatCard label="Awaiting payment" icon={Clock} tone="amber" loading={loading} value={all.filter((b) => b.status === 'Pending').length} />
-        <StatCard label="Cancellation rate" icon={XCircle} tone="rose" loading={loading} value={all.length ? `${Math.round((canceled / all.length) * 100)}%` : '—'} hint={`${canceled} canceled, refunds issued`} />
+        <StatCard label="Total bookings" icon={CalendarCheck} value={all.length} sparkline={monthly.map((m) => m.Confirmed + m.Pending + m.Canceled)} />
+        <StatCard label="Payments (30 days)" icon={Wallet} tone="violet" value={formatRwfShort(valueTrend.current)} trend={{ value: valueTrend.change, label: 'vs previous 30 days' }} hint={`${formatRwfShort(sum(paid, (b) => b.totalRwf))} all time`} />
+        <StatCard label="Awaiting payment" icon={Clock} tone="amber" value={all.filter((b) => b.status === 'Pending').length} />
+        <StatCard label="Cancellation rate" icon={XCircle} tone="rose" value={all.length ? `${Math.round((canceled / all.length) * 100)}%` : '—'} hint={`${canceled} canceled, refunds issued`} />
       </StatGrid>
 
       <DataTable
         className="mt-6"
         data={list}
-        loading={loading}
         columns={columns}
         getRowId={(b) => b.id}
         initialSort={{ id: 'created', desc: true }}

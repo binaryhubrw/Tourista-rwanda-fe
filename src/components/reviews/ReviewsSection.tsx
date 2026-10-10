@@ -4,7 +4,7 @@ import type { ReviewTargetType } from '@/types';
 import { getReviews } from '@/services/reviewService';
 import { useAsync } from '@/hooks/useAsync';
 import { ReviewCard } from '@/components/cards';
-import { Button, EmptyState, ErrorState, Modal, Skeleton, StarRow } from '@/components/ui';
+import { Button, EmptyState, ErrorState, Loading, Modal, StarRow } from '@/components/ui';
 import { ReviewForm } from './ReviewForm';
 
 /** Reviews list + "Write a review" modal for any location, experience or business. */
@@ -25,7 +25,7 @@ export function ReviewsSection({ target, id = 'reviews' }: { target: { id: strin
         <Button variant="secondary" onClick={() => setOpen(true)}><PenLine className="h-4 w-4" aria-hidden />Write a review</Button>
       </div>
       {loading ? (
-        <div className="space-y-3"><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
+        <Loading variant="section" label="Loading reviews" />
       ) : error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : !reviews?.length ? (
