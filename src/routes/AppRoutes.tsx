@@ -1,12 +1,11 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { LoadingSpinner } from '@/components/ui';
 
 // Route-level code splitting keeps the first load small on mobile networks.
-const HomePage = lazy(() => import('@/pages/HomePage'));
 const ExplorePage = lazy(() => import('@/pages/ExplorePage'));
 const DestinationsPage = lazy(() => import('@/pages/DestinationsPage'));
 const LocationDetailsPage = lazy(() => import('@/pages/LocationDetailsPage'));
@@ -40,6 +39,8 @@ const SettingsPage = lazy(() => import('@/pages/dashboard/SettingsPage'));
 
 const BusinessDashboardPage = lazy(() => import('@/pages/business/BusinessDashboardPage'));
 const MyBusinessPage = lazy(() => import('@/pages/business/MyBusinessPage'));
+const ListingEditorPage = lazy(() => import('@/pages/business/ListingEditorPage'));
+const OwnerListingDetailsPage = lazy(() => import('@/pages/business/OwnerListingDetailsPage'));
 const MyServicesPage = lazy(() => import('@/pages/business/MyServicesPage'));
 const BusinessBookingsPage = lazy(() => import('@/pages/business/BusinessBookingsPage'));
 const BusinessReviewsPage = lazy(() => import('@/pages/business/BusinessReviewsPage'));
@@ -50,6 +51,7 @@ const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
 const AdminUserDetailsPage = lazy(() => import('@/pages/admin/AdminUserDetailsPage'));
 const AdminLocationsPage = lazy(() => import('@/pages/admin/AdminLocationsPage'));
 const AdminBusinessesPage = lazy(() => import('@/pages/admin/AdminBusinessesPage'));
+const AdminBusinessDetailsPage = lazy(() => import('@/pages/admin/AdminBusinessDetailsPage'));
 const AdminBookingsPage = lazy(() => import('@/pages/admin/AdminBookingsPage'));
 const AdminReviewsPage = lazy(() => import('@/pages/admin/AdminReviewsPage'));
 
@@ -58,7 +60,7 @@ export function AppRoutes() {
     <Suspense fallback={<LoadingSpinner className="min-h-[60vh]" />}>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route index element={<HomePage />} />
+          <Route index element={<Navigate to="/explore" replace />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="destinations" element={<DestinationsPage />} />
@@ -106,6 +108,9 @@ export function AppRoutes() {
           <Route path="business-dashboard" element={<DashboardLayout />}>
             <Route index element={<BusinessDashboardPage />} />
             <Route path="business" element={<MyBusinessPage />} />
+            <Route path="business/new" element={<ListingEditorPage />} />
+            <Route path="business/:id" element={<OwnerListingDetailsPage />} />
+            <Route path="business/:id/edit" element={<ListingEditorPage />} />
             <Route path="services" element={<MyServicesPage />} />
             <Route path="bookings" element={<BusinessBookingsPage />} />
             <Route path="bookings/:id" element={<BookingDetailsPage />} />
@@ -123,6 +128,7 @@ export function AppRoutes() {
             <Route path="users/:id" element={<AdminUserDetailsPage />} />
             <Route path="locations" element={<AdminLocationsPage />} />
             <Route path="businesses" element={<AdminBusinessesPage />} />
+            <Route path="businesses/:id" element={<AdminBusinessDetailsPage />} />
             <Route path="bookings" element={<AdminBookingsPage />} />
             <Route path="bookings/:id" element={<BookingDetailsPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />

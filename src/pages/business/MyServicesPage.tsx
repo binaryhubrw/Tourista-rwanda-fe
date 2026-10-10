@@ -12,7 +12,7 @@ import { makeId } from '@/utils/id';
 import { isRoom } from '@/utils/pricing';
 import { useOwnerActivity } from './useOwnerBusinesses';
 
-const units = ['per night', 'per person', 'per day', 'per item', 'per group', 'per plate', 'per bag'];
+const units = ['per night', 'per person', 'per day', 'per item', 'per group', 'per plate', 'per drink', 'per cup', 'per bag'];
 const blank = { name: '', description: '', priceRwf: '', unit: 'per night', businessId: '', capacity: '2', available: '1', bedType: '', amenities: '' };
 
 interface Row { service: Service; business: Business; bookings: number; revenue: number }
@@ -134,7 +134,7 @@ export default function MyServicesPage() {
       <>
         <PageHeader title="Rooms & services" />
         <StatGrid><StatCard label="Services" icon={Package} value={0} hint="Services belong to a business listing" /></StatGrid>
-        <div className="mt-6"><EmptyState title="Add your business first" message="Services belong to a business listing." action={<ButtonLink to="/business-dashboard/business?new=1">Add your business</ButtonLink>} /></div>
+        <div className="mt-6"><EmptyState title="Add a listing first" message="Rooms and services belong to a listing." action={<ButtonLink to="/business-dashboard/business/new">Add listing</ButtonLink>} /></div>
       </>
     );
   }

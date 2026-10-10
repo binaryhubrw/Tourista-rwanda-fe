@@ -29,7 +29,7 @@ export default function BusinessDashboardPage() {
           <StatCard label="Rating" icon={Star} tone="amber" value="New" />
         </StatGrid>
         <div className="mt-6">
-          <EmptyState icon={<Store className="h-7 w-7" />} title="You haven't listed a business yet" message="Add your guiding service, restaurant, workshop, stay or product. It takes about five minutes." action={<ButtonLink to="/business-dashboard/business?new=1"><Plus className="h-4 w-4" aria-hidden />Add your business</ButtonLink>} />
+          <EmptyState icon={<Store className="h-7 w-7" />} title="You haven't listed anything yet" message="Add a stay, restaurant, guide, workshop or product. The form asks only for what that kind of listing needs." action={<ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add listing</ButtonLink>} />
         </div>
       </>
     );
@@ -118,7 +118,7 @@ export default function BusinessDashboardPage() {
                 <p className="text-sm text-slate-500">{main.district}</p>
                 <Rating value={main.rating} count={main.reviewCount} className="mt-1 text-sm" />
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <ButtonLink to={`/business-dashboard/business?edit=${main.id}`} size="sm">Edit listing</ButtonLink>
+                  <ButtonLink to={`/business-dashboard/business/${main.id}/edit`} size="sm">Edit listing</ButtonLink>
                   <ButtonLink to={`/businesses/${main.id}`} size="sm" variant="secondary">View public page</ButtonLink>
                 </div>
               </div>

@@ -16,9 +16,10 @@ import { images } from '@/data/images';
 import { average } from '@/utils/analytics';
 import { formatRwf } from '@/utils/format';
 import { fromPrice } from '@/utils/pricing';
+import { ListingViewLink } from '../shared/tableColumns';
 
 const columns: Column<Business>[] = [
-  { id: 'name', header: 'Business', sortValue: (b) => b.name, cell: (b) => <Link to={`/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-600 hover:underline">{b.name}</Link> },
+  { id: 'name', header: 'Business', sortValue: (b) => b.name, cell: (b) => <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-600 hover:underline">{b.name}</Link> },
   { id: 'owner', header: 'Owner', sortValue: (b) => b.ownerName, cell: (b) => b.ownerName },
   { id: 'category', header: 'Kind', sortValue: (b) => b.listingKind ?? b.propertyType ?? b.category, cell: (b) => <span className="whitespace-nowrap">{b.listingKind ?? b.propertyType ?? b.category}</span> },
   { id: 'district', header: 'District', sortValue: (b) => b.district, cell: (b) => b.district },
@@ -172,6 +173,7 @@ export default function AdminBusinessesPage() {
         }
         exportFileName="businesses"
         emptyTitle="No businesses"
+        rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />}
       />
 
       <Modal open={adding && !!data} onClose={() => setAdding(false)} title="Add a business" size="lg">

@@ -20,6 +20,14 @@ export function BookingViewLink({ to }: { to: string }) {
   );
 }
 
+export function ListingViewLink({ to, name }: { to: string; name: string }) {
+  return (
+    <Link to={to} aria-label={`View ${name}`} title="View listing" className="inline-grid h-9 w-9 place-items-center rounded-full text-brand-600 hover:bg-brand-50">
+      <Eye className="h-4 w-4" aria-hidden />
+    </Link>
+  );
+}
+
 type BookingColumnId = 'guest' | 'target' | 'service' | 'date' | 'units' | 'people' | 'total' | 'status' | 'payment' | 'created';
 
 /** Booking columns shared by the traveller, business and admin tables; pick the ones each view needs. */

@@ -38,7 +38,7 @@ export default function RegisterPage() {
     try {
       const user = await register({ name: form.name, email: form.email, password: form.password, role });
       toast.success('Account created. Welcome to Tourista Rwanda.');
-      navigate(role === 'business_owner' ? '/business-dashboard/business' : dashboardPathFor(user.role), { replace: true });
+      navigate(role === 'business_owner' ? '/business-dashboard/business/new' : dashboardPathFor(user.role), { replace: true });
     } catch (err) {
       setErrors({ form: errorMessage(err) });
     } finally {
@@ -52,27 +52,27 @@ export default function RegisterPage() {
   ];
 
   return (
-    <AuthShell title="Create your account" intro="Join as a traveller or list your tourism business.">
-      <form onSubmit={submit} className="space-y-4" noValidate>
+    <AuthShell fit title="Create your account" intro="Join as a traveller or list your tourism business.">
+      <form onSubmit={submit} className="space-y-2.5 sm:space-y-3" noValidate>
         {errors.form && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{errors.form}</p>}
         <fieldset>
           <legend className="mb-1.5 text-sm font-semibold text-ink">I am a</legend>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {roles.map(({ value, icon: Icon, title, text }) => (
-              <label key={value} className={cn('cursor-pointer rounded-2xl border p-3.5 transition-colors', role === value ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600' : 'border-slate-300 hover:border-brand-300')}>
+              <label key={value} className={cn('cursor-pointer rounded-2xl border p-2.5 transition-colors sm:p-3.5', role === value ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600' : 'border-slate-300 hover:border-brand-300')}>
                 <input type="radio" name="role" value={value} checked={role === value} onChange={() => setRole(value)} className="sr-only" />
                 <Icon className="h-5 w-5 text-brand-600" aria-hidden />
-                <span className="mt-2 block font-semibold text-ink">{title}</span>
-                <span className="block text-xs text-slate-600">{text}</span>
+                <span className="mt-1 block font-semibold text-ink sm:mt-2">{title}</span>
+                <span className="hidden text-xs text-slate-600 sm:block">{text}</span>
               </label>
             ))}
           </div>
         </fieldset>
         <Input label="Full name" required autoComplete="name" value={form.name} onChange={set('name')} error={errors.name} />
         <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={set('email')} error={errors.email} />
-        <Input label="Password" type="password" required autoComplete="new-password" value={form.password} onChange={set('password')} error={errors.password} hint="At least 8 characters" />
+        <Input label="Password" type="password" required autoComplete="new-password" value={form.password} onChange={set('password')} error={errors.password} />
         <Input label="Confirm password" type="password" required autoComplete="new-password" value={form.confirm} onChange={set('confirm')} error={errors.confirm} />
-        <Button type="submit" size="lg" loading={loading} className="w-full">Create account</Button>
+        <Button type="submit" loading={loading} className="w-full">Create account</Button>
         <p className="text-center text-sm text-slate-600">Already have an account? <Link to="/login" className="font-semibold text-brand-600 hover:underline">Log in</Link></p>
       </form>
     </AuthShell>

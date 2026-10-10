@@ -27,7 +27,7 @@ export default function SearchPage() {
       </div>
 
       <h1 className="mt-8 font-display text-2xl font-bold text-ink" aria-live="polite">
-        {!q ? 'Search Tourista Rwanda' : loading ? `Searching for “${q}”…` : `${data?.length ?? 0} result${data?.length === 1 ? '' : 's'} for “${q}”`}
+        {!q ? 'Search Tourista Rwanda' : loading ? `Searching for “${q}”…` : `${data?.length ?? 0} match${data?.length === 1 ? '' : 'es'} for “${q}”`}
       </h1>
 
       <div className="mt-6">
@@ -36,9 +36,9 @@ export default function SearchPage() {
         ) : error ? <ErrorState message={error} onRetry={reload} /> : !q ? (
           <EmptyState title="What are you looking for?" message="Search for a place, activity, hotel, restaurant, guide or local business." />
         ) : !data?.length ? (
-          <EmptyState icon={<SearchX className="h-7 w-7" />} title={`No results for “${q}”`} message="Check the spelling, try a broader word like “lake” or “coffee”, or search everything instead of one category." action={<ButtonLink to="/explore" variant="secondary">Browse everything</ButtonLink>} />
+            <EmptyState icon={<SearchX className="h-7 w-7" />} title={`No listings match “${q}”`} message="Try a service name such as massage, a kind such as hotel, or a place such as Musanze. Search shows the businesses that offer what you typed, not the service on its own." action={<ButtonLink to="/explore" variant="secondary">Browse everything</ButtonLink>} />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">{data.map((r) => <SearchResultCard key={`${r.type}-${r.id}`} result={r} />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2">{data.map((r) => <SearchResultCard key={`${r.type}-${r.id}`} result={r} />)}</div>
         )}
       </div>
     </Container>

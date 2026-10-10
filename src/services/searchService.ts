@@ -11,7 +11,7 @@ export type SearchScope = 'all' | 'destinations' | 'experiences' | 'accommodatio
 const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 /** Builds the full search index from every collection. */
-function buildIndex(): (SearchResult & { haystack: string; scope: SearchScope })[] {
+function buildIndex(): (SearchResult & { haystack: string; scope: SearchScope; matchedServices?: string[] })[] {
   const locations = read('locations').map((l) => ({
     id: l.id, type: 'location' as const, title: l.name, subtitle: `${l.district}, ${l.province}`, image: l.image,
     href: `/destinations/${l.id}`, rating: l.rating, category: l.category, scope: 'destinations' as SearchScope,
@@ -23,25 +23,19 @@ function buildIndex(): (SearchResult & { haystack: string; scope: SearchScope })
     haystack: normalize([e.title, e.type, e.locationName, e.description, e.hostName, ...e.interests].join(' ')),
   }));
   const bookings = read('bookings');
-  const businesses = read('businesses').filter((b) => hasAvailability(b, bookings)).flatMap((b) => {
+  const businesses = read('businesses').filter((b) => hasAvailability(b, bookings)).map((b) => {
     const kind = listingKindOf(b);
     const open = availableServices(b.services, bookings);
-    const listing = {
+    const matched = open.map((service) => service.category ?? service.name).filter(Boolean);
+    return {
       id: b.id, type: 'business' as const, title: b.name, subtitle: `${kind} in ${b.district}`, image: b.image,
       href: `/businesses/${b.id}`, rating: b.rating, category: kind,
       description: b.description,
       priceLabel: open[0] ? `From ${formatRwf(Math.min(...open.map((service) => service.priceRwf)))}` : undefined,
       scope: (b.category === 'Accommodation' ? 'accommodations' : b.category === 'Restaurants' ? 'restaurants' : 'businesses') as SearchScope,
       haystack: normalize([b.name, kind, b.category, b.district, b.description, b.ownerName, ...b.badges, ...open.map((service) => `${service.name} ${service.category ?? ''} ${service.description}`)].join(' ')),
+      matchedServices: matched,
     };
-    const services = open.map((service) => ({
-      id: service.id, type: 'business' as const, title: service.name, subtitle: `${b.name} · ${b.district}`, image: b.image,
-      href: `/businesses/${b.id}#offer-${service.id}`, rating: b.rating, category: service.category ?? kind,
-      description: service.description, priceLabel: `${formatRwf(service.priceRwf)} ${service.unit}`,
-      scope: listing.scope,
-      haystack: normalize([service.name, service.category ?? '', service.description, b.name, kind, b.district].join(' ')),
-    }));
-    return [listing, ...services];
   });
   return [...locations, ...experiences, ...businesses];
 }
@@ -54,13 +48,18 @@ export function searchSync(query: string, scope: SearchScope = 'all', limit = 50
     .map((r) => {
       const title = normalize(r.title);
       const hits = terms.filter((t) => r.haystack.includes(t)).length;
-      const score = hits === terms.length ? hits * 2 + (title.startsWith(terms[0]) ? 3 : title.includes(terms[0]) ? 2 : 0) + r.rating / 5 : 0;
-      return { r, score };
+      const serviceHit = (r.matchedServices ?? []).some((name) => terms.some((t) => normalize(name).includes(t)));
+      const score = hits === terms.length ? hits * 2 + (title.startsWith(terms[0]) ? 3 : title.includes(terms[0]) ? 2 : 0) + (serviceHit ? 2 : 0) + r.rating / 5 : 0;
+      return { r, score, serviceHit };
     })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(({ r: { haystack: _h, scope: _s, ...rest } }) => rest);
+    .map(({ r, serviceHit }) => {
+      const { haystack: _h, scope: _s, matchedServices, ...rest } = r;
+      const match = (matchedServices ?? []).find((name) => terms.some((t) => normalize(name).includes(t)));
+      return { ...rest, description: serviceHit && match ? `Offers ${match}. ${rest.description}` : rest.description };
+    });
 }
 
 export async function search(query: string, scope: SearchScope = 'all'): Promise<SearchResult[]> {

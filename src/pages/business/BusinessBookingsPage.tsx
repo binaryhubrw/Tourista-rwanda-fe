@@ -56,7 +56,7 @@ export default function BusinessBookingsPage() {
       <>
         <PageHeader title="Bookings" />
         <StatGrid><StatCard label="Bookings" icon={CalendarCheck} value={0} hint="Add a listing to start receiving bookings" /></StatGrid>
-        <div className="mt-6"><ButtonLink to="/business-dashboard/business?new=1">Add your business</ButtonLink></div>
+        <div className="mt-6"><ButtonLink to="/business-dashboard/business/new">Add listing</ButtonLink></div>
       </>
     );
   }

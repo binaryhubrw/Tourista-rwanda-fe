@@ -16,11 +16,11 @@ export function AuthShell({ title, intro, children, fit = false }: { title: stri
           <p className="mt-6 max-w-md font-display text-3xl font-bold leading-tight">Every visit can support a guide, a weaver, a farmer or a ranger.</p>
         </div>
       </div>
-      <div className={cn('flex items-center justify-center px-4 sm:px-8', fit ? 'h-full overflow-hidden py-4' : 'py-10')}>
+      <div className={cn('flex items-center justify-center px-4 sm:px-8', fit ? 'h-full overflow-hidden py-2 sm:py-4' : 'py-10')}>
         <div className="w-full max-w-md">
-          <h1 className={cn('font-display font-bold text-ink', fit ? 'text-2xl' : 'text-3xl')}>{title}</h1>
-          <p className={cn('text-slate-600', fit ? 'mt-1 text-sm' : 'mt-2')}>{intro}</p>
-          <div className={fit ? 'mt-4' : 'mt-8'}>{children}</div>
+          <h1 className={cn('font-display font-bold text-ink', fit ? 'text-xl sm:text-2xl' : 'text-3xl')}>{title}</h1>
+          <p className={cn('text-slate-600', fit ? 'mt-0.5 text-sm sm:mt-1' : 'mt-2')}>{intro}</p>
+          <div className={fit ? 'mt-3 sm:mt-4' : 'mt-8'}>{children}</div>
         </div>
       </div>
     </div>

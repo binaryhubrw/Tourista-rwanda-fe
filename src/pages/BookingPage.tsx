@@ -7,11 +7,11 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ButtonLink, Container, ErrorState, Input, LoadingSpinner, SmartImage, Textarea } from '@/components/ui';
+import { Badge, Button, ButtonLink, Container, DatePicker, ErrorState, Input, LoadingSpinner, SmartImage, Textarea } from '@/components/ui';
 import { PaymentForm } from '@/components/payment/PaymentForm';
 import { formatDate, formatRwf, todayIso } from '@/utils/format';
 import { addDaysIso, guidedVisitPrice, periodNoun, pricingMode, quote } from '@/utils/pricing';
-import { remaining } from '@/utils/availability';
+import { isNightTakenFor, isStayRangeTaken, remaining } from '@/utils/availability';
 import { paymentMethodLabel } from '@/utils/payment';
 import { cn } from '@/utils/cn';
 import NotFoundPage from './NotFoundPage';
@@ -109,6 +109,26 @@ export default function BookingPage() {
   const needsRange = needsStay || modes.includes('rental');
   const needsPeople = modes.some((mode) => mode === 'perPerson' || mode === 'stay');
   const span = item ? windowFor(services, start, end) : null;
+  const demand = services.map((service) => ({
+    service,
+    units: pricingMode(service.unit) === 'perPerson' ? 1 : (counts[service.id] ?? 1),
+  }));
+
+  useEffect(() => {
+    if (!data || !start) return;
+    const next = services.map((service) => ({
+      service,
+      units: pricingMode(service.unit) === 'perPerson' ? 1 : (counts[service.id] ?? 1),
+    }));
+    if (!needsRange) {
+      if (isNightTakenFor(next, data.bookings, start)) setStart('');
+      return;
+    }
+    if (end && isStayRangeTaken(next, data.bookings, start, needsStay ? end : addDaysIso(end, 1))) {
+      setStart('');
+      setEnd('');
+    }
+  }, [counts, data, end, needsRange, needsStay, selected, start]);
 
   const lines = useMemo(() => {
     if (!item || !span) return [];
@@ -273,17 +293,32 @@ export default function BookingPage() {
               {errors.services && <p className="text-sm text-red-600">{errors.services}</p>}
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input
+                <DatePicker
                   label={needsRange ? (needsStay ? 'Check-in' : 'From') : 'Date'}
-                  type="date" required min={todayIso()} value={start}
-                  onChange={(e) => {
-                    setStart(e.target.value);
-                    if (needsStay && e.target.value && (!end || end <= e.target.value)) setEnd(addDaysIso(e.target.value, 1));
+                  required min={todayIso()} value={start}
+                  isDisabled={(iso) => isNightTakenFor(demand, data.bookings, iso)}
+                  onChange={(iso) => {
+                    setStart(iso);
+                    if (needsStay && iso && (!end || end <= iso)) setEnd(addDaysIso(iso, 1));
                   }}
                   error={errors.start}
+                  hint="Booked dates cannot be chosen."
                 />
                 {needsRange && (
-                  <Input label={needsStay ? 'Check-out' : 'To'} type="date" required min={start ? (needsStay ? addDaysIso(start, 1) : start) : todayIso()} value={end} onChange={(e) => setEnd(e.target.value)} error={errors.end} />
+                  <DatePicker
+                    label={needsStay ? 'Check-out' : 'To'}
+                    required
+                    min={start ? (needsStay ? addDaysIso(start, 1) : start) : todayIso()}
+                    value={end}
+                    isDisabled={(iso) => {
+                      if (!start) return false;
+                      if (needsStay) return iso <= start || isStayRangeTaken(demand, data.bookings, start, iso);
+                      return iso < start || isStayRangeTaken(demand, data.bookings, start, addDaysIso(iso, 1));
+                    }}
+                    onChange={setEnd}
+                    error={errors.end}
+                    hint="Booked dates cannot be chosen."
+                  />
                 )}
               </div>
               {errors.dates && <p className="text-sm text-red-600">{errors.dates}</p>}

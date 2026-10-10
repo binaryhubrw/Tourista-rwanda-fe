@@ -1,105 +1,80 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, Store, Package, Star, Leaf } from 'lucide-react';
-import type { Business } from '@/types';
-import { createBusiness, getLocations, updateBusiness } from '@/services';
-import { useAsync, errorMessage } from '@/hooks/useAsync';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Store, Package, Star, Leaf, BedDouble, UtensilsCrossed, Sparkles, CalendarCheck } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/context/ToastContext';
-import { PageHeader, StatCard, StatGrid } from '@/components/dashboard';
-import { Badge, Button, EmptyState, ErrorState, LoadingSpinner, Rating, SmartImage } from '@/components/ui';
-import { BusinessForm } from './BusinessForm';
+import { DataTable, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
+import { Badge, ButtonLink, EmptyState, ErrorState, LoadingSpinner } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
 import { fromPrice, isRoom } from '@/utils/pricing';
-import { useOwnerBusinesses } from './useOwnerBusinesses';
-import type { BusinessInput } from '@/services/businessService';
+import { listingKindOf } from '@/utils/catalog';
+import { ListingViewLink } from '../shared/tableColumns';
+import { useOwnerActivity } from './useOwnerBusinesses';
+import type { Booking, Business } from '@/types';
+
+const countFor = (bookings: Booking[], id: string) => bookings.filter((item) => item.businessId === id || item.targetId === id).length;
+
+const columns = (bookings: Booking[]): Column<Business>[] => [
+  { id: 'name', header: 'Listing', sortValue: (b) => b.name, cell: (b) => (
+    <div className="min-w-0">
+      <Link to={`/business-dashboard/business/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link>
+      <p className="text-xs text-slate-500">{b.district}</p>
+    </div>
+  ) },
+  { id: 'kind', header: 'Kind', sortValue: (b) => listingKindOf(b), cell: (b) => <Badge tone="solid">{listingKindOf(b)}</Badge> },
+  { id: 'rooms', header: 'Rooms', align: 'right', sortValue: (b) => b.services.filter(isRoom).reduce((n, r) => n + (r.available ?? 1), 0), cell: (b) => <span className="tabular-nums">{b.services.filter(isRoom).reduce((n, r) => n + (r.available ?? 1), 0)}</span> },
+  { id: 'wellness', header: 'Services', align: 'right', sortValue: (b) => b.services.filter((s) => s.group === 'wellness').length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => s.group === 'wellness').length}</span> },
+  { id: 'food', header: 'Food', align: 'right', sortValue: (b) => b.services.filter((s) => s.group === 'food').length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => s.group === 'food').length}</span> },
+  { id: 'bookings', header: 'Bookings', align: 'right', sortValue: (b) => countFor(bookings, b.id), cell: (b) => <span className="tabular-nums">{countFor(bookings, b.id)}</span> },
+  { id: 'from', header: 'From', align: 'right', sortValue: (b) => fromPrice(b)?.priceRwf ?? 0, cell: (b) => { const p = fromPrice(b); return p ? <span className="whitespace-nowrap tabular-nums">{formatRwf(p.priceRwf)}</span> : '—'; } },
+  { id: 'rating', header: 'Rating', align: 'right', sortValue: (b) => b.rating, cell: (b) => <span className="tabular-nums">{b.rating ? b.rating.toFixed(1) : 'New'}</span> },
+];
 
 export default function MyBusinessPage() {
-  useDocumentTitle('My business');
-  const { user } = useAuth();
-  const toast = useToast();
-  const [params, setParams] = useSearchParams();
-  const biz = useOwnerBusinesses();
-  const locations = useAsync(getLocations);
-  const [editing, setEditing] = useState<Business | 'new' | null>(null);
-  const [saving, setSaving] = useState(false);
+  useDocumentTitle('Listings');
+  const { data, loading, error, reload } = useOwnerActivity();
 
-  useEffect(() => {
-    if (params.get('new')) setEditing('new');
-    const editId = params.get('edit');
-    if (editId && biz.data) setEditing(biz.data.find((b) => b.id === editId) ?? null);
-  }, [params, biz.data]);
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
 
-  const close = () => { setEditing(null); setParams({}, { replace: true }); };
-
-  const submit = async (input: BusinessInput) => {
-    setSaving(true);
-    try {
-      if (editing === 'new') {
-        const created = await createBusiness(input);
-        biz.setData((l) => [created, ...(l ?? [])]);
-        toast.success(`${created.name} is now listed. Add your services next.`);
-      } else if (editing) {
-        const updated = await updateBusiness(editing.id, input);
-        biz.setData((l) => l?.map((b) => (b.id === updated.id ? updated : b)));
-        toast.success('Listing updated.');
-      }
-      close();
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (biz.loading || locations.loading) return <LoadingSpinner />;
-  if (biz.error || locations.error) return <ErrorState message={biz.error ?? locations.error ?? undefined} onRetry={() => { biz.reload(); locations.reload(); }} />;
-
-  const list = biz.data ?? [];
+  const list = data?.businesses ?? [];
+  const bookings = data?.bookings ?? [];
   const rated = list.filter((b) => b.rating > 0);
-
-  if (editing) {
-    return (
-      <>
-        <PageHeader title={editing === 'new' ? 'Add your business' : `Edit ${editing.name}`} intro="This is what travellers see on your public listing." />
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7">
-          <BusinessForm initial={editing === 'new' ? undefined : editing} locations={locations.data!} ownerId={user!.id} ownerName={user!.name} submitting={saving} onSubmit={submit} onCancel={close} />
-        </div>
-      </>
-    );
-  }
+  const rooms = list.reduce((n, b) => n + b.services.filter(isRoom).reduce((s, r) => s + (r.available ?? 1), 0), 0);
+  const wellness = list.reduce((n, b) => n + b.services.filter((s) => s.group === 'wellness').length, 0);
+  const food = list.reduce((n, b) => n + b.services.filter((s) => s.group === 'food').length, 0);
 
   return (
     <>
-      <PageHeader title="Listings" intro="Your public listings on Tourista Rwanda." action={<Button onClick={() => setEditing('new')}><Plus className="h-4 w-4" aria-hidden />Add business</Button>} />
-      <StatGrid className="mb-6">
-        <StatCard label="Listings" icon={Store} value={list.length} hint={list.map((b) => b.category).filter((c, i, a) => a.indexOf(c) === i).join(', ') || 'No listings yet'} />
-        <StatCard label="Services offered" icon={Package} tone="teal" value={list.reduce((s, b) => s + b.services.length, 0)} to="/business-dashboard/services" />
-        <StatCard label="Average rating" icon={Star} tone="amber" value={rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1) : 'New'} hint={`${list.reduce((s, b) => s + b.reviewCount, 0)} reviews in total`} to="/business-dashboard/reviews" />
-        <StatCard label="Sustainability badges" icon={Leaf} tone="violet" value={new Set(list.flatMap((b) => b.badges)).size} hint="Verified by Tourista admins" />
+      <PageHeader title="Listings" intro="Every listing you have on Tourista Rwanda, with a count of rooms, services and food." action={<ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add listing</ButtonLink>} />
+      <StatGrid className="mb-6 grid-cols-2">
+        <StatCard label="Listings" icon={Store} value={list.length} hint={list.map((b) => listingKindOf(b)).filter((c, i, a) => a.indexOf(c) === i).join(', ') || 'No listings yet'} />
+        <StatCard label="Rooms" icon={BedDouble} tone="teal" value={rooms} />
+        <StatCard label="Wellness services" icon={Sparkles} tone="violet" value={wellness} />
+        <StatCard label="Food & drink" icon={UtensilsCrossed} tone="amber" value={food} />
       </StatGrid>
-      {!biz.data?.length ? (
-        <EmptyState title="No listings yet" message="Add your first business to start receiving bookings." action={<Button onClick={() => setEditing('new')}>Add your business</Button>} />
+      <StatGrid className="mb-6 grid-cols-2">
+        <StatCard label="Bookings" icon={CalendarCheck} tone="teal" value={bookings.length} hint="Across all listings" to="/business-dashboard/bookings" />
+        <StatCard label="All offerings" icon={Package} value={list.reduce((s, b) => s + b.services.length, 0)} to="/business-dashboard/services" />
+        <StatCard label="Average rating" icon={Star} tone="amber" value={rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1) : 'New'} hint={`${list.reduce((s, b) => s + b.reviewCount, 0)} reviews`} to="/business-dashboard/reviews" />
+        <StatCard label="Sustainability badges" icon={Leaf} tone="violet" value={new Set(list.flatMap((b) => b.badges)).size} />
+      </StatGrid>
+      {!list.length ? (
+        <EmptyState title="No listings yet" message="Add your first listing so travellers can find and book you." action={<ButtonLink to="/business-dashboard/business/new">Add listing</ButtonLink>} />
       ) : (
-        <ul className="space-y-4">
-          {biz.data.map((b) => (
-            <li key={b.id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white sm:flex-row">
-              <SmartImage src={b.image} alt={b.name} className="aspect-[16/9] w-full sm:aspect-auto sm:w-48" />
-              <div className="flex-1 p-5">
-                <div className="flex flex-wrap gap-2"><Badge tone="solid">{b.propertyType ?? b.category}</Badge>{b.badges.map((x) => <Badge key={x}>{x}</Badge>)}</div>
-                <h2 className="mt-2 font-display text-xl font-bold text-ink">{b.name}</h2>
-                <p className="text-sm text-slate-500">{b.district} · {b.services.filter(isRoom).length ? `${b.services.filter(isRoom).reduce((n, r) => n + (r.available ?? 1), 0)} rooms` : `${b.services.length} service${b.services.length === 1 ? '' : 's'}`}{fromPrice(b) && <> · from <span className="font-semibold text-ink">{formatRwf(fromPrice(b)!.priceRwf)}</span> {fromPrice(b)!.unit}</>}</p>
-                <Rating value={b.rating} count={b.reviewCount} className="mt-1 text-sm" />
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => setEditing(b)}><Pencil className="h-4 w-4" aria-hidden />Edit listing</Button>
-                  <Link to="/business-dashboard/services" className="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold text-brand-600 hover:bg-brand-50">Rooms & prices</Link>
-                  <Link to={`/businesses/${b.id}`} className="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold text-brand-600 hover:bg-brand-50">View public page</Link>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <DataTable
+          data={list}
+          columns={columns(bookings)}
+          getRowId={(b) => b.id}
+          initialSort={{ id: 'name', desc: false }}
+          searchText={(b) => `${b.name} ${listingKindOf(b)} ${b.district}`}
+          searchPlaceholder="Search listings"
+          exportFileName="my-listings"
+          rowActions={(b) => (
+            <div className="flex items-center justify-end gap-1">
+              <ListingViewLink to={`/business-dashboard/business/${b.id}`} name={b.name} />
+              <ButtonLink to={`/business-dashboard/business/${b.id}/edit`} size="sm" variant="secondary"><Pencil className="h-4 w-4" aria-hidden />Edit</ButtonLink>
+            </div>
+          )}
+        />
       )}
     </>
   );

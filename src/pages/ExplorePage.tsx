@@ -1,15 +1,18 @@
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Container, PageHeader } from '@/components/ui';
+import { Container } from '@/components/ui';
+import { HomeHero } from '@/components/layout/HomeHero';
 import { ExploreBrowser } from '@/components/ExploreBrowser';
 
 export default function ExplorePage() {
-  useDocumentTitle('Explore Rwanda');
+  useDocumentTitle();
   return (
     <>
-      <PageHeader title="Explore Rwanda" intro="Places, activities, stays, restaurants, guides and local makers, all in one search." />
-      <Container className="py-8 lg:py-10">
-        <ExploreBrowser />
-      </Container>
+      <HomeHero />
+      <div id="explore-listings">
+        <Container className="py-12 sm:py-16">
+          <ExploreBrowser showSearch={false} featuredFirst />
+        </Container>
+      </div>
     </>
   );
 }

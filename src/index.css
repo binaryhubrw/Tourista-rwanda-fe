@@ -30,3 +30,42 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Hero motion in the spirit of trac.africa: line wipe, rise-in copy, Ken Burns photos. */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(1.75rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hero-wipe {
+  from { mask-position: 100% 100%; -webkit-mask-position: 100% 100%; }
+  to { mask-position: 0% 100%; -webkit-mask-position: 0% 100%; }
+}
+@keyframes hero-kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+@keyframes hero-scroll {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(0.4rem); }
+}
+
+.hero-wipe {
+  -webkit-mask-image: linear-gradient(150deg, #000 0%, #000 48%, transparent 88%, transparent 100%);
+  mask-image: linear-gradient(150deg, #000 0%, #000 48%, transparent 88%, transparent 100%);
+  -webkit-mask-size: 1000% 100%;
+  mask-size: 1000% 100%;
+  -webkit-mask-position: 100% 100%;
+  mask-position: 100% 100%;
+}
+.hero-ready .hero-wipe {
+  animation: hero-wipe 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.hero-ready .hero-rise {
+  animation: hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero-ready .hero-kenburns {
+  animation: hero-kenburns 8s ease-out forwards;
+}
+.hero-scroll-cue {
+  animation: hero-scroll 1.8s ease-in-out infinite;
+}

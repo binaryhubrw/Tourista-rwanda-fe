@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { getBookings, getBusinesses, getExperiences, getLocations } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { BusinessCard, DestinationCard, ExperienceCard, ServiceCard } from '@/components/cards';
-import { Pagination } from '@/components/dashboard';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
 import { Button, CardSkeletonGrid, EmptyState, ErrorState, fieldClass } from '@/components/ui';
 import { buildExploreItems, featuredRank, sortItems, sortOptions, type ExploreItem, type SortKey } from '@/utils/explore';
@@ -61,8 +60,9 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   });
   const [sort, setSort] = useState<SortKey>('recommended');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 9;
+  const [visibleCount, setVisibleCount] = useState(6);
+  const pageSize = 6;
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, loading, error, reload } = useAsync(async () => {
     const [l, e, b, bookings] = await Promise.all([getLocations(), getExperiences(), getBusinesses(), getBookings()]);
@@ -74,13 +74,25 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
     if (!featuredFirst || sort !== 'recommended') return sorted;
     return [...sorted].sort((a, b) => featuredRank(a) - featuredRank(b));
   }, [data, query, filters, sort, featuredFirst]);
-  const pageCount = Math.max(1, Math.ceil(results.length / pageSize));
-  const safePage = Math.min(page, pageCount);
-  const visible = results.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visible = results.slice(0, visibleCount);
+  const hasMore = visibleCount < results.length;
   const activeCount = Object.values(filters).reduce((s, v) => s + v.length, 0);
 
+  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize]);
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) setVisibleCount((count) => count + pageSize);
+    }, { rootMargin: '120px 0px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, visible.length, pageSize]);
+
   const onQuery = (v: string) => {
-    setPage(1);
+    setVisibleCount(pageSize);
     setQuery(v);
     const next = new URLSearchParams(params);
     if (v) next.set('q', v); else next.delete('q');
@@ -101,7 +113,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
           <FilterButton count={activeCount} onClick={() => setSheetOpen(true)} />
           <label className={cn(showSearch && 'flex-1 sm:flex-none')}>
             <span className="sr-only">Sort by</span>
-            <select value={sort} onChange={(e) => { setPage(1); setSort(e.target.value as SortKey); }} className={`${fieldClass} h-11 rounded-full font-semibold sm:w-48`}>
+            <select value={sort} onChange={(e) => { setVisibleCount(pageSize); setSort(e.target.value as SortKey); }} className={`${fieldClass} h-11 rounded-full font-semibold sm:w-48`}>
               {sortOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>
@@ -109,9 +121,9 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-        <FilterPanel groups={groups} values={filters} onChange={(next) => { setPage(1); setFilters(next); }} open={sheetOpen} onClose={() => setSheetOpen(false)} resultCount={loading ? -1 : results.length} />
+        <FilterPanel groups={groups} values={filters} onChange={(next) => { setVisibleCount(pageSize); setFilters(next); }} open={sheetOpen} onClose={() => setSheetOpen(false)} resultCount={loading ? -1 : results.length} />
         <div>
-          <p className="mb-4 text-sm text-slate-600" aria-live="polite">{loading ? 'Loading results…' : `${results.length} result${results.length === 1 ? '' : 's'}`}</p>
+          <p className="mb-4 text-sm text-slate-600" aria-live="polite">{loading ? 'Loading results…' : `${visible.length} of ${results.length} result${results.length === 1 ? '' : 's'}`}</p>
           {loading ? <CardSkeletonGrid count={6} className="xl:grid-cols-3 lg:grid-cols-2" /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
             <EmptyState title="Nothing matches those filters" message="Try removing a filter or searching for a district name such as Musanze or Huye." action={<Button variant="secondary" onClick={() => { setFilters({}); onQuery(''); }}>Clear search and filters</Button>} />
           ) : (
@@ -119,8 +131,10 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {visible.map((it) => <ExploreCard key={it.key} item={it} />)}
               </div>
-              {pageCount > 1 && (
-                <Pagination className="mt-6 rounded-2xl border border-slate-200 bg-white px-2" page={safePage} pageCount={pageCount} pageSize={pageSize} total={results.length} onPageChange={setPage} showPageSize={false} />
+              {hasMore && (
+                <div ref={sentinelRef} className="mt-8 flex justify-center py-4" aria-live="polite">
+                  <p className="text-sm font-semibold text-brand-600">Loading more as you scroll…</p>
+                </div>
               )}
             </>
           )}

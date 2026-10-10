@@ -4,8 +4,8 @@ import { Logo } from './Logo';
 import { Container, HillLines } from '@/components/ui';
 
 const columns = [
-  { title: 'Explore', links: [['Destinations', '/destinations'], ['Experiences', '/experiences'], ['Local Businesses', '/businesses'], ['Itinerary', '/itinerary'], ['Map', '/map']] },
-  { title: 'Sustainable Tourism', links: [['Eco-Tourism', '/eco-tourism'], ['Conservation', '/eco-tourism#conservation'], ['Responsible Travel', '/eco-tourism#responsible-travel']] },
+  { title: 'Explore', links: [['Everything', '/explore'], ['Destinations', '/destinations'], ['Experiences', '/experiences'], ['Listings', '/businesses']] },
+  { title: 'Plan', links: [['Plan a trip', '/itinerary'], ['Map', '/map'], ['Eco-tourism', '/eco-tourism'], ['Reviews', '/reviews']] },
   { title: 'Support', links: [['About', '/about'], ['Contact', '/contact'], ['Help', '/help'], ['Privacy', '/privacy'], ['Terms', '/terms']] },
 ];
 

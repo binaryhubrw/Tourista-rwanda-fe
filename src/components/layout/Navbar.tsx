@@ -10,14 +10,8 @@ import { Avatar, buttonClass, Container } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 export const navLinks = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/explore', label: 'Explore' },
-  { to: '/destinations', label: 'Destinations' },
-  { to: '/experiences', label: 'Experiences' },
-  { to: '/businesses', label: 'Local Businesses' },
-  { to: '/itinerary', label: 'Itinerary' },
-  { to: '/eco-tourism', label: 'Eco-Tourism' },
-  { to: '/reviews', label: 'Reviews' },
+  { to: '/itinerary', label: 'Plan a trip' },
+  { to: '/map', label: 'Map' },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -56,16 +50,18 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-      <Container className="flex h-16 items-center gap-3 lg:h-[72px]">
+      <Container className="relative flex h-16 items-center justify-between gap-3 lg:h-[72px]">
         <Logo />
 
-        <nav aria-label="Main" className="ml-2 hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:flex">
-          {navLinks.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>
-          ))}
+        <nav aria-label="Main" className="pointer-events-none absolute inset-x-0 hidden justify-center lg:flex">
+          <div className="pointer-events-auto flex items-center gap-1">
+            {navLinks.map((l) => (
+              <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>
+            ))}
+          </div>
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button onClick={() => setSearchOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-brand-50 hover:text-brand-700" aria-label="Search" aria-expanded={searchOpen}>
             <Search className="h-5 w-5" />
           </button>
@@ -126,11 +122,10 @@ export function Navbar() {
               <SearchBar onNavigate={() => setMobileOpen(false)} placeholder="Search Rwanda" />
               <nav aria-label="Mobile" className="mt-4 flex flex-col">
                 {navLinks.map((l) => (
-                  <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>
+                  <NavLink key={l.to} to={l.to} className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>
                     {l.label}
                   </NavLink>
                 ))}
-                <NavLink to="/map" className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>Map</NavLink>
               </nav>
             </div>
             <div className="border-t border-slate-100 p-4">

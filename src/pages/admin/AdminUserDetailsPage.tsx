@@ -5,7 +5,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Avatar, Badge, ErrorState, LoadingSpinner } from '@/components/ui';
 import { DataTable, PageHeader, roleLabel, type Column } from '@/components/dashboard';
-import { bookingColumns, bookingSearchText } from '../shared/tableColumns';
+import { ListingViewLink, bookingColumns, bookingSearchText } from '../shared/tableColumns';
 import type { Business } from '@/types';
 import { formatDate, formatRwf } from '@/utils/format';
 import { fromPrice } from '@/utils/pricing';
@@ -14,7 +14,7 @@ import { listingKindOf } from '@/utils/catalog';
 const roleTone = { tourist: 'brand', business_owner: 'warning', admin: 'solid' } as const;
 
 const businessColumns: Column<Business>[] = [
-  { id: 'name', header: 'Listing', sortValue: (b) => b.name, cell: (b) => <Link to={`/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link> },
+  { id: 'name', header: 'Listing', sortValue: (b) => b.name, cell: (b) => <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link> },
   { id: 'kind', header: 'Kind', sortValue: (b) => listingKindOf(b), cell: (b) => listingKindOf(b) },
   { id: 'district', header: 'District', sortValue: (b) => b.district, cell: (b) => b.district },
   { id: 'from', header: 'From', align: 'right', sortValue: (b) => fromPrice(b)?.priceRwf ?? 0, cell: (b) => { const price = fromPrice(b); return price ? formatRwf(price.priceRwf) : '—'; } },
@@ -69,7 +69,7 @@ export default function AdminUserDetailsPage() {
       {user.role === 'business_owner' && (
         <div className="mt-6">
           <h2 className="mb-3 font-display text-xl font-bold text-ink">Listings</h2>
-          <DataTable data={businesses} columns={businessColumns} getRowId={(b) => b.id} searchText={(b) => `${b.name} ${b.district} ${listingKindOf(b)}`} searchPlaceholder="Search listings" emptyTitle="No listings" emptyMessage="This owner has not published a listing yet." />
+          <DataTable data={businesses} columns={businessColumns} getRowId={(b) => b.id} searchText={(b) => `${b.name} ${b.district} ${listingKindOf(b)}`} searchPlaceholder="Search listings" emptyTitle="No listings" emptyMessage="This owner has not published a listing yet." rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />} />
         </div>
       )}
 

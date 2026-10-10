@@ -4,10 +4,22 @@ import { makeId } from '@/utils/id';
 export const ROOM_CATEGORIES = ['Regular', 'VIP', 'VVIP', 'Premium', 'Diamond'] as const;
 export const WELLNESS_CATEGORIES = ['Massage', 'Gym', 'Sauna', 'Spa', 'Yoga'] as const;
 export const FOOD_CATEGORIES = ['Restaurant', 'Bar', 'Coffee shop'] as const;
+export const DRINK_CATEGORIES = ['Beer', 'Wine', 'Cocktail', 'Soft drink'] as const;
 
 export type RoomCategory = (typeof ROOM_CATEGORIES)[number];
 export type WellnessCategory = (typeof WELLNESS_CATEGORIES)[number];
 export type FoodCategory = (typeof FOOD_CATEGORIES)[number];
+export type DrinkCategory = (typeof DRINK_CATEGORIES)[number];
+export type ServiceStyle = 'table' | 'self' | 'both';
+export type BookingMode = 'book' | 'walk-in' | 'both';
+
+export const foodUnit = (category: string) => {
+  if (category === 'Restaurant' || category === 'Table service') return 'per plate';
+  if (category === 'Self-service') return 'per person';
+  if (category === 'Coffee shop' || category === 'Coffee') return 'per cup';
+  if (category === 'Snack') return 'per item';
+  return 'per drink';
+};
 
 export interface ListingKind {
   id: string;
@@ -36,8 +48,6 @@ export const LISTING_KINDS: ListingKind[] = [
 export const kindById = (id: string) => LISTING_KINDS.find((k) => k.id === id);
 export const isLodgingKind = (id: string) => kindById(id)?.category === 'Accommodation';
 
-const ROOM_SLEEP: Record<string, number> = { Regular: 2, VIP: 2, VVIP: 3, Premium: 3, Diamond: 4 };
-
 export function offeringBlurb(group: OfferingGroup, category: string) {
   if (group === 'room') return `${category} room with a private bathroom.`;
   if (group === 'wellness') {
@@ -48,9 +58,12 @@ export function offeringBlurb(group: OfferingGroup, category: string) {
     return 'A yoga session.';
   }
   if (group === 'food') {
-    if (category === 'Restaurant') return 'A meal in the restaurant.';
-    if (category === 'Bar') return 'Drinks at the bar.';
-    return 'Coffee and a snack.';
+    if (category === 'Restaurant' || category === 'Table service') return 'A plated meal. Price is per plate.';
+    if (category === 'Self-service') return 'Buffet or self-service. Price is per person.';
+    if (category === 'Bar' || category === 'Beer' || category === 'Wine' || category === 'Cocktail' || category === 'Soft drink') return 'Starting price per drink. The bill depends on what is ordered.';
+    if (category === 'Coffee') return 'Starting price per cup. Speciality drinks can cost more.';
+    if (category === 'Snack') return 'Starting price per item.';
+    return 'Coffee and a snack. Starting price per cup.';
   }
   return '';
 }
@@ -71,11 +84,23 @@ export interface ExtraDraft {
   count: string;
 }
 
+export interface VenueDraft {
+  style: ServiceStyle;
+  platePrice: string;
+  buffetPrice: string;
+  bookable: BookingMode;
+  seats: string;
+  drinks: Record<string, string>;
+  coffeeFrom: string;
+  snackFrom: string;
+}
+
 export interface CatalogDraft {
   rooms: Record<string, OfferDraft>;
   wellness: Record<string, OfferDraft>;
   food: Record<string, OfferDraft>;
   extras: ExtraDraft[];
+  venue: VenueDraft;
 }
 
 const blankOffer = (group: OfferingGroup, category: string, count: string): OfferDraft => ({
@@ -85,17 +110,35 @@ const blankOffer = (group: OfferingGroup, category: string, count: string): Offe
   description: offeringBlurb(group, category),
 });
 
+export function emptyVenue(): VenueDraft {
+  return {
+    style: 'table',
+    platePrice: '',
+    buffetPrice: '',
+    bookable: 'both',
+    seats: '',
+    drinks: Object.fromEntries(DRINK_CATEGORIES.map((c) => [c, ''])),
+    coffeeFrom: '',
+    snackFrom: '',
+  };
+}
+
 export function emptyCatalog(): CatalogDraft {
   return {
     rooms: Object.fromEntries(ROOM_CATEGORIES.map((c, i) => [c, blankOffer('room', c, String([8, 4, 2, 2, 1][i]))])),
     wellness: Object.fromEntries(WELLNESS_CATEGORIES.map((c) => [c, blankOffer('wellness', c, '8')])),
     food: Object.fromEntries(FOOD_CATEGORIES.map((c) => [c, blankOffer('food', c, '30')])),
     extras: [],
+    venue: emptyVenue(),
   };
 }
 
 export function emptyExtra(): ExtraDraft {
   return { id: makeId('svc'), name: '', description: '', price: '', unit: 'per person', count: '' };
+}
+
+function findService(services: Service[], ...names: string[]) {
+  return services.find((s) => names.includes(s.category ?? '') || names.includes(s.name));
 }
 
 /** Rebuilds the registration form from services already saved on a listing. */
@@ -119,7 +162,36 @@ export function catalogFromServices(services: Service[]): CatalogDraft {
     const group = service.group ?? (service.unit === 'per night' ? 'room' : undefined);
     if (group === 'room') place(draft.rooms, service);
     else if (group === 'wellness') place(draft.wellness, service);
-    else if (group === 'food') place(draft.food, service);
+    else if (group === 'food' && service.category && FOOD_CATEGORIES.includes(service.category as FoodCategory)) place(draft.food, service);
+  }
+
+  const table = findService(services, 'Table service', 'Restaurant');
+  const buffet = findService(services, 'Self-service', 'Buffet');
+  if (table && buffet) draft.venue.style = 'both';
+  else if (buffet) draft.venue.style = 'self';
+  else draft.venue.style = 'table';
+  if (table) { draft.venue.platePrice = String(table.priceRwf); used.add(table.id); }
+  if (buffet) { draft.venue.buffetPrice = String(buffet.priceRwf); used.add(buffet.id); }
+  if (!table) {
+    const plated = services.find((s) => s.unit === 'per plate');
+    if (plated) { draft.venue.platePrice = String(plated.priceRwf); used.add(plated.id); }
+  }
+
+  for (const drink of DRINK_CATEGORIES) {
+    const row = findService(services, drink);
+    if (row) { draft.venue.drinks[drink] = String(row.priceRwf); used.add(row.id); }
+  }
+  const coffee = findService(services, 'Coffee', 'Coffee shop');
+  const snack = findService(services, 'Snack');
+  if (coffee) { draft.venue.coffeeFrom = String(coffee.priceRwf); used.add(coffee.id); }
+  if (snack) { draft.venue.snackFrom = String(snack.priceRwf); used.add(snack.id); }
+
+  const seated = services.find((s) => s.available && s.available > 0 && (s.group === 'food' || s.unit === 'per plate' || s.unit === 'per drink' || s.unit === 'per cup'));
+  if (seated?.available) {
+    draft.venue.seats = String(seated.available);
+    draft.venue.bookable = seated.description.toLowerCase().includes('walk-in') ? 'walk-in' : 'both';
+  } else if (table || buffet || coffee || snack || Object.values(draft.venue.drinks).some(Boolean)) {
+    draft.venue.bookable = 'walk-in';
   }
 
   draft.extras = services.filter((s) => !used.has(s.id)).map((s) => ({
@@ -133,7 +205,38 @@ export function catalogFromServices(services: Service[]): CatalogDraft {
   return draft;
 }
 
-export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [], lodging = false): Service[] {
+function venueSeats(draft: CatalogDraft) {
+  const n = Math.round(Number(draft.venue.seats));
+  return draft.venue.bookable !== 'walk-in' && Number.isFinite(n) && n > 0 ? { available: n } : {};
+}
+
+function bookingNote(mode: BookingMode) {
+  if (mode === 'book') return ' Guests book a table ahead.';
+  if (mode === 'walk-in') return ' Walk-in only. Guests do not book ahead.';
+  return ' Guests can book a table or walk in.';
+}
+
+function pushNamed(
+  out: Service[],
+  existing: Service[],
+  opts: { name: string; category: string; group: OfferingGroup; unit: string; price: number; description: string; extra?: Partial<Service> },
+) {
+  if (!(opts.price > 0)) return;
+  const prev = existing.find((s) => s.category === opts.category || s.name === opts.name);
+  out.push({
+    id: prev?.id ?? makeId('svc'),
+    name: opts.name,
+    category: opts.category,
+    group: opts.group,
+    description: opts.description,
+    priceRwf: Math.round(opts.price),
+    unit: opts.unit,
+    ...opts.extra,
+  });
+}
+
+export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [], kindId = ''): Service[] {
+  const lodging = isLodgingKind(kindId);
   const out: Service[] = [];
   const push = (group: OfferingGroup, category: string, row: OfferDraft, unit: string) => {
     if (!row.enabled) return;
@@ -148,13 +251,53 @@ export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [
       priceRwf: Math.round(Number(row.price)),
       unit,
       ...(Number.isFinite(count) && count > 0 ? { available: count } : {}),
-      ...(group === 'room' ? { capacity: prev?.capacity ?? ROOM_SLEEP[category] ?? 2, bedType: prev?.bedType, amenities: prev?.amenities } : {}),
+      ...(group === 'room' ? { capacity: 1, bedType: '1 bed', amenities: prev?.amenities } : {}),
     });
   };
 
   if (lodging) ROOM_CATEGORIES.forEach((c) => push('room', c, draft.rooms[c], 'per night'));
-  WELLNESS_CATEGORIES.forEach((c) => push('wellness', c, draft.wellness[c], 'per person'));
-  FOOD_CATEGORIES.forEach((c) => push('food', c, draft.food[c], 'per person'));
+  if (lodging || kindId === 'Wellness') WELLNESS_CATEGORIES.forEach((c) => push('wellness', c, draft.wellness[c], 'per person'));
+  if (lodging) FOOD_CATEGORIES.forEach((c) => push('food', c, draft.food[c], foodUnit(c)));
+
+  const v = draft.venue;
+  const seats = venueSeats(draft);
+  if (kindId === 'Restaurant') {
+    if (v.style === 'table' || v.style === 'both') {
+      pushNamed(out, existing, {
+        name: 'Table service', category: 'Table service', group: 'food', unit: 'per plate',
+        price: Number(v.platePrice), extra: seats,
+        description: `A plated meal. Charged per plate.${bookingNote(v.bookable)}`,
+      });
+    }
+    if (v.style === 'self' || v.style === 'both') {
+      pushNamed(out, existing, {
+        name: 'Self-service', category: 'Self-service', group: 'food', unit: 'per person',
+        price: Number(v.buffetPrice), extra: seats,
+        description: `Buffet or self-service. Charged per person.${bookingNote(v.bookable)}`,
+      });
+    }
+  }
+  if (kindId === 'Bar') {
+    for (const drink of DRINK_CATEGORIES) {
+      pushNamed(out, existing, {
+        name: drink, category: drink, group: 'food', unit: 'per drink',
+        price: Number(v.drinks[drink]), extra: seats,
+        description: `Starting price per drink. What you pay depends on the drink.${bookingNote(v.bookable)}`,
+      });
+    }
+  }
+  if (kindId === 'Coffee shop') {
+    pushNamed(out, existing, {
+      name: 'Coffee', category: 'Coffee', group: 'food', unit: 'per cup',
+      price: Number(v.coffeeFrom), extra: seats,
+      description: `Starting price per cup. Speciality drinks can cost more.${bookingNote(v.bookable)}`,
+    });
+    pushNamed(out, existing, {
+      name: 'Snack', category: 'Snack', group: 'food', unit: 'per item',
+      price: Number(v.snackFrom), extra: seats,
+      description: `Starting price per item.${bookingNote(v.bookable)}`,
+    });
+  }
 
   for (const extra of draft.extras) {
     if (extra.name.trim().length < 2 || !(Number(extra.price) > 0)) continue;
@@ -165,16 +308,17 @@ export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [
       description: extra.description.trim(),
       priceRwf: Math.round(Number(extra.price)),
       unit: extra.unit || 'per person',
-      group: extra.unit === 'per night' ? 'room' : 'activity',
+      group: extra.unit === 'per night' ? 'room' : extra.unit === 'per plate' || extra.unit === 'per drink' || extra.unit === 'per cup' ? 'food' : 'activity',
       category: extra.name.trim(),
       ...(Number.isFinite(count) && count > 0 ? { available: count } : {}),
-      ...(extra.unit === 'per night' ? { capacity: 2 } : {}),
+      ...(extra.unit === 'per night' ? { capacity: 1, bedType: '1 bed' } : {}),
     });
   }
   return out;
 }
 
-export function catalogErrors(draft: CatalogDraft, lodging: boolean): Record<string, string> {
+export function catalogErrors(draft: CatalogDraft, kindId: string): Record<string, string> {
+  const lodging = isLodgingKind(kindId);
   const errors: Record<string, string> = {};
   const check = (key: string, row: OfferDraft, needsCount: boolean) => {
     if (!row.enabled) return false;
@@ -187,8 +331,38 @@ export function catalogErrors(draft: CatalogDraft, lodging: boolean): Record<str
   let roomsOn = 0;
   let any = false;
   for (const c of ROOM_CATEGORIES) if (lodging && check(`rooms.${c}`, draft.rooms[c], true)) { roomsOn += 1; any = true; }
-  for (const c of WELLNESS_CATEGORIES) if (check(`wellness.${c}`, draft.wellness[c], false)) any = true;
-  for (const c of FOOD_CATEGORIES) if (check(`food.${c}`, draft.food[c], false)) any = true;
+  if (lodging || kindId === 'Wellness') {
+    for (const c of WELLNESS_CATEGORIES) if (check(`wellness.${c}`, draft.wellness[c], false)) any = true;
+  }
+  if (lodging) {
+    for (const c of FOOD_CATEGORIES) if (check(`food.${c}`, draft.food[c], false)) any = true;
+  }
+
+  const v = draft.venue;
+  const needsSeats = v.bookable === 'book' || v.bookable === 'both';
+  if (kindId === 'Restaurant') {
+    if (v.style === 'table' || v.style === 'both') {
+      if (!(Number(v.platePrice) > 0)) errors.platePrice = 'Enter a typical plate price.';
+      else any = true;
+    }
+    if (v.style === 'self' || v.style === 'both') {
+      if (!(Number(v.buffetPrice) > 0)) errors.buffetPrice = 'Enter the self-service price per person.';
+      else any = true;
+    }
+    if (needsSeats && !(Number(v.seats) >= 1)) errors.seats = 'Enter how many seats guests can book.';
+  }
+  if (kindId === 'Bar') {
+    const priced = DRINK_CATEGORIES.filter((c) => Number(v.drinks[c]) > 0);
+    if (!priced.length) errors.drinks = 'Enter a starting price for at least one kind of drink.';
+    else any = true;
+    if (needsSeats && !(Number(v.seats) >= 1)) errors.seats = 'Enter how many seats guests can book.';
+  }
+  if (kindId === 'Coffee shop') {
+    if (!(Number(v.coffeeFrom) > 0) && !(Number(v.snackFrom) > 0)) errors.coffeeFrom = 'Enter a starting price for coffee or a snack.';
+    else any = true;
+    if (needsSeats && !(Number(v.seats) >= 1)) errors.seats = 'Enter how many seats guests can book.';
+  }
+
   draft.extras.forEach((extra, i) => {
     const started = extra.name.trim() || extra.price || extra.description.trim();
     if (!started) return;
