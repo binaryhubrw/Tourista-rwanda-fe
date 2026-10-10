@@ -63,7 +63,7 @@ export function ItineraryTimeline({ stops, startDate, editable, onChange }: Prop
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-brand-600">{dateForDay(startDate, stop.day) ?? `Day ${stop.day}`}</p>
               <h3 className="font-display text-lg font-bold text-ink">
-                <Link to={`/destinations/${stop.locationId}`} className="hover:text-brand-700">{stop.locationName}</Link>
+                <Link to={`/explore?location=${stop.locationId}#explore-listings`} className="hover:text-brand-700">{stop.locationName}</Link>
               </h3>
               {editable ? (
                 <>

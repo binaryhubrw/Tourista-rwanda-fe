@@ -4,7 +4,7 @@ import { Avatar, StarRow } from '@/components/ui';
 import { formatDate } from '@/utils/format';
 
 const hrefFor = (r: Review) =>
-  r.targetType === 'location' ? `/destinations/${r.targetId}` : r.targetType === 'experience' ? `/experiences/${r.targetId}` : `/businesses/${r.targetId}`;
+  r.targetType === 'location' ? `/explore?location=${r.targetId}#explore-listings` : r.targetType === 'experience' ? `/experiences/${r.targetId}` : `/businesses/${r.targetId}`;
 
 export function ReviewCard({ review, showTarget, action }: { review: Review; showTarget?: boolean; action?: React.ReactNode }) {
   return (

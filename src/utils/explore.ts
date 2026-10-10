@@ -24,6 +24,17 @@ export type ExploreItem = {
   | { type: 'service'; node: Service; business: Business }
 );
 
+export function locationHaystack(location: Location) {
+  return `${location.name} ${location.district} ${location.province} ${location.shortDescription} ${location.description} ${location.category} ${location.thingsToDo.join(' ')}`;
+}
+
+export function termsMatch(haystack: string, query: string) {
+  const text = haystack.toLowerCase();
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return true;
+  return terms.every((term) => text.includes(term) || (term.endsWith('s') && term.length > 3 && text.includes(term.slice(0, -1))));
+}
+
 const businessKind = (b: Business): ExploreKind =>
   b.category === 'Accommodation' ? 'accommodation' : b.category === 'Restaurants' ? 'restaurant' : b.category === 'Tour Guides' ? 'guide' : 'business';
 
@@ -43,7 +54,7 @@ export function buildExploreItems(locations: Location[], experiences: Experience
   })));
   return [
     ...locations.map<ExploreItem>((l) => ({
-      key: `l-${l.id}`, type: 'location', node: l, kind: 'destination', title: l.name, text: `${l.name} ${l.district} ${l.shortDescription} ${l.category}`,
+      key: `l-${l.id}`, type: 'location', node: l, kind: 'destination', title: l.name, text: `${l.name} ${l.district} ${l.shortDescription} ${l.description} ${l.category} ${l.thingsToDo.join(' ')}`,
       rating: l.rating, reviewCount: l.reviewCount, province: l.province, priceLevel: l.priceLevel, interests: l.interests,
       sustainable: l.sustainability.length > 0 && (l.isHiddenGem || l.category === 'National Park'), createdAt: l.createdAt, popularity: l.visitsLastYear,
     })),
@@ -52,12 +63,16 @@ export function buildExploreItems(locations: Location[], experiences: Experience
       rating: e.rating, reviewCount: e.reviewCount, province: provinceOf(e.locationId), priceLevel: e.priceRwf < 20000 ? 1 : e.priceRwf < 50000 ? 2 : 3,
       interests: e.interests, sustainable: e.communityLed, createdAt: e.createdAt, popularity: e.reviewCount * 40,
     })),
-    ...openBusinesses.map<ExploreItem>((b) => ({
-      key: `b-${b.id}`, type: 'business', node: { ...b, services: availableServices(b.services, bookings) }, kind: businessKind(b), title: b.name,
-      text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${b.services.map((service) => service.name).join(' ')} ${b.badges.join(' ')}`,
-      rating: b.rating, reviewCount: b.reviewCount, province: provinceOf(b.locationId), priceLevel: b.priceLevel, interests: businessInterests(b),
-      sustainable: b.badges.length > 0, createdAt: b.createdAt, popularity: b.reviewCount * 40,
-    })),
+    ...openBusinesses.map<ExploreItem>((b) => {
+      const place = locations.find((location) => location.id === b.locationId);
+      const services = availableServices(b.services, bookings);
+      return {
+        key: `b-${b.id}`, type: 'business', node: { ...b, services }, kind: businessKind(b), title: b.name,
+        text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${services.map((service) => `${service.name} ${service.category ?? ''} ${service.description}`).join(' ')} ${b.badges.join(' ')} ${place ? locationHaystack(place) : ''}`,
+        rating: b.rating, reviewCount: b.reviewCount, province: provinceOf(b.locationId), priceLevel: b.priceLevel, interests: businessInterests(b),
+        sustainable: b.badges.length > 0, createdAt: b.createdAt, popularity: b.reviewCount * 40,
+      };
+    }),
     ...serviceItems,
   ];
 }

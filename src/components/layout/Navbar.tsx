@@ -35,6 +35,14 @@ export function Navbar() {
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [mobileOpen]);
 
   useEffect(() => {
@@ -62,9 +70,11 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <button onClick={() => setSearchOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-brand-50 hover:text-brand-700" aria-label="Search" aria-expanded={searchOpen}>
-            <Search className="h-5 w-5" />
-          </button>
+          {location.pathname !== '/explore' && (
+            <button onClick={() => setSearchOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-brand-50 hover:text-brand-700" aria-label="Search" aria-expanded={searchOpen}>
+              <Search className="h-5 w-5" />
+            </button>
+          )}
           <Link to="/favorites" className="relative grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-brand-50 hover:text-brand-700" aria-label={`Favorites (${favorites.length})`}>
             <Heart className="h-5 w-5" />
             {favorites.length > 0 && (

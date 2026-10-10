@@ -1,20 +1,16 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Sparkles, Store, X } from 'lucide-react';
+import { Search, Store, X } from 'lucide-react';
 import { searchSync, type SearchScope } from '@/services/searchService';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/utils/cn';
 
 export const scopeOptions: { value: SearchScope; label: string }[] = [
-  { value: 'all', label: 'Everything' },
-  { value: 'destinations', label: 'Destinations' },
-  { value: 'experiences', label: 'Experiences' },
-  { value: 'accommodations', label: 'Accommodations' },
+  { value: 'all', label: 'All listings' },
+  { value: 'accommodations', label: 'Stays' },
   { value: 'restaurants', label: 'Restaurants' },
-  { value: 'businesses', label: 'Local businesses' },
+  { value: 'businesses', label: 'Guides & makers' },
 ];
-
-const typeIcon = { location: MapPin, experience: Sparkles, business: Store };
 
 interface Props {
   variant?: 'hero' | 'compact';
@@ -25,7 +21,7 @@ interface Props {
 }
 
 /** Search box with live suggestions. Enter or the button opens the full results page. */
-export function SearchBar({ variant = 'compact', placeholder = 'Where do you want to go in Rwanda?', autoFocus, onNavigate, initialQuery = '' }: Props) {
+export function SearchBar({ variant = 'compact', placeholder = 'What do you want to book in Rwanda?', autoFocus, onNavigate, initialQuery = '' }: Props) {
   const navigate = useNavigate();
   const [query, setQuery] = useState(initialQuery);
   const [scope, setScope] = useState<SearchScope>('all');
@@ -55,7 +51,10 @@ export function SearchBar({ variant = 'compact', placeholder = 'Where do you wan
     e.preventDefault();
     if (active >= 0 && suggestions[active]) return go(suggestions[active].href);
     const q = query.trim();
-    go(q ? `/search?q=${encodeURIComponent(q)}&scope=${scope}` : '/explore');
+    const next = new URLSearchParams();
+    if (q) next.set('q', q);
+    if (scope !== 'all') next.set('scope', scope);
+    go(q ? `/explore?${next.toString()}#explore-listings` : '/explore#explore-listings');
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -114,7 +113,7 @@ export function SearchBar({ variant = 'compact', placeholder = 'Where do you wan
       {open && suggestions.length > 0 && (
         <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lift">
           {suggestions.map((s, i) => {
-            const Icon = typeIcon[s.type];
+            const Icon = Store;
             return (
               <li key={`${s.type}-${s.id}`} id={`${listId}-${i}`} role="option" aria-selected={i === active}>
                 <button
@@ -133,8 +132,8 @@ export function SearchBar({ variant = 'compact', placeholder = 'Where do you wan
             );
           })}
           <li>
-            <button type="button" onClick={() => go(`/search?q=${encodeURIComponent(query.trim())}&scope=${scope}`)} className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-brand-600 hover:bg-brand-50">
-              See all results for “{query.trim()}”
+            <button type="button" onClick={() => go(`/explore?q=${encodeURIComponent(query.trim())}${scope !== 'all' ? `&scope=${scope}` : ''}#explore-listings`)} className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-brand-600 hover:bg-brand-50">
+              See all matches for “{query.trim()}”
             </button>
           </li>
         </ul>

@@ -19,7 +19,7 @@ export function FavoritesGrid({ embedded }: { embedded?: boolean }) {
   const list = favorites.filter((f) => tab === 'all' || f.itemType === tab);
 
   if (!favorites.length) {
-    return <EmptyState icon={<Heart className="h-7 w-7" />} title="No saved destinations yet" message="Tap the heart on any destination, experience or business to keep it here for later." action={<ButtonLink to="/explore">Start exploring</ButtonLink>} />;
+    return <EmptyState icon={<Heart className="h-7 w-7" />} title="No saved listings yet" message="Tap the heart on any listing to keep it here for later." action={<ButtonLink to="/explore">Start exploring</ButtonLink>} />;
   }
 
   return (

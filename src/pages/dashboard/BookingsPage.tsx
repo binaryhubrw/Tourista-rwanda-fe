@@ -69,7 +69,7 @@ export default function BookingsPage() {
 
   return (
     <>
-      <PageHeader title="Bookings" intro="Bookings are confirmed once they're paid. Cancel an upcoming booking to get a refund." action={<ButtonLink to="/businesses" variant="secondary">Book something new</ButtonLink>} />
+      <PageHeader title="Bookings" intro="Bookings are confirmed once they're paid. Cancel an upcoming booking to get a refund." action={<ButtonLink to="/explore" variant="secondary">Book something new</ButtonLink>} />
 
       <StatGrid>
         <StatCard label="All bookings" icon={CalendarCheck} loading={loading} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed`} />

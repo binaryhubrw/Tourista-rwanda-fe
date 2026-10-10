@@ -14,7 +14,7 @@ import { bookingLines } from '@/utils/availability';
 import { formatDate, formatRwf, todayIso } from '@/utils/format';
 import { paymentMethodLabel } from '@/utils/payment';
 
-const targetHref = (type: string, id: string) => (type === 'experience' ? `/experiences/${id}` : type === 'location' ? `/destinations/${id}` : `/businesses/${id}`);
+const targetHref = (type: string, id: string) => (type === 'experience' ? `/experiences/${id}` : type === 'location' ? `/explore?location=${id}#explore-listings` : `/businesses/${id}`);
 
 export default function BookingDetailsPage() {
   const { id = '' } = useParams();

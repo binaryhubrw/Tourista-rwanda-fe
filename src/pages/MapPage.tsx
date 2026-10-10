@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Crosshair, List, Map as MapIcon, Search, X } from 'lucide-react';
-import { getBusinesses, getLocations } from '@/services';
+import { getBusinesses } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { RwandaMap, MapLegend, kindStyle, type MapPoint, type MapPointKind } from '@/components/map/RwandaMap';
@@ -19,24 +19,18 @@ interface Place extends MapPoint {
   href: string;
 }
 
-const kinds: MapPointKind[] = ['attraction', 'cultural', 'accommodation', 'restaurant', 'business', 'guide'];
+const kinds: MapPointKind[] = ['accommodation', 'restaurant', 'business', 'guide'];
 
 export default function MapPage() {
   useDocumentTitle('Map');
   const toast = useToast();
   const { data, loading, error, reload } = useAsync(async () => {
-    const [locations, businesses] = await Promise.all([getLocations(), getBusinesses()]);
-    const places: Place[] = [
-      ...locations.map<Place>((l) => ({
-        id: l.id, name: l.name, coordinates: l.coordinates, kind: l.category === 'Cultural Site' ? 'cultural' : 'attraction',
-        image: l.image, rating: l.rating, category: l.category, subtitle: l.district, href: `/destinations/${l.id}`,
-      })),
-      ...businesses.map<Place>((b) => ({
-        id: b.id, name: b.name, coordinates: b.coordinates,
-        kind: b.category === 'Accommodation' ? 'accommodation' : b.category === 'Restaurants' ? 'restaurant' : b.category === 'Tour Guides' ? 'guide' : 'business',
-        image: b.image, rating: b.rating, category: b.category, subtitle: b.district, href: `/businesses/${b.id}`,
-      })),
-    ];
+    const businesses = await getBusinesses();
+    const places: Place[] = businesses.map((b) => ({
+      id: b.id, name: b.name, coordinates: b.coordinates,
+      kind: b.category === 'Accommodation' ? 'accommodation' : b.category === 'Restaurants' ? 'restaurant' : b.category === 'Tour Guides' ? 'guide' : 'business',
+      image: b.image, rating: b.rating, category: b.category, subtitle: b.district, href: `/businesses/${b.id}`,
+    }));
     return places;
   });
 
@@ -120,7 +114,7 @@ export default function MapPage() {
         <div className="space-y-3 border-b border-slate-200 p-4">
           <h1 className="font-display text-2xl font-bold text-ink">Map of Rwanda</h1>
           <label className="relative block">
-            <span className="sr-only">Filter places on the map</span>
+            <span className="sr-only">Filter listings on the map</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-600" aria-hidden />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by name or district" className={`${fieldClass} h-10 rounded-full pl-9 text-sm`} />
           </label>
@@ -132,7 +126,7 @@ export default function MapPage() {
             ))}
           </div>
           <div className="flex items-center justify-between gap-2 text-sm text-slate-600">
-            <span>{visible.length} places, nearest to {origin.label}</span>
+            <span>{visible.length} listings, nearest to {origin.label}</span>
             <Button size="sm" variant="ghost" onClick={locate} loading={locating}><Crosshair className="h-4 w-4" aria-hidden />Near me</Button>
           </div>
           <div className="grid grid-cols-2 gap-1 rounded-full bg-slate-100 p-1 lg:hidden" role="tablist" aria-label="View">
@@ -141,7 +135,7 @@ export default function MapPage() {
           </div>
         </div>
         <div className={cn('flex-1 overflow-y-auto', mobileView === 'map' && 'hidden lg:block')}>
-          {visible.length ? list : <div className="p-4"><EmptyState title="No places to show" message="Turn on more categories or clear the name filter." /></div>}
+          {visible.length ? list : <div className="p-4"><EmptyState title="No listings to show" message="Turn on more categories or clear the name filter." /></div>}
         </div>
       </aside>
 
@@ -164,7 +158,7 @@ export default function MapPage() {
                 <Rating value={selected.rating} />
                 <span className="font-semibold text-ink">{Math.round(selected.km)} km from {origin.label}</span>
               </div>
-              <ButtonLink to={selected.href} size="sm" className="mt-4 w-full">View details</ButtonLink>
+              <ButtonLink to={selected.href} size="sm" className="mt-4 w-full">Open listing</ButtonLink>
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@ import { Logo } from './Logo';
 import { Container, HillLines } from '@/components/ui';
 
 const columns = [
-  { title: 'Explore', links: [['Everything', '/explore'], ['Destinations', '/destinations'], ['Experiences', '/experiences'], ['Listings', '/businesses']] },
+  { title: 'Explore', links: [['Search listings', '/explore'], ['Stays', '/explore?scope=accommodations#explore-listings'], ['Eat', '/explore?scope=restaurants#explore-listings'], ['Guides & makers', '/explore?scope=businesses#explore-listings']] },
   { title: 'Plan', links: [['Plan a trip', '/itinerary'], ['Map', '/map'], ['Eco-tourism', '/eco-tourism'], ['Reviews', '/reviews']] },
   { title: 'Support', links: [['About', '/about'], ['Contact', '/contact'], ['Help', '/help'], ['Privacy', '/privacy'], ['Terms', '/terms']] },
 ];

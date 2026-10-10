@@ -21,7 +21,7 @@ export default function ExperienceDetailsPage() {
   return (
     <article>
       <Container className="pt-6">
-        <Link to="/experiences" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All experiences</Link>
+        <Link to="/explore#explore-listings" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All listings</Link>
       </Container>
       <Container className="mt-4 grid gap-10 pb-16 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-8">
@@ -30,7 +30,7 @@ export default function ExperienceDetailsPage() {
             <div className="flex flex-wrap gap-2"><Badge tone="solid">{exp.type}</Badge>{exp.communityLed && <Badge>Community-led</Badge>}</div>
             <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight text-ink">{exp.title}</h1>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-slate-600">
-              <Link to={`/destinations/${exp.locationId}`} className="inline-flex items-center gap-1.5 hover:text-brand-700"><MapPin className="h-4 w-4 text-brand-600" aria-hidden />{exp.locationName}</Link>
+              <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-brand-600" aria-hidden />{exp.locationName}</span>
               <Rating value={exp.rating} count={exp.reviewCount} />
             </div>
           </header>

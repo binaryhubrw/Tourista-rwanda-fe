@@ -14,25 +14,25 @@ function HeroBackdrop({ index, reduceMotion }: { index: number; reduceMotion: bo
           src={slide.src}
           alt=""
           quiet
-          loading={i === 0 ? 'eager' : 'lazy'}
+          loading="eager"
           style={{ objectPosition: slide.position }}
           className={cn(
-            'absolute inset-0 h-full w-full origin-center',
-            reduceMotion ? '' : 'transition-opacity duration-1000',
-            i === index ? 'opacity-100' : 'opacity-0',
+            'absolute inset-0 h-full w-full origin-center opacity-100',
+            i === index ? 'z-[1]' : 'z-0',
             i === index && !reduceMotion && 'hero-kenburns',
           )}
         />
       ))}
-      <div className="absolute inset-0 bg-gradient-to-r from-brand-600/55 via-brand-600/30 to-brand-600/15" />
+      <div className="absolute inset-0 z-[2] bg-gradient-to-r from-brand-600/85 via-brand-600/65 to-brand-600/50" />
     </div>
   );
 }
 
+const SLIDE_MS = 5000;
+
 /** Photo slideshow, headline and floating search — the public landing hero. */
-export function HomeHero() {
+export function HomeHero({ initialQuery = '' }: { initialQuery?: string }) {
   const [slide, setSlide] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -50,10 +50,9 @@ export function HomeHero() {
   }, []);
 
   useEffect(() => {
-    if (paused || reduceMotion) return;
-    const timer = window.setInterval(() => setSlide((current) => (current + 1) % heroSlides.length), 6000);
-    return () => window.clearInterval(timer);
-  }, [paused, reduceMotion]);
+    const timer = window.setTimeout(() => setSlide((current) => (current + 1) % heroSlides.length), SLIDE_MS);
+    return () => window.clearTimeout(timer);
+  }, [slide]);
 
   const scrollToListings = () => {
     document.getElementById('explore-listings')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
@@ -61,19 +60,15 @@ export function HomeHero() {
 
   return (
     <div className={cn(ready && 'hero-ready')}>
-      <section
-        className="relative isolate overflow-hidden bg-brand-600"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
+      <section className="relative isolate overflow-hidden bg-brand-600">
         <HeroBackdrop index={slide} reduceMotion={reduceMotion} />
         <Container className="pb-28 pt-16 sm:pb-36 sm:pt-24 lg:min-h-[78vh] lg:pt-28">
           <div className="max-w-3xl text-white">
             <h1 className="hero-wipe font-display text-[2.4rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-              Find your Rwanda stay, place and plan.
+              Find a stay, a table or a guide.
             </h1>
             <p className="hero-rise mt-5 max-w-xl text-lg text-white sm:text-xl" style={{ animationDelay: '0.18s' }}>
-              Search a lodge, a guide or a park. Compare a few options. Book when you are ready.
+              Search what you want. Open a listing. Pick rooms, meals or services.
             </p>
             <div className="hero-rise mt-8 flex flex-wrap items-center gap-4" style={{ animationDelay: '0.32s' }}>
               <p className="text-sm font-semibold" aria-live="polite">{heroSlides[slide].place}</p>
@@ -105,7 +100,7 @@ export function HomeHero() {
 
       <Container className="relative z-20 -mt-12 sm:-mt-10">
         <div className="hero-rise mx-auto max-w-4xl" style={{ animationDelay: '0.42s' }}>
-          <SearchBar variant="hero" />
+          <SearchBar key={initialQuery} variant="hero" initialQuery={initialQuery} />
           <p className="mt-3 text-center text-sm text-slate-500">Try “gorillas”, “coffee”, “Lake Kivu” or “women-led”</p>
         </div>
       </Container>

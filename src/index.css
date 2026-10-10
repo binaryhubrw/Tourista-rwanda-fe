@@ -64,7 +64,7 @@
   animation: hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .hero-ready .hero-kenburns {
-  animation: hero-kenburns 8s ease-out forwards;
+  animation: hero-kenburns 5s ease-out forwards;
 }
 .hero-scroll-cue {
   animation: hero-scroll 1.8s ease-in-out infinite;

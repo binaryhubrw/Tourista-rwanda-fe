@@ -1,46 +1,13 @@
-import { useSearchParams } from 'react-router-dom';
-import { SearchX } from 'lucide-react';
-import { search, type SearchScope } from '@/services/searchService';
-import { useAsync } from '@/hooks/useAsync';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { SearchBar, scopeOptions } from '@/components/layout/SearchBar';
-import { SearchResultCard } from '@/components/cards';
-import { ButtonLink, Container, EmptyState, ErrorState, Skeleton } from '@/components/ui';
-import { cn } from '@/utils/cn';
+import { Navigate, useSearchParams } from 'react-router-dom';
 
+/** Older /search links land on the catalog so people stay in one browse flow. */
 export default function SearchPage() {
-  const [params, setParams] = useSearchParams();
-  const q = params.get('q') ?? '';
-  const scope = (params.get('scope') as SearchScope) || 'all';
-  useDocumentTitle(q ? `Search: ${q}` : 'Search');
-  const { data, loading, error, reload } = useAsync(() => (q ? search(q, scope) : Promise.resolve([])), [q, scope]);
-
-  return (
-    <Container className="py-8 lg:py-12">
-      <div className="max-w-3xl">
-        <SearchBar key={q} initialQuery={q} />
-        <div role="tablist" aria-label="Search in" className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-          {scopeOptions.map((o) => (
-            <button key={o.value} role="tab" aria-selected={scope === o.value} onClick={() => setParams({ q, scope: o.value })} className={cn('shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold', scope === o.value ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700')}>{o.label}</button>
-          ))}
-        </div>
-      </div>
-
-      <h1 className="mt-8 font-display text-2xl font-bold text-ink" aria-live="polite">
-        {!q ? 'Search Tourista Rwanda' : loading ? `Searching for “${q}”…` : `${data?.length ?? 0} match${data?.length === 1 ? '' : 'es'} for “${q}”`}
-      </h1>
-
-      <div className="mt-6">
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[120px]" />)}</div>
-        ) : error ? <ErrorState message={error} onRetry={reload} /> : !q ? (
-          <EmptyState title="What are you looking for?" message="Search for a place, activity, hotel, restaurant, guide or local business." />
-        ) : !data?.length ? (
-            <EmptyState icon={<SearchX className="h-7 w-7" />} title={`No listings match “${q}”`} message="Try a service name such as massage, a kind such as hotel, or a place such as Musanze. Search shows the businesses that offer what you typed, not the service on its own." action={<ButtonLink to="/explore" variant="secondary">Browse everything</ButtonLink>} />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">{data.map((r) => <SearchResultCard key={`${r.type}-${r.id}`} result={r} />)}</div>
-        )}
-      </div>
-    </Container>
-  );
+  const [params] = useSearchParams();
+  const next = new URLSearchParams();
+  const q = params.get('q');
+  const scope = params.get('scope');
+  if (q) next.set('q', q);
+  if (scope && ['accommodations', 'restaurants', 'businesses'].includes(scope)) next.set('scope', scope);
+  const query = next.toString();
+  return <Navigate to={query ? `/explore?${query}#explore-listings` : '/explore'} replace />;
 }

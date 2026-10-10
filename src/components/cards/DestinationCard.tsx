@@ -7,7 +7,7 @@ import { guidedVisitPrice } from '@/utils/pricing';
 import { FavoriteButton } from './FavoriteButton';
 
 export function DestinationCard({ location, compact }: { location: Location; compact?: boolean }) {
-  const href = `/destinations/${location.id}`;
+  const href = `/explore?location=${location.id}#explore-listings`;
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-shadow hover:shadow-lift">
       <div className="relative">

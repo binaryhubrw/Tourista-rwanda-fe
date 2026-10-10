@@ -225,7 +225,7 @@ export default function BookingPage() {
         </dl>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <ButtonLink to={`${dashboardPathFor(user?.role ?? 'tourist')}/bookings/${confirmed.id}`}>View booking</ButtonLink>
-          <ButtonLink to="/businesses" variant="secondary">Back to listings</ButtonLink>
+          <ButtonLink to="/explore" variant="secondary">Back to listings</ButtonLink>
         </div>
       </Container>
     );

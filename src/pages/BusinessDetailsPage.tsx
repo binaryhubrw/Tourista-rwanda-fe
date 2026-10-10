@@ -123,9 +123,9 @@ export default function BusinessDetailsPage() {
   return (
     <article>
       <Container className="pt-4 sm:pt-6">
-        <Link to="/businesses" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />Listings</Link>
+        <Link to="/explore#explore-listings" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All listings</Link>
       </Container>
-      <Container className="mt-4 grid gap-8 pb-16 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
+      <Container className="mt-4 grid gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10 lg:pb-16">
         <div className="min-w-0 space-y-8">
           <div>
             <SmartImage src={photos[photo] ?? b.image} alt={`${b.name}, photo ${photo + 1} of ${photos.length}`} className="aspect-[16/9] w-full rounded-3xl" />
@@ -149,7 +149,7 @@ export default function BusinessDetailsPage() {
             <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{b.name}</h1>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-slate-600">
               <span className="inline-flex items-center gap-1.5"><User className="h-4 w-4 text-brand-600" aria-hidden />{b.ownerName}</span>
-              <Link to={`/destinations/${b.locationId}`} className="inline-flex items-center gap-1.5 hover:text-brand-600"><MapPin className="h-4 w-4 text-brand-600" aria-hidden />{b.district}</Link>
+              <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-brand-600" aria-hidden />{b.district}</span>
               <Rating value={b.rating} count={b.reviewCount} />
             </div>
           </header>
@@ -221,6 +221,15 @@ export default function BusinessDetailsPage() {
           </div>
         </aside>
       </Container>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <p className="min-w-0 flex-1 text-sm">
+            {from ? <><span className="text-slate-500">From </span><span className="font-semibold text-ink">{formatRwf(from.priceRwf)}</span></> : 'Select what to book'}
+            {picked.length > 0 && <span className="block truncate text-xs text-slate-500">{picked.length} selected</span>}
+          </p>
+          <Button onClick={startBooking} disabled={!picked.length} className="shrink-0">Continue</Button>
+        </div>
+      </div>
     </article>
   );
 }

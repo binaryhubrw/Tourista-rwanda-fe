@@ -21,7 +21,7 @@ const INTERESTS: Interest[] = ['Nature', 'Culture', 'Adventure', 'Food', 'Wildli
 const inRwanda = (lat: number, lng: number) => lat >= -2.85 && lat <= -1.04 && lng >= 28.85 && lng <= 30.9;
 
 const columns: Column<Location>[] = [
-  { id: 'name', header: 'Name', sortValue: (l) => l.name, cell: (l) => <Link to={`/destinations/${l.id}`} className="font-semibold text-ink hover:text-brand-600 hover:underline">{l.name}</Link> },
+  { id: 'name', header: 'Name', sortValue: (l) => l.name, cell: (l) => <Link to={`/explore?location=${l.id}#explore-listings`} className="font-semibold text-ink hover:text-brand-600 hover:underline">{l.name}</Link> },
   { id: 'district', header: 'District', sortValue: (l) => l.district, cell: (l) => l.district },
   { id: 'province', header: 'Province', sortValue: (l) => l.province, cell: (l) => l.province },
   { id: 'category', header: 'Category', sortValue: (l) => l.category, cell: (l) => <Badge tone={l.isHiddenGem ? 'solid' : 'brand'}>{l.category}</Badge> },

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -7,11 +7,7 @@ import { LoadingSpinner } from '@/components/ui';
 
 // Route-level code splitting keeps the first load small on mobile networks.
 const ExplorePage = lazy(() => import('@/pages/ExplorePage'));
-const DestinationsPage = lazy(() => import('@/pages/DestinationsPage'));
-const LocationDetailsPage = lazy(() => import('@/pages/LocationDetailsPage'));
-const ExperiencesPage = lazy(() => import('@/pages/ExperiencesPage'));
 const ExperienceDetailsPage = lazy(() => import('@/pages/ExperienceDetailsPage'));
-const BusinessesPage = lazy(() => import('@/pages/BusinessesPage'));
 const BusinessDetailsPage = lazy(() => import('@/pages/BusinessDetailsPage'));
 const MapPage = lazy(() => import('@/pages/MapPage'));
 const ItineraryBuilderPage = lazy(() => import('@/pages/ItineraryBuilderPage'));
@@ -55,6 +51,11 @@ const AdminBusinessDetailsPage = lazy(() => import('@/pages/admin/AdminBusinessD
 const AdminBookingsPage = lazy(() => import('@/pages/admin/AdminBookingsPage'));
 const AdminReviewsPage = lazy(() => import('@/pages/admin/AdminReviewsPage'));
 
+function RedirectToListings() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/explore?location=${encodeURIComponent(id)}#explore-listings` : '/explore'} replace />;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner className="min-h-[60vh]" />}>
@@ -63,11 +64,11 @@ export function AppRoutes() {
           <Route index element={<Navigate to="/explore" replace />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="search" element={<SearchPage />} />
-          <Route path="destinations" element={<DestinationsPage />} />
-          <Route path="destinations/:id" element={<LocationDetailsPage />} />
-          <Route path="experiences" element={<ExperiencesPage />} />
+          <Route path="destinations" element={<Navigate to="/explore" replace />} />
+          <Route path="destinations/:id" element={<RedirectToListings />} />
+          <Route path="experiences" element={<Navigate to="/explore" replace />} />
           <Route path="experiences/:id" element={<ExperienceDetailsPage />} />
-          <Route path="businesses" element={<BusinessesPage />} />
+          <Route path="businesses" element={<Navigate to="/explore" replace />} />
           <Route path="businesses/:id" element={<BusinessDetailsPage />} />
           <Route path="map" element={<MapPage />} />
           <Route path="itinerary" element={<ItineraryBuilderPage />} />

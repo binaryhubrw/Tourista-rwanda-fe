@@ -11,10 +11,10 @@ export default function NotFoundPage({ what }: { what?: string }) {
         <Compass className="h-14 w-14 text-brand-600" aria-hidden />
         <p className="mt-6 font-display text-7xl font-extrabold text-brand-600">404</p>
         <h1 className="mt-2 font-display text-3xl font-bold text-ink">{what ? `We couldn't find that ${what}` : 'This path leads off the map'}</h1>
-        <p className="mt-3 max-w-md text-slate-600">The link may be old or mistyped. Head back home or explore Rwanda's destinations instead.</p>
+        <p className="mt-3 max-w-md text-slate-600">The link may be old or mistyped. Search listings or open the map instead.</p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink to="/">Go to the homepage</ButtonLink>
-          <ButtonLink to="/explore" variant="secondary">Explore Rwanda</ButtonLink>
+          <ButtonLink to="/explore">Explore Rwanda</ButtonLink>
+          <ButtonLink to="/map" variant="secondary">Open the map</ButtonLink>
         </div>
       </Container>
     </section>

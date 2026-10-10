@@ -15,7 +15,7 @@ export default function ReviewsPage() {
 
   return (
     <>
-      <PageHeader title="Reviews & community" intro="Honest notes from travellers who've been there. To write a review, open any destination, experience or business." />
+      <PageHeader title="Reviews & community" intro="Honest notes from travellers who've been there. To write a review, open a listing." />
       <Container className="py-8 lg:py-10">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0" role="group" aria-label="Filter by rating">

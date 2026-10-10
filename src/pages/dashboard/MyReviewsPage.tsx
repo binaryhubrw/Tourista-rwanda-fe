@@ -67,7 +67,7 @@ export default function MyReviewsPage() {
         rowActions={(r) => <button onClick={() => setRemoving({ rows: [r] })} className="text-sm font-semibold text-red-600 hover:underline">Delete</button>}
         emptyTitle="You haven't written any reviews yet"
         emptyMessage="Open any destination, experience or business you've visited and select Write a review."
-        emptyAction={<ButtonLink to="/destinations" variant="secondary" size="sm">Find a place to review</ButtonLink>}
+        emptyAction={<ButtonLink to="/explore" variant="secondary" size="sm">Find a listing to review</ButtonLink>}
       />
 
       <ConfirmModal

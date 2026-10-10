@@ -8,9 +8,9 @@ import { paymentMethodShort } from '@/utils/payment';
 import { periodNoun, unitNoun } from '@/utils/pricing';
 
 export const reviewTargetHref = (r: Pick<Review, 'targetType' | 'targetId'>) =>
-  r.targetType === 'location' ? `/destinations/${r.targetId}` : r.targetType === 'experience' ? `/experiences/${r.targetId}` : `/businesses/${r.targetId}`;
+  r.targetType === 'location' ? `/explore?location=${r.targetId}#explore-listings` : r.targetType === 'experience' ? `/experiences/${r.targetId}` : `/businesses/${r.targetId}`;
 
-const bookingTargetHref = (b: Booking) => (b.targetType === 'experience' ? `/experiences/${b.targetId}` : b.targetType === 'location' ? `/destinations/${b.targetId}` : `/businesses/${b.targetId}`);
+const bookingTargetHref = (b: Booking) => (b.targetType === 'experience' ? `/experiences/${b.targetId}` : b.targetType === 'location' ? `/explore?location=${b.targetId}#explore-listings` : `/businesses/${b.targetId}`);
 
 export function BookingViewLink({ to }: { to: string }) {
   return (
