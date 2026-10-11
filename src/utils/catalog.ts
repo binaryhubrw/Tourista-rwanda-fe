@@ -255,7 +255,7 @@ export function emptyExtra(): ExtraDraft {
 }
 
 export function emptyFleet(): FleetDraft {
-  return { id: makeId('veh'), name: '', brand: '', category: 'Standard', description: offeringBlurb('vehicle', 'Standard'), price: '', count: '1', seats: String(defaultVehicleSeats('Standard')), plateNumber: '', image: vehicleLevelPhoto('Standard') };
+  return { id: makeId('veh'), name: '', brand: '', category: 'Standard', description: offeringBlurb('vehicle', 'Standard'), price: '', count: '1', seats: String(defaultVehicleSeats('Standard')), plateNumber: '', image: '' };
 }
 
 function findService(services: Service[], ...names: string[]) {

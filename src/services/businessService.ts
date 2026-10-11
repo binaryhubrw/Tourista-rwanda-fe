@@ -4,6 +4,7 @@ import { mergeVehicles, persistFleet, payoutForOwner } from '@/demo/store';
 import { DEMO_INN_ID, DEMO_PAYOUT, demoHireBusiness, demoInnBusiness, demoStaffBranches, isDemoHire, isDemoListing, withDemoListings } from '@/demo/vehicles';
 import { getStoredUser } from './authService';
 import type { PayoutTarget } from '@/utils/payment';
+import { announceCatalog } from '@/utils/explore';
 
 function attach(b: Business): Business {
   return mergeVehicles(b) as Business;
@@ -95,6 +96,7 @@ export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'cr
 export async function createBusiness(input: BusinessInput): Promise<Business> {
   const created = await api.post<Business>('/businesses/', input);
   persistFleet(created.id, input.services ?? []);
+  announceCatalog();
   return attach(created);
 }
 
@@ -102,13 +104,18 @@ export async function updateBusiness(id: string, patch: Partial<Business>): Prom
   const demo = demoById(id);
   if (demo) {
     if (patch.services) persistFleet(id, patch.services);
+    announceCatalog();
     return attach({ ...demo, ...patch, id, services: patch.services ?? demo.services });
   }
   const updated = await api.patch<Business>(`/businesses/${id}/`, patch);
   if (patch.services) persistFleet(id, patch.services);
+  announceCatalog();
   return attach(updated);
 }
 
 export async function createBusinesses(inputs: BusinessInput[]): Promise<Business[]> {
-  return api.post<Business[]>('/businesses/bulk/', inputs);
+  const created = await api.post<Business[]>('/businesses/bulk/', inputs);
+  created.forEach((business, i) => persistFleet(business.id, inputs[i]?.services ?? business.services ?? []));
+  announceCatalog();
+  return created.map(attach);
 }

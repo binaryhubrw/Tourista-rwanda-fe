@@ -5,11 +5,12 @@ import { Menu, Search, X, LayoutDashboard, LogOut, User as UserIcon, ChevronDown
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
+import { useOfferedServices } from '@/hooks/useOfferedServices';
 import { Avatar, buttonClass, Container } from '@/components/ui';
 import { cn } from '@/utils/cn';
-import { EXPLORE_SCOPES, exploreScopeHref, normalizeExploreScope } from '@/utils/explore';
+import { EXPLORE_SCOPES, exploreScopeHref, exploreServiceHref, normalizeExploreScope, normalizeExploreService } from '@/utils/explore';
 
-export const catalogLinks = EXPLORE_SCOPES.map((item) => ({ to: exploreScopeHref(item.id), label: item.label, scope: item.id }));
+export const catalogLinks = EXPLORE_SCOPES.filter((item) => item.id !== 'services').map((item) => ({ to: exploreScopeHref(item.id), label: item.label, scope: item.id }));
 export const navLinks = [
   ...catalogLinks,
   { to: '/itinerary', label: 'Plan a trip' },
@@ -30,7 +31,10 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -38,6 +42,8 @@ export function Navbar() {
     setMobileOpen(false);
     setSearchOpen(false);
     setMenuOpen(false);
+    setServicesOpen(false);
+    setMobileServicesOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -53,14 +59,41 @@ export function Navbar() {
   }, [mobileOpen]);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => !menuRef.current?.contains(e.target as Node) && setMenuOpen(false);
+    const close = (e: MouseEvent) => {
+      const node = e.target as Node;
+      if (!menuRef.current?.contains(node)) setMenuOpen(false);
+      if (!servicesRef.current?.contains(node)) setServicesOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      setServicesOpen(false);
+    };
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
   }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const exploreScope = location.pathname === '/explore' ? normalizeExploreScope(new URLSearchParams(location.search).get('scope')) : '';
+  const exploreService = location.pathname === '/explore' ? normalizeExploreService(new URLSearchParams(location.search).get('service')) : '';
+  const goCatalog = () => { if (location.pathname === '/explore') requestAnimationFrame(scrollToCatalog); };
+  const { options: serviceOptions, refresh: refreshServices } = useOfferedServices();
+  const serviceActive = (id: string) => exploreService.toLowerCase() === id.toLowerCase();
+  const toggleServices = () => {
+    refreshServices();
+    setServicesOpen((open) => !open);
+  };
+  const toggleMobileServices = () => {
+    refreshServices();
+    setMobileServicesOpen((open) => !open);
   };
 
   return (
@@ -71,13 +104,49 @@ export function Navbar() {
         <nav aria-label="Main" className="hidden min-w-0 flex-1 justify-center px-4 lg:flex">
           <div className="flex items-center gap-0.5">
             {catalogLinks.map((l) => {
-              const active = location.pathname === '/explore' && normalizeExploreScope(new URLSearchParams(location.search).get('scope')) === l.scope;
+              const active = exploreScope === l.scope;
               return (
-                <Link key={l.scope} to={l.to} aria-current={active ? 'page' : undefined} className={linkClass(active)} onClick={() => { if (location.pathname === '/explore') requestAnimationFrame(scrollToCatalog); }}>
+                <Link key={l.scope} to={l.to} aria-current={active ? 'page' : undefined} className={linkClass(active)} onClick={goCatalog}>
                   {l.label}
                 </Link>
               );
             })}
+            <div ref={servicesRef} className="relative">
+              <button
+                type="button"
+                onClick={toggleServices}
+                aria-haspopup="menu"
+                aria-expanded={servicesOpen}
+                aria-current={exploreScope === 'services' ? 'page' : undefined}
+                className={cn(linkClass(exploreScope === 'services'), 'inline-flex items-center gap-1')}
+              >
+                Services
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', servicesOpen && 'rotate-180')} aria-hidden />
+              </button>
+              {servicesOpen && (
+                <div role="menu" className="absolute left-1/2 top-full z-30 mt-2 max-h-[min(24rem,70vh)] w-64 -translate-x-1/2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lift">
+                  <Link
+                    role="menuitem"
+                    to={exploreScopeHref('services')}
+                    className={cn('block rounded-xl px-3 py-2 text-sm font-semibold', exploreScope === 'services' && !exploreService ? 'bg-brand-50 text-brand-700' : 'text-ink hover:bg-brand-50')}
+                    onClick={() => { setServicesOpen(false); goCatalog(); }}
+                  >
+                    All services
+                  </Link>
+                  {serviceOptions.map((item) => (
+                    <Link
+                      key={item.id}
+                      role="menuitem"
+                      to={exploreServiceHref(item.id)}
+                      className={cn('block rounded-xl px-3 py-2 text-sm font-semibold', serviceActive(item.id) ? 'bg-brand-50 text-brand-700' : 'text-ink hover:bg-brand-50')}
+                      onClick={() => { setServicesOpen(false); goCatalog(); }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             <span className="mx-1.5 h-4 w-px bg-slate-200" aria-hidden />
             <NavLink to="/itinerary" className={({ isActive }) => linkClass(isActive)}>Plan a trip</NavLink>
             <NavLink to="/map" className={({ isActive }) => linkClass(isActive)}>Map</NavLink>
@@ -143,13 +212,30 @@ export function Navbar() {
               <nav aria-label="Mobile" className="mt-4 flex flex-col">
                 <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Browse</p>
                 {catalogLinks.map((l) => {
-                  const active = location.pathname === '/explore' && normalizeExploreScope(new URLSearchParams(location.search).get('scope')) === l.scope;
+                  const active = exploreScope === l.scope;
                   return (
                     <Link key={l.scope} to={l.to} aria-current={active ? 'page' : undefined} className={cn('rounded-xl px-3 py-3 text-base font-semibold', active ? 'bg-brand-50 text-brand-600' : 'text-ink')}>
                       {l.label}
                     </Link>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={toggleMobileServices}
+                  aria-expanded={mobileServicesOpen}
+                  className={cn('flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-base font-semibold', exploreScope === 'services' ? 'bg-brand-50 text-brand-600' : 'text-ink')}
+                >
+                  Services
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', mobileServicesOpen && 'rotate-180')} aria-hidden />
+                </button>
+                {mobileServicesOpen && (
+                  <div className="mb-1 ml-3 space-y-0.5 border-l border-slate-200 pl-3">
+                    <Link to={exploreScopeHref('services')} className={cn('block rounded-xl px-3 py-2.5 text-sm font-semibold', exploreScope === 'services' && !exploreService ? 'bg-brand-50 text-brand-600' : 'text-slate-700')}>All services</Link>
+                    {serviceOptions.map((item) => (
+                      <Link key={item.id} to={exploreServiceHref(item.id)} className={cn('block rounded-xl px-3 py-2.5 text-sm font-semibold', serviceActive(item.id) ? 'bg-brand-50 text-brand-600' : 'text-slate-700')}>{item.label}</Link>
+                    ))}
+                  </div>
+                )}
                 <p className="mt-3 px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Plan</p>
                 <NavLink to="/itinerary" className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>Plan a trip</NavLink>
                 <NavLink to="/map" className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>Map</NavLink>

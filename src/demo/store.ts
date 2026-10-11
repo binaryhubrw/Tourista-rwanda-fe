@@ -32,6 +32,7 @@ export interface DemoState {
   refunds: Refund[];
   staff: StaffAccount[];
   vehicles: Record<string, Service[]>;
+  extras: Record<string, Service[]>;
   payouts: Record<string, PayoutTarget>;
   notifications: AppNotification[];
   vehiclesSeeded?: boolean;
@@ -39,7 +40,7 @@ export interface DemoState {
   notificationsSeeded?: string[];
 }
 
-const empty = (): DemoState => ({ bookings: [], refunds: [], staff: [], vehicles: {}, payouts: {}, notifications: [] });
+const empty = (): DemoState => ({ bookings: [], refunds: [], staff: [], vehicles: {}, extras: {}, payouts: {}, notifications: [] });
 
 function load(): DemoState {
   try {
@@ -51,6 +52,7 @@ function load(): DemoState {
       refunds: parsed.refunds ?? [],
       staff: parsed.staff ?? [],
       vehicles: parsed.vehicles ?? {},
+      extras: parsed.extras ?? {},
       payouts: parsed.payouts ?? {},
       notifications: parsed.notifications ?? [],
       vehiclesSeeded: parsed.vehiclesSeeded,
@@ -331,8 +333,15 @@ export function removeVehicle(businessId: string, vehicleId: string) {
   save();
 }
 
-export function persistFleet(businessId: string, vehicles: Service[]) {
-  state.vehicles = { ...state.vehicles, [businessId]: vehicles.filter((v) => v.group === 'vehicle') };
+const CORE_GROUPS = new Set(['room', 'food', 'vehicle']);
+
+export function extrasFor(businessId: string) {
+  return getDemoState().extras[businessId] ?? [];
+}
+
+export function persistFleet(businessId: string, services: Service[]) {
+  state.vehicles = { ...state.vehicles, [businessId]: services.filter((v) => v.group === 'vehicle') };
+  state.extras = { ...state.extras, [businessId]: services.filter((v) => !v.group || !CORE_GROUPS.has(v.group)) };
   save();
 }
 
@@ -351,14 +360,14 @@ function withSeededCarPhotos(service: Service): Service {
 }
 
 export function mergeVehicles(business: { id: string; services: Service[] }) {
-  const extras = vehiclesFor(business.id);
-  const extraById = Object.fromEntries(extras.map((v) => [v.id, v]));
+  const overlay = [...vehiclesFor(business.id), ...extrasFor(business.id)];
+  const extraById = Object.fromEntries(overlay.map((v) => [v.id, v]));
   const ids = new Set(business.services.map((s) => s.id));
   return {
     ...business,
     services: [
       ...business.services.map((s) => withSeededCarPhotos(extraById[s.id] ?? s)),
-      ...extras.filter((v) => !ids.has(v.id)).map(withSeededCarPhotos),
+      ...overlay.filter((v) => !ids.has(v.id)).map(withSeededCarPhotos),
     ],
   };
 }

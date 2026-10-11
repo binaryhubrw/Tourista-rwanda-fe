@@ -1,6 +1,5 @@
 import { ImageUpload, Input, Select } from '@/components/ui';
-import { images } from '@/data/images';
-import { VEHICLE_LEVELS, defaultVehicleSeats, offeringBlurb, vehicleLevelPhoto } from '@/utils/catalog';
+import { VEHICLE_LEVELS, defaultVehicleSeats, offeringBlurb } from '@/utils/catalog';
 
 export interface CarDraft {
   name: string;
@@ -18,15 +17,11 @@ export const emptyCar = (level = 'Standard'): CarDraft => ({
   brand: '',
   category: level,
   plate: '',
-  image: vehicleLevelPhoto(level),
+  image: '',
   seats: String(defaultVehicleSeats(level)),
   priceRwf: '',
   description: offeringBlurb('vehicle', level),
 });
-
-function fleetPhotoAt(index: number, level: string) {
-  return images.carFleet[index % images.carFleet.length] || vehicleLevelPhoto(level);
-}
 
 export function resizeCars(prev: CarDraft[], raw: string, min = 0) {
   const n = Math.max(min, Math.min(20, Math.round(Number(raw) || min)));
@@ -34,11 +29,7 @@ export function resizeCars(prev: CarDraft[], raw: string, min = 0) {
   const template = prev[prev.length - 1] ?? emptyCar();
   return [
     ...prev,
-    ...Array.from({ length: n - prev.length }, (_, i) => {
-      const index = prev.length + i;
-      const stock = !template.image || template.image === vehicleLevelPhoto(template.category) || images.carFleet.includes(template.image);
-      return { ...template, plate: '', image: stock ? fleetPhotoAt(index, template.category) : template.image };
-    }),
+    ...Array.from({ length: n - prev.length }, () => ({ ...template, plate: '', image: '' })),
   ];
 }
 
@@ -46,8 +37,7 @@ export function patchCar(prev: CarDraft[], index: number, patch: Partial<CarDraf
   return prev.map((car, i) => {
     if (i !== index) return car;
     const next = { ...car, ...patch };
-    if (patch.category && (car.image === vehicleLevelPhoto(car.category) || !car.image)) {
-      next.image = vehicleLevelPhoto(patch.category);
+    if (patch.category) {
       if (!car.seats || car.seats === String(defaultVehicleSeats(car.category))) next.seats = String(defaultVehicleSeats(patch.category));
       if (!car.description || car.description === offeringBlurb('vehicle', car.category)) next.description = offeringBlurb('vehicle', patch.category);
     }

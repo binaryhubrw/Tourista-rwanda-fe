@@ -8,7 +8,7 @@ import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '
 import { Button, EmptyState, ErrorState, fieldClass } from '@/components/ui';
 import { ExploreReveal } from '@/components/ExploreReveal';
 import {
-  EXPLORE_SCOPES, buildExploreItems, businessMatchesScope, featuredRank, locationHaystack, normalizeExploreScope, sortItems, sortOptions, termsMatch,
+  EXPLORE_SCOPES, buildExploreItems, businessHasService, businessMatchesScope, featuredRank, locationHaystack, normalizeExploreScope, normalizeExploreService, sortItems, sortOptions, termsMatch,
   type ExploreItem, type SortKey,
 } from '@/utils/explore';
 import { cn } from '@/utils/cn';
@@ -34,6 +34,7 @@ function applyFilters(
   locationId: string,
   locationDistrict: string,
   placeHits: { id: string; district: string }[],
+  service: string,
 ) {
   return items.filter((it) => {
     if (it.type !== 'business') return false;
@@ -43,7 +44,9 @@ function applyFilters(
       const placeHit = placeHits.some((place) => it.node.locationId === place.id || it.node.district === place.district);
       if (!textHit && !placeHit) return false;
     }
-    if (f.category?.length && !f.category.some((value) => {
+    if (service) {
+      if (!businessHasService(it.node, service)) return false;
+    } else if (f.category?.length && !f.category.some((value) => {
       const scope = normalizeExploreScope(value);
       return scope ? businessMatchesScope(it.node, scope) : it.kind === value;
     })) return false;
@@ -84,6 +87,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const qParam = params.get('q') ?? '';
   const scopeParam = params.get('scope') ?? '';
   const locationParam = params.get('location') ?? '';
+  const serviceParam = normalizeExploreService(params.get('service'));
 
   useEffect(() => { setQuery(qParam); }, [qParam]);
   useEffect(() => {
@@ -112,15 +116,15 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const locationDistrict = selectedPlace?.district ?? '';
 
   const results = useMemo(() => {
-    const sorted = sortItems(applyFilters(data?.items ?? [], query, filters, locationParam, locationDistrict, placeHits), sort);
+    const sorted = sortItems(applyFilters(data?.items ?? [], query, filters, locationParam, locationDistrict, placeHits, serviceParam), sort);
     if (!featuredFirst || sort !== 'recommended') return sorted;
     return [...sorted].sort((a, b) => featuredRank(a) - featuredRank(b));
-  }, [data, query, filters, sort, featuredFirst, locationParam, locationDistrict, placeHits]);
+  }, [data, query, filters, sort, featuredFirst, locationParam, locationDistrict, placeHits, serviceParam]);
   const visible = results.slice(0, visibleCount);
   const hasMore = visibleCount < results.length;
   const activeCount = Object.values(filters).reduce((s, v) => s + v.length, 0);
 
-  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize, locationParam]);
+  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize, locationParam, serviceParam]);
 
   useEffect(() => {
     if (!hasMore) return;
@@ -153,6 +157,13 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
     const next = new URLSearchParams(params);
     const scope = category.length === 1 ? normalizeExploreScope(category[0]) : '';
     if (scope) next.set('scope', scope); else next.delete('scope');
+    next.delete('service');
+    setParams(next, { replace: true });
+  };
+
+  const clearService = () => {
+    const next = new URLSearchParams(params);
+    next.delete('service');
     setParams(next, { replace: true });
   };
 
@@ -184,6 +195,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
           const nextParams = new URLSearchParams(params);
           const scope = (next.category ?? []).length === 1 ? normalizeExploreScope(next.category![0]) : '';
           if (scope) nextParams.set('scope', scope); else nextParams.delete('scope');
+          nextParams.delete('service');
           setParams(nextParams, { replace: true });
         }} open={sheetOpen} onClose={() => setSheetOpen(false)} resultCount={loading ? -1 : results.length} />
         <div>
@@ -196,6 +208,12 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
               );
             })}
           </div>
+          {serviceParam && (
+            <p className="mb-3 text-sm text-slate-600">
+              Businesses offering {serviceParam}.{' '}
+              <button type="button" onClick={clearService} className="font-semibold text-brand-600 hover:underline">Show all services</button>
+            </p>
+          )}
           {locationParam && placeLabel && (
             <p className="mb-3 text-sm text-slate-600">
               Listings at {placeLabel}.{' '}
@@ -212,7 +230,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
             <p className="mb-4 text-sm text-slate-600" aria-live="polite">{`${visible.length} of ${results.length} listing${results.length === 1 ? '' : 's'}`}</p>
           )}
           {loading ? <ExploreReveal /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
-            <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setCategories([]); onQuery(''); clearPlace(); setFilters({}); }}>Clear search and filters</Button>} />
+            <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setCategories([]); onQuery(''); clearPlace(); clearService(); setFilters({}); }}>Clear search and filters</Button>} />
           ) : (
             <>
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

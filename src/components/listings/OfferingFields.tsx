@@ -3,7 +3,7 @@ import { Button, Input, Select } from '@/components/ui';
 import { VehicleCarsEditor, emptyCar, type CarDraft } from '@/components/business/VehicleCarsEditor';
 import {
   DRINK_CATEGORIES, FOOD_CATEGORIES, ROOM_CATEGORIES, WELLNESS_CATEGORIES,
-  emptyExtra, vehicleLevelPhoto, type BookingMode, type CatalogDraft, type ExtraDraft, type OfferDraft, type ServiceStyle, type VenueDraft,
+  emptyExtra, type BookingMode, type CatalogDraft, type ExtraDraft, type OfferDraft, type ServiceStyle, type VenueDraft,
 } from '@/utils/catalog';
 import { makeId } from '@/utils/id';
 
@@ -32,7 +32,7 @@ export function OfferingFields({ lodging, kind, value, errors, onChange }: Props
     brand: car.brand,
     category: car.category || 'Standard',
     plate: car.plateNumber,
-    image: car.image || vehicleLevelPhoto(car.category),
+    image: car.image || '',
     seats: car.seats,
     priceRwf: car.price,
     description: car.description,

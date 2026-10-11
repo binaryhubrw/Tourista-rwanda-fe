@@ -9,7 +9,7 @@ import { Button, ButtonLink, ErrorState, Loading, Select } from '@/components/ui
 import { PageHeader } from '@/components/dashboard';
 import { VehicleCarsEditor, emptyCar, type CarDraft } from '@/components/business/VehicleCarsEditor';
 import { makeId } from '@/utils/id';
-import { defaultVehicleSeats, parsePlateList, vehicleLevelPhoto, vehicleUnits } from '@/utils/catalog';
+import { defaultVehicleSeats, parsePlateList, vehicleUnits } from '@/utils/catalog';
 import { useOwnerBusinesses } from './useOwnerBusinesses';
 
 function groupKey(car: CarDraft) {
@@ -71,7 +71,7 @@ export default function VehicleFormPage() {
         brand: vehicle.brand ?? '',
         category: unit.level || vehicle.category || 'Standard',
         plate: unit.plate,
-        image: unit.image || vehicle.image || vehicleLevelPhoto(vehicle.category),
+        image: unit.image || vehicle.image || '',
         seats: String(vehicle.capacity ?? defaultVehicleSeats(vehicle.category ?? '')),
         priceRwf: String(vehicle.priceRwf),
         description: vehicle.description,

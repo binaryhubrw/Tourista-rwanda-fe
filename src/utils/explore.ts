@@ -66,6 +66,67 @@ export function exploreScopeHref(scope: ExploreScope) {
   return `/explore?scope=${scope}#explore-listings`;
 }
 
+const ROOM_FOOD_VEHICLE = new Set(['room', 'food', 'vehicle']);
+
+/** Wellness, tours and other extras — not rooms, meals or hire cars. */
+export function isExploreService(service: Service) {
+  return !service.group || !ROOM_FOOD_VEHICLE.has(service.group);
+}
+
+function serviceMenuLabel(service: Service) {
+  return service.name.trim() || service.category?.trim() || '';
+}
+
+export function normalizeExploreService(raw: string | null | undefined): string {
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw).trim();
+  } catch {
+    return raw.trim();
+  }
+}
+
+export function exploreServiceHref(service?: string) {
+  const id = normalizeExploreService(service ?? '');
+  if (!id) return exploreScopeHref('services');
+  return `/explore?scope=services&service=${encodeURIComponent(id)}#explore-listings`;
+}
+
+export const CATALOG_EVENT = 'tourista-catalog';
+
+/** Tell the navbar (and any other catalog listeners) that offerings changed. */
+export function announceCatalog() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(CATALOG_EVENT));
+}
+
+/** Unique extras currently sold on any branch, for the Services dropdown. */
+export function offeredServices(businesses: Business[]): { id: string; label: string }[] {
+  const seen = new Map<string, string>();
+  businesses.forEach((business) => {
+    business.services.forEach((service) => {
+      if (!isExploreService(service)) return;
+      const label = serviceMenuLabel(service);
+      if (!label) return;
+      const key = label.toLowerCase();
+      if (!seen.has(key)) seen.set(key, label);
+    });
+  });
+  return [...seen.values()]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+    .map((label) => ({ id: label, label }));
+}
+
+/** Whether this branch actually sells the chosen service. */
+export function businessHasService(business: Business, service: string): boolean {
+  const needle = normalizeExploreService(service).toLowerCase();
+  if (!needle) return false;
+  return business.services.some((item) => {
+    if (!isExploreService(item)) return false;
+    return item.name.toLowerCase() === needle || item.category?.toLowerCase() === needle;
+  });
+}
+
 /** Whether a business actually offers this catalog slice (rooms, meals, cars or extra services). */
 export function businessMatchesScope(business: Business, scope: ExploreScope): boolean {
   const groups = new Set(business.services.map((service) => service.group));
