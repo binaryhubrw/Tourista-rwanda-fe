@@ -20,9 +20,7 @@ export function toJson<T>(rows: T[], columns: ExportColumn<T>[]) {
   return JSON.stringify(rows.map((r) => Object.fromEntries(columns.map((c) => [c.header, c.value(r) ?? null]))), null, 2);
 }
 
-export function downloadFile(filename: string, content: string, mime: string) {
-  // BOM so Excel opens UTF-8 CSVs (names like "Inès") correctly.
-  const blob = new Blob([mime.startsWith('text/csv') ? '﻿' : '', content], { type: mime });
+export function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -31,6 +29,11 @@ export function downloadFile(filename: string, content: string, mime: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function downloadFile(filename: string, content: string, mime: string) {
+  // BOM so Excel opens UTF-8 CSVs (names like "Inès") correctly.
+  downloadBlob(filename, new Blob([mime.startsWith('text/csv') ? '﻿' : '', content], { type: mime }));
 }
 
 export function exportRows<T>(format: 'csv' | 'json', baseName: string, rows: T[], columns: ExportColumn<T>[]) {

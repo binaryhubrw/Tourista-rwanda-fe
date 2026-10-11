@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Globe, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, User as UserIcon } from 'lucide-react';
+import { Bell, ChevronDown, ChevronRight, Globe, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, User as UserIcon } from 'lucide-react';
 import type { User } from '@/types';
 import { Avatar } from '@/components/ui';
 import { cn } from '@/utils/cn';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import { roleLabel } from './navigation';
 
 interface Props {
@@ -20,9 +21,12 @@ interface Props {
 /** Sticky top bar of the dashboard shell. */
 export function DashboardHeader({ user, basePath, pageTitle, roleCaption, collapsed, onToggleCollapsed, onOpenMobile, onLogout }: Props) {
   const caption = roleCaption ?? roleLabel[user.role];
+  const unread = useUnreadNotificationCount(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
+  const inboxTo = `${basePath}/notifications`;
+  const inboxOpen = pathname === inboxTo || pathname.startsWith(`${inboxTo}/`);
 
   useEffect(() => setMenuOpen(false), [pathname]);
 
@@ -65,6 +69,20 @@ export function DashboardHeader({ user, basePath, pageTitle, roleCaption, collap
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <Link to="/" className="hidden h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-ink sm:inline-flex">
             <Globe className="h-4 w-4" aria-hidden />Visit site
+          </Link>
+
+          <Link
+            to={inboxTo}
+            className={cn(iconBtn, 'relative', inboxOpen && 'bg-brand-50 text-brand-700')}
+            aria-label={unread ? `${unread} unread notifications` : 'Notifications'}
+            title="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+            {unread > 0 && (
+              <span className="absolute right-1 top-1 grid min-h-[1.1rem] min-w-[1.1rem] place-items-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
           </Link>
 
           <div ref={menuRef} className="relative">

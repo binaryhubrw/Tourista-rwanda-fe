@@ -30,19 +30,6 @@ const columns: Column<Location>[] = [
   { id: 'rating', header: 'Rating', align: 'right', sortValue: (l) => l.rating, cell: (l) => <span className="tabular-nums">{l.rating ? l.rating.toFixed(1) : 'New'}</span> },
 ];
 
-const importFields: ImportField[] = [
-  { key: 'name', label: 'Name', required: true, example: 'Lake Muhazi' },
-  { key: 'category', label: 'Category', required: true, example: 'Lake', hint: CATEGORIES.join(', ') },
-  { key: 'district', label: 'District', required: true, example: 'Rwamagana' },
-  { key: 'province', label: 'Province', required: true, example: 'Eastern Province', hint: PROVINCES.join(', ') },
-  { key: 'latitude', label: 'Latitude', required: true, example: '-1.85' },
-  { key: 'longitude', label: 'Longitude', required: true, example: '30.33' },
-  { key: 'shortDescription', label: 'Short description', required: true, example: 'A long, quiet lake for weekend escapes from Kigali.' },
-  { key: 'description', label: 'Description', example: 'Fishing villages, boat trips and lakeside fish grills.' },
-  { key: 'interests', label: 'Interests', example: 'Nature; Relaxation', hint: INTERESTS.join(', ') },
-  { key: 'thingsToDo', label: 'Things to do', example: 'Boat trip; Birdwatching' },
-  { key: 'photoUrl', label: 'Photo URL', example: '', hint: 'Optional.' },
-];
 
 const blank = { name: '', category: 'Hidden Gem' as LocationCategory, district: '', province: PROVINCES[1], lat: '', lng: '', shortDescription: '', description: '', interests: ['Nature'] as Interest[], thingsToDo: '', priceLevel: '1', hiddenGem: true, photos: [] as string[] };
 
@@ -58,6 +45,22 @@ export default function AdminLocationsPage() {
   const [saving, setSaving] = useState(false);
 
   const all = data ?? [];
+  const categoryOptions = [...new Set([...CATEGORIES, ...all.map((l) => l.category)])];
+  const provinceOptions = [...new Set([...PROVINCES, ...all.map((l) => l.province)])];
+  const districtOptions = [...new Set(all.map((l) => l.district.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const importFields: ImportField[] = useMemo(() => [
+    { key: 'name', label: 'Name', required: true, example: 'Lake Muhazi' },
+    { key: 'category', label: 'Category', required: true, example: categoryOptions[0] ?? 'Lake', options: categoryOptions, hint: 'Use the Excel dropdown.' },
+    { key: 'district', label: 'District', required: true, example: districtOptions[0] ?? 'Rwamagana', options: districtOptions, strict: false, hint: districtOptions.length ? 'Use the dropdown, or type a new district.' : 'Type the district name.' },
+    { key: 'province', label: 'Province', required: true, example: provinceOptions[0], options: provinceOptions, hint: 'Use the Excel dropdown.' },
+    { key: 'latitude', label: 'Latitude', required: true, example: '-1.85' },
+    { key: 'longitude', label: 'Longitude', required: true, example: '30.33' },
+    { key: 'shortDescription', label: 'Short description', required: true, example: 'A long, quiet lake for weekend escapes from Kigali.' },
+    { key: 'description', label: 'Description', example: 'Fishing villages, boat trips and lakeside fish grills.' },
+    { key: 'interests', label: 'Interests', example: INTERESTS.slice(0, 2).join('; '), options: INTERESTS, strict: false, hint: 'Use the dropdown, or list several separated by ;' },
+    { key: 'thingsToDo', label: 'Things to do', example: 'Boat trip; Birdwatching' },
+    { key: 'photoUrl', label: 'Photo URL', example: '', hint: 'Optional.' },
+  ], [categoryOptions, districtOptions, provinceOptions]);
   const categories = [...new Set(all.map((l) => l.category))].sort();
   const list = useMemo(() => all.filter((l) => category === 'all' || l.category === category), [all, category]);
   const names = useMemo(() => new Set(all.map((l) => l.name.toLowerCase())), [all]);
@@ -98,9 +101,9 @@ export default function AdminLocationsPage() {
   const parseRow = (r: Record<string, string>, i: number, rows: Record<string, string>[]) => {
     const errs: string[] = [];
     const name = (r.name ?? '').trim();
-    const cat = CATEGORIES.find((c) => c.toLowerCase() === (r.category ?? '').trim().toLowerCase());
+    const cat = (categoryOptions.find((c) => c.toLowerCase() === (r.category ?? '').trim().toLowerCase()) ?? CATEGORIES.find((c) => c.toLowerCase() === (r.category ?? '').trim().toLowerCase())) as LocationCategory | undefined;
     const provinceKey = (r.province ?? '').trim().toLowerCase();
-    const province = provinceKey.length >= 4 ? PROVINCES.find((p) => p.toLowerCase() === provinceKey) ?? PROVINCES.find((p) => p.toLowerCase().includes(provinceKey)) : undefined;
+    const province = provinceKey.length >= 4 ? provinceOptions.find((p) => p.toLowerCase() === provinceKey) ?? provinceOptions.find((p) => p.toLowerCase().includes(provinceKey)) : undefined;
     const lat = Number(r.latitude);
     const lng = Number(r.longitude);
     const interests = split(r.interests).map((x) => INTERESTS.find((o) => o.toLowerCase() === x.toLowerCase()));

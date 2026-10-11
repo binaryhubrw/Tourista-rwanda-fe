@@ -11,6 +11,9 @@ export function BusinessCard({ business, showActions = true }: { business: Busin
   const href = `/businesses/${business.id}`;
   const from = fromPrice(business);
   const label = listingKindOf(business);
+  const cars = business.services.filter((s) => s.group === 'vehicle');
+  const carFrom = cars.length ? cars.reduce((a, c) => (c.priceRwf < a.priceRwf ? c : a)) : null;
+  const carCount = cars.reduce((n, s) => n + (s.available ?? 1), 0);
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-shadow hover:shadow-lift">
       <div className="relative">
@@ -41,10 +44,15 @@ export function BusinessCard({ business, showActions = true }: { business: Busin
             From <span className="font-display text-lg font-bold text-ink">{formatRwf(from.priceRwf)}</span> {from.unit}
           </p>
         )}
+        {carFrom && (
+          <p className="mt-1 text-sm text-slate-500">
+            {carCount} {carCount === 1 ? 'car' : 'cars'} from <span className="font-semibold text-ink">{formatRwf(carFrom.priceRwf)}</span> {carFrom.unit}
+          </p>
+        )}
         {showActions && (
           <div className="mt-auto flex flex-wrap gap-2 pt-4">
             <Link to={href} className={buttonClass('secondary', 'sm')}>View details</Link>
-            <Link to={`/book/business/${business.id}`} className={buttonClass('primary', 'sm')}>Book</Link>
+            <Link to={href} className={buttonClass('primary', 'sm')}>Book</Link>
             <a href={`tel:${business.phone.replace(/\s/g, '')}`} className={buttonClass('ghost', 'sm')} aria-label={`Call ${business.name}`}>
               <Phone className="h-4 w-4" aria-hidden /> Contact
             </a>

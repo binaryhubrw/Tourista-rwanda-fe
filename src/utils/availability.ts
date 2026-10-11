@@ -1,6 +1,8 @@
 import type { Booking, BookingLine, Business, Service } from '@/types';
+import { occupiesInventory } from '@/demo/store';
 import { addDaysIso, nightsBetween, pricingMode } from '@/utils/pricing';
 import { todayIso } from '@/utils/format';
+import { vehiclePlates } from '@/utils/catalog';
 
 export function bookingLines(booking: Pick<Booking, 'lines' | 'serviceId' | 'serviceName' | 'units' | 'unitPriceRwf' | 'totalRwf'>): BookingLine[] {
   if (booking.lines?.length) return booking.lines;
@@ -26,7 +28,7 @@ const overlaps = (start: string, end: string, otherStart: string, otherEnd: stri
 /** Units already confirmed for this service between start (inclusive) and end (exclusive). */
 export function reservedUnits(serviceId: string, bookings: Booking[], start: string, end: string, service?: Pick<Service, 'unit'>) {
   return bookings.reduce((sum, booking) => {
-    if (booking.status !== 'Confirmed') return sum;
+    if (!occupiesInventory(booking.status)) return sum;
     const line = bookingLines(booking).find((item) => item.serviceId === serviceId);
     if (!line) return sum;
     const until = occupiedUntil(booking, service);
@@ -40,15 +42,40 @@ export function remaining(service: Service, bookings: Booking[], start: string, 
   return Math.max(0, service.available - reservedUnits(service.id, bookings, start, end, service));
 }
 
+/** Plates already assigned to overlapping hires of this car type. */
+export function reservedPlates(serviceId: string, bookings: Booking[], start: string, end: string, service?: Pick<Service, 'unit'>) {
+  const taken: string[] = [];
+  for (const booking of bookings) {
+    if (!occupiesInventory(booking.status)) continue;
+    const line = bookingLines(booking).find((item) => item.serviceId === serviceId);
+    if (!line?.plateNumbers?.length) continue;
+    const until = occupiedUntil(booking, service);
+    if (overlaps(start, end, booking.date, until)) taken.push(...line.plateNumbers);
+  }
+  return taken;
+}
+
+/** Next free registration plates for a vehicle hire. */
+export function assignVehiclePlates(service: Service, count: number, bookings: Booking[], start: string, end: string) {
+  const fleet = vehiclePlates(service);
+  if (!fleet.length) return [];
+  const taken = new Set(reservedPlates(service.id, bookings, start, end, service));
+  const reserved = reservedUnits(service.id, bookings, start, end, service);
+  const anonymous = Math.max(0, reserved - taken.size);
+  const free = fleet.filter((plate) => !taken.has(plate));
+  return free.slice(anonymous, anonymous + Math.max(0, count));
+}
+
 export function eachIso(start: string, end: string) {
   const days: string[] = [];
   for (let day = start; day < end; day = addDaysIso(day, 1)) days.push(day);
   return days;
 }
 
-/** True when this offering has no remaining units on that night or day. */
-export function isDateTaken(service: Service, bookings: Booking[], iso: string, units = 1) {
-  return remaining(service, bookings, iso, addDaysIso(iso, 1)) < units;
+/** True when this offering is sold out that night or day — not merely short of the requested quantity. */
+export function isDateTaken(service: Service, bookings: Booking[], iso: string, _units = 1) {
+  const left = remaining(service, bookings, iso, addDaysIso(iso, 1));
+  return Number.isFinite(left) && left <= 0;
 }
 
 export function isNightTakenFor(services: { service: Service; units: number }[], bookings: Booking[], iso: string) {
@@ -70,7 +97,7 @@ export interface OccupancySpan {
 export function occupancySpans(service: Service, bookings: Booking[], from = todayIso()): OccupancySpan[] {
   const spans: OccupancySpan[] = [];
   for (const booking of bookings) {
-    if (booking.status !== 'Confirmed') continue;
+    if (!occupiesInventory(booking.status)) continue;
     const line = bookingLines(booking).find((item) => item.serviceId === service.id);
     if (!line) continue;
     const until = occupiedUntil(booking, service);
@@ -104,5 +131,5 @@ export function hasAvailability(business: Pick<Business, 'services'>, bookings: 
 }
 
 export function bookingsForService(serviceId: string, bookings: Booking[]) {
-  return bookings.filter((booking) => booking.status === 'Confirmed' && bookingLines(booking).some((line) => line.serviceId === serviceId));
+  return bookings.filter((booking) => occupiesInventory(booking.status) && bookingLines(booking).some((line) => line.serviceId === serviceId));
 }

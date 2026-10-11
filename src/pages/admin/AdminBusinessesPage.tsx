@@ -28,19 +28,7 @@ const columns: Column<Business>[] = [
   { id: 'rating', header: 'Rating', align: 'right', sortValue: (b) => b.rating, cell: (b) => <span className="tabular-nums">{b.rating ? b.rating.toFixed(1) : 'New'}</span> },
 ];
 
-const importFields: ImportField[] = [
-  { key: 'name', label: 'Business name', required: true, example: 'Lake Burera Lodge' },
-  { key: 'category', label: 'Category', required: true, example: 'Accommodation', hint: BUSINESS_CATEGORIES.join(', ') },
-  { key: 'propertyType', label: 'Property type', example: 'Lodge', hint: `Accommodation only: ${PROPERTY_TYPES.join(', ')}` },
-  { key: 'destination', label: 'Destination', required: true, example: 'musanze', hint: 'Destination ID or name, e.g. Musanze' },
-  { key: 'description', label: 'Description', required: true, example: 'Six lakeside rooms with canoe trips and local meals.' },
-  { key: 'phone', label: 'Phone', required: true, example: '+250 788 600 100' },
-  { key: 'email', label: 'Email', required: true, example: 'stay@burera.rw' },
-  { key: 'ownerEmail', label: 'Owner email', example: 'business@tourista.rw', hint: 'Must be a business owner account. Defaults to you.' },
-  { key: 'priceLevel', label: 'Price range', example: 'mid-range', hint: 'budget, mid-range or premium (or 1–3)' },
-  { key: 'badges', label: 'Badges', example: 'Eco-certified; Women-led', hint: 'Separate with ;' },
-  { key: 'photoUrl', label: 'Photo URL', example: '', hint: 'Optional. Add photos later from the listing.' },
-];
+const PRICE_OPTIONS = ['budget', 'mid-range', 'premium'];
 
 const defaultImage = (c: BusinessCategory) =>
   ({ Accommodation: images.hotel, Restaurants: images.food, 'Tour Guides': images.hills, Handcrafts: images.crafts, 'Local Products': images.coffee, Transportation: images.lake, 'Community Tourism': images.village })[c];
@@ -68,6 +56,28 @@ export default function AdminBusinessesPage() {
   const [saving, setSaving] = useState(false);
 
   const all = data?.businesses ?? [];
+  const destinations = useMemo(() => {
+    const locations = data?.locations ?? [];
+    const counts = new Map<string, number>();
+    locations.forEach((l) => counts.set(l.name, (counts.get(l.name) ?? 0) + 1));
+    return [...locations]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((l) => (counts.get(l.name)! > 1 ? `${l.name} (${l.id})` : l.name));
+  }, [data?.locations]);
+  const ownerEmails = useMemo(() => [...new Set((data?.owners ?? []).map((o) => o.email))].sort((a, b) => a.localeCompare(b)), [data?.owners]);
+  const importFields: ImportField[] = useMemo(() => [
+    { key: 'name', label: 'Business name', required: true, example: 'Lake Burera Lodge' },
+    { key: 'category', label: 'Category', required: true, example: BUSINESS_CATEGORIES[0], options: [...BUSINESS_CATEGORIES], hint: 'Use the Excel dropdown.' },
+    { key: 'propertyType', label: 'Property type', example: PROPERTY_TYPES[0], options: [...PROPERTY_TYPES], hint: 'Accommodation only. Use the Excel dropdown.' },
+    { key: 'destination', label: 'Destination', required: true, example: destinations[0] ?? '', options: destinations, hint: destinations.length ? 'Use the Excel dropdown (destinations on the server).' : 'Add locations first, then import businesses.' },
+    { key: 'description', label: 'Description', required: true, example: 'Six lakeside rooms with canoe trips and local meals.' },
+    { key: 'phone', label: 'Phone', required: true, example: '+250 788 600 100' },
+    { key: 'email', label: 'Email', required: true, example: 'stay@burera.rw' },
+    { key: 'ownerEmail', label: 'Owner email', example: ownerEmails[0] ?? '', options: ownerEmails, hint: ownerEmails.length ? 'Use the dropdown. Must be a business owner. Leave empty to use your account.' : 'Leave empty to use your account.' },
+    { key: 'priceLevel', label: 'Price range', example: 'mid-range', options: PRICE_OPTIONS, hint: 'Use the Excel dropdown.' },
+    { key: 'badges', label: 'Badges', example: BADGE_OPTIONS.slice(0, 2).join('; '), options: [...BADGE_OPTIONS], strict: false, hint: 'Use the dropdown, or list several separated by ;' },
+    { key: 'photoUrl', label: 'Photo URL', example: '', hint: 'Optional. Add photos later from the branch.' },
+  ], [destinations, ownerEmails]);
   const categories = [...new Set(all.map((b) => b.category))].sort();
   const list = useMemo(() => all.filter((b) => category === 'all' || b.category === category), [all, category]);
   const ownerOptions = useMemo(() => [{ id: user!.id, name: `${user!.name} (you)` }, ...(data?.owners ?? []).map((o) => ({ id: o.id, name: o.name }))], [data, user]);
@@ -91,7 +101,11 @@ export default function AdminBusinessesPage() {
     const cat = BUSINESS_CATEGORIES.find((c) => c.toLowerCase() === (r.category ?? '').trim().toLowerCase());
     const prop = (r.propertyType ?? '').trim() ? PROPERTY_TYPES.find((p) => p.toLowerCase() === r.propertyType.trim().toLowerCase()) : undefined;
     const destKey = (r.destination ?? '').trim().toLowerCase();
-    const loc = data?.locations.find((l) => l.id === destKey || l.name.toLowerCase() === destKey);
+    const loc = data?.locations.find((l) => {
+      const name = l.name.toLowerCase();
+      const id = l.id.toLowerCase();
+      return destKey === id || destKey === name || destKey === `${name} (${id})`;
+    });
     const ownerEmail = (r.ownerEmail ?? '').trim().toLowerCase();
     const owner = ownerEmail ? data?.owners.find((o) => o.email.toLowerCase() === ownerEmail) : undefined;
     const level = parsePriceLevel(r.priceLevel ?? '');

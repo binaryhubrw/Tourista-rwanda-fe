@@ -65,10 +65,10 @@ export function HomeHero({ initialQuery = '' }: { initialQuery?: string }) {
         <Container className="pb-28 pt-16 sm:pb-36 sm:pt-24 lg:min-h-[78vh] lg:pt-28">
           <div className="max-w-3xl text-white">
             <h1 className="hero-wipe font-display text-[2.4rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-              Find a stay, a table or a guide.
+              Find a stay, a table, a car or a guide.
             </h1>
             <p className="hero-rise mt-5 max-w-xl text-lg text-white sm:text-xl" style={{ animationDelay: '0.18s' }}>
-              Search what you want. Open a listing. Pick rooms, meals or services.
+              Search what you want. Open a listing. Pick rooms, meals, cars or services.
             </p>
             <div className="hero-rise mt-8 flex flex-wrap items-center gap-4" style={{ animationDelay: '0.32s' }}>
               <p className="text-sm font-semibold" aria-live="polite">{heroSlides[slide].place}</p>

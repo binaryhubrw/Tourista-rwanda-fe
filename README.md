@@ -11,22 +11,12 @@ npm run dev              # http://localhost:5173
 npm run build            # type-check + production build
 ```
 
-### Demo accounts (mock mode)
-| Role | Email | Password |
-|---|---|---|
-| Tourist | tourist@tourista.rw | password |
-| Business owner | business@tourista.rw | password |
-| Tourism authority | admin@tourista.rw | password |
-
-The login page also has one-click buttons for these. Settings → "Reset demo data" restores the sample data.
-
 ## Connecting the Node API (`tourista-be`)
 
-All data goes through `src/services/`. Each function returns mock data when `VITE_USE_MOCK=true` and calls the API otherwise. Keep mock on until Mongo + `npm run dev` in `tourista-be` are up, so the UI stays filled.
+All screens load from the API. Run Mongo and `npm run dev` in `tourista-be`, then:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000/api
-VITE_USE_MOCK=false
 ```
 
 `src/services/apiClient.ts` sends `Authorization: Bearer <token>`. CORS on the API should allow `http://localhost:5173`. Expected endpoints:
@@ -56,11 +46,11 @@ src/
 ├── pages/        public pages, auth/, dashboard/ (tourist), business/, admin/
 ├── layouts/      MainLayout, DashboardLayout
 ├── routes/       AppRoutes, ProtectedRoute (role-based)
-├── services/     API-ready service functions + in-browser mock DB
+├── services/     API client and resource functions
 ├── context/      Auth, Favorites, Toast
 ├── hooks/        useAsync, useDebounce, useDocumentTitle
 ├── types/        domain interfaces
-├── data/         Rwanda mock data + images.ts (all image URLs in one place)
+├── data/         Hero and placeholder image URLs
 └── utils/
 ```
 

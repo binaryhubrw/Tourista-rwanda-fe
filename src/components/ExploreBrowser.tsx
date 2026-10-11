@@ -7,16 +7,14 @@ import { BusinessCard } from '@/components/cards';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
 import { Button, EmptyState, ErrorState, fieldClass } from '@/components/ui';
 import { ExploreReveal } from '@/components/ExploreReveal';
-import { buildExploreItems, featuredRank, locationHaystack, sortItems, sortOptions, termsMatch, type ExploreItem, type SortKey } from '@/utils/explore';
+import {
+  EXPLORE_SCOPES, buildExploreItems, businessMatchesScope, featuredRank, locationHaystack, normalizeExploreScope, sortItems, sortOptions, termsMatch,
+  type ExploreItem, type SortKey,
+} from '@/utils/explore';
 import { cn } from '@/utils/cn';
 
 const groups: FilterGroup[] = [
-  { id: 'category', label: 'Category', type: 'checkbox', options: [
-    { value: 'accommodation', label: 'Hotels, lodges & stays' },
-    { value: 'restaurant', label: 'Restaurants' },
-    { value: 'guide', label: 'Guides' },
-    { value: 'business', label: 'Local businesses' },
-  ] },
+  { id: 'category', label: 'Category', type: 'checkbox', options: EXPLORE_SCOPES.map((item) => ({ value: item.id, label: item.label })) },
   { id: 'interest', label: 'Interests', type: 'checkbox', options: [
     { value: 'Culture', label: 'Cultural experiences' }, { value: 'Nature', label: 'Nature' }, { value: 'Adventure', label: 'Adventure' },
     { value: 'Food', label: 'Food' }, { value: 'Wildlife', label: 'Wildlife' }, { value: 'History', label: 'History' },
@@ -45,7 +43,10 @@ function applyFilters(
       const placeHit = placeHits.some((place) => it.node.locationId === place.id || it.node.district === place.district);
       if (!textHit && !placeHit) return false;
     }
-    if (f.category?.length && !f.category.includes(it.kind)) return false;
+    if (f.category?.length && !f.category.some((value) => {
+      const scope = normalizeExploreScope(value);
+      return scope ? businessMatchesScope(it.node, scope) : it.kind === value;
+    })) return false;
     if (f.interest?.length && !f.interest.some((i) => it.interests.includes(i as never))) return false;
     if (f.province?.length && !f.province.some((p) => it.province.includes(p.replace(' Province', '')))) return false;
     if (f.price?.length && !f.price.includes(String(it.priceLevel))) return false;
@@ -55,27 +56,16 @@ function applyFilters(
   });
 }
 
-const scopeToCategory: Record<string, string[]> = {
-  accommodations: ['accommodation'],
-  restaurants: ['restaurant'],
-  businesses: ['business', 'guide'],
-};
-
-const quickFilters = [
-  { value: 'accommodation', label: 'Stays' },
-  { value: 'restaurant', label: 'Eat' },
-  { value: 'guide', label: 'Guides' },
-  { value: 'business', label: 'Makers' },
-];
+const quickFilters = EXPLORE_SCOPES;
 
 /** Filterable list of businesses. Search opens a listing, then the visitor picks what to book. */
 export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { showSearch?: boolean; featuredFirst?: boolean }) {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [filters, setFilters] = useState<FilterValues>(() => {
-    const cat = params.get('category');
+    const scope = normalizeExploreScope(params.get('scope') ?? params.get('category'));
     const interest = params.get('interest');
-    return { ...(cat ? { category: [cat] } : {}), ...(interest ? { interest: [interest] } : {}) };
+    return { ...(scope ? { category: [scope] } : {}), ...(interest ? { interest: [interest] } : {}) };
   });
   const [sort, setSort] = useState<SortKey>('recommended');
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -97,8 +87,19 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
 
   useEffect(() => { setQuery(qParam); }, [qParam]);
   useEffect(() => {
-    const mapped = scopeToCategory[scopeParam];
-    if (mapped) setFilters((current) => ({ ...current, category: mapped }));
+    const scope = normalizeExploreScope(scopeParam);
+    setFilters((current) => {
+      const prev = current.category ?? [];
+      if (scope) {
+        if (prev.length === 1 && prev[0] === scope) return current;
+        return { ...current, category: [scope] };
+      }
+      if (prev.length <= 1) {
+        if (!prev.length) return current;
+        return { ...current, category: [] };
+      }
+      return current;
+    });
   }, [scopeParam]);
 
   const placeHits = useMemo(() => {
@@ -146,6 +147,15 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
     setParams(next, { replace: true });
   };
 
+  const setCategories = (category: string[]) => {
+    setVisibleCount(pageSize);
+    setFilters((current) => ({ ...current, category }));
+    const next = new URLSearchParams(params);
+    const scope = category.length === 1 ? normalizeExploreScope(category[0]) : '';
+    if (scope) next.set('scope', scope); else next.delete('scope');
+    setParams(next, { replace: true });
+  };
+
   return (
     <>
       <div className={cn('mb-6 flex flex-col gap-3', showSearch && 'sm:flex-row sm:items-center')}>
@@ -153,7 +163,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
           <label className="relative flex-1">
             <span className="sr-only">Search listings</span>
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-600" aria-hidden />
-            <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search stays, food, guides…" className={`${fieldClass} h-12 rounded-full pl-11`} />
+            <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search stays, food, cars, guides…" className={`${fieldClass} h-12 rounded-full pl-11`} />
           </label>
         )}
         <div className={cn('flex gap-2', !showSearch && 'justify-end')}>
@@ -168,14 +178,21 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-        <FilterPanel groups={groups} values={filters} onChange={(next) => { setVisibleCount(pageSize); setFilters(next); }} open={sheetOpen} onClose={() => setSheetOpen(false)} resultCount={loading ? -1 : results.length} />
+        <FilterPanel groups={groups} values={filters} onChange={(next) => {
+          setVisibleCount(pageSize);
+          setFilters(next);
+          const nextParams = new URLSearchParams(params);
+          const scope = (next.category ?? []).length === 1 ? normalizeExploreScope(next.category![0]) : '';
+          if (scope) nextParams.set('scope', scope); else nextParams.delete('scope');
+          setParams(nextParams, { replace: true });
+        }} open={sheetOpen} onClose={() => setSheetOpen(false)} resultCount={loading ? -1 : results.length} />
         <div>
           <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Quick category">
-            <button type="button" onClick={() => setFilters((current) => ({ ...current, category: [] }))} className={cn('shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold', !filters.category?.length ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700')}>All</button>
+            <button type="button" onClick={() => setCategories([])} className={cn('shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold', !filters.category?.length ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700')}>All</button>
             {quickFilters.map((item) => {
-              const on = filters.category?.length === 1 && filters.category[0] === item.value;
+              const on = filters.category?.length === 1 && filters.category[0] === item.id;
               return (
-                <button key={item.value} type="button" onClick={() => setFilters((current) => ({ ...current, category: on ? [] : [item.value] }))} className={cn('shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold', on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700')}>{item.label}</button>
+                <button key={item.id} type="button" onClick={() => setCategories(on ? [] : [item.id])} className={cn('shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold', on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700')}>{item.label}</button>
               );
             })}
           </div>
@@ -195,7 +212,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
             <p className="mb-4 text-sm text-slate-600" aria-live="polite">{`${visible.length} of ${results.length} listing${results.length === 1 ? '' : 's'}`}</p>
           )}
           {loading ? <ExploreReveal /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
-            <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setFilters({}); onQuery(''); clearPlace(); }}>Clear search and filters</Button>} />
+            <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setCategories([]); onQuery(''); clearPlace(); setFilters({}); }}>Clear search and filters</Button>} />
           ) : (
             <>
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

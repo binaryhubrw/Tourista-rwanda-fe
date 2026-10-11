@@ -20,9 +20,17 @@ export function BookingViewLink({ to }: { to: string }) {
   );
 }
 
+export function PaymentViewLink({ to, label = 'View payment details' }: { to: string; label?: string }) {
+  return (
+    <Link to={to} aria-label={label} title={label} className="inline-grid h-9 w-9 place-items-center rounded-full text-brand-600 hover:bg-brand-50">
+      <Eye className="h-4 w-4" aria-hidden />
+    </Link>
+  );
+}
+
 export function ListingViewLink({ to, name }: { to: string; name: string }) {
   return (
-    <Link to={to} aria-label={`View ${name}`} title="View listing" className="inline-grid h-9 w-9 place-items-center rounded-full text-brand-600 hover:bg-brand-50">
+    <Link to={to} aria-label={`View ${name}`} title="View branch" className="inline-grid h-9 w-9 place-items-center rounded-full text-brand-600 hover:bg-brand-50">
       <Eye className="h-4 w-4" aria-hidden />
     </Link>
   );
@@ -80,7 +88,7 @@ export function bookingColumns(include: BookingColumnId[], options?: { detailsBa
       id: 'payment', header: 'Payment', sortValue: (b) => b.payment?.status ?? 'Unpaid',
       exportValue: (b) => (b.payment ? `${b.payment.status} via ${paymentMethodShort[b.payment.method]} (${b.payment.reference})` : 'Unpaid'),
       cell: (b) => {
-        if (!b.payment) return <span className="whitespace-nowrap text-xs font-semibold text-slate-500">{b.status === 'Pending' ? 'Awaiting payment' : 'Not paid'}</span>;
+        if (!b.payment) return <span className="whitespace-nowrap text-xs font-semibold text-slate-500">{b.status === 'AwaitingPayment' ? 'Pay 30% now' : b.status === 'Pending' ? 'Awaiting host' : 'Not paid'}</span>;
         const Icon = b.payment.method === 'card' ? CreditCard : Smartphone;
         return (
           <div className="whitespace-nowrap">
@@ -95,7 +103,7 @@ export function bookingColumns(include: BookingColumnId[], options?: { detailsBa
   return include.map((id) => all[id]);
 }
 
-export const bookingSearchText = (b: Booking) => `${b.id} ${b.customerName} ${b.customerEmail} ${b.targetName} ${b.serviceName ?? ''} ${b.payment?.reference ?? ''}`;
+export const bookingSearchText = (b: Booking) => `${b.id} ${b.customerName} ${b.customerEmail} ${b.targetName} ${b.serviceName ?? ''} ${b.lines?.flatMap((l) => l.plateNumbers ?? []).join(' ') ?? ''} ${b.payment?.reference ?? ''}`;
 
 /** Nights between start and end, used to tell stays (nights) from rentals (days). */
 function nightsOf(b: Booking) {
@@ -108,7 +116,7 @@ export type StatusFilter = 'All' | BookingStatus;
 export function statusOptions(bookings: Booking[]) {
   return [
     { value: 'All' as StatusFilter, label: 'All', count: bookings.length },
-    ...BOOKING_STATUSES.map((s) => ({ value: s as StatusFilter, label: s, count: bookings.filter((b) => b.status === s).length })),
+    ...BOOKING_STATUSES.map((s) => ({ value: s as StatusFilter, label: s.replace(/([a-z])([A-Z])/g, '$1 $2'), count: bookings.filter((b) => b.status === s).length })).filter((o) => o.count > 0 || o.value === 'Confirmed' || o.value === 'Pending'),
   ];
 }
 

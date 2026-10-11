@@ -3,15 +3,18 @@ import { MapPin } from 'lucide-react';
 import type { Business, Service } from '@/types';
 import { Badge, SmartImage, buttonClass } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
-import { listingKindOf } from '@/utils/catalog';
+import { listingKindOf, vehicleCarry, vehiclePhoto } from '@/utils/catalog';
 
 export function ServiceCard({ service, business }: { service: Service; business: Business }) {
   const href = `/businesses/${business.id}#offer-${service.id}`;
-  const kind = service.category ?? service.group ?? 'Service';
+  const kind = service.group === 'vehicle'
+    ? `${service.brand ? `${service.brand} · ` : ''}${service.category ?? 'Car'}`
+    : (service.category ?? service.group ?? 'Service');
+  const fleet = service.group === 'vehicle' ? (service.available ?? 1) : null;
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-shadow hover:shadow-lift">
       <div className="relative">
-        <SmartImage src={business.image} alt="" className="aspect-[16/10] w-full" />
+        <SmartImage src={service.group === 'vehicle' ? vehiclePhoto(service) : business.image} alt="" className="aspect-[16/10] w-full" />
         <Badge tone="glass" className="absolute left-3 top-3">{kind}</Badge>
       </div>
       <div className="flex flex-1 flex-col p-5">
@@ -24,6 +27,7 @@ export function ServiceCard({ service, business }: { service: Service; business:
         <p className="mt-3 text-sm text-slate-500">
           <span className="font-display text-lg font-bold text-ink">{formatRwf(service.priceRwf)}</span> {service.unit}
           {service.available != null && service.group === 'room' && <span> · {service.available} {service.available === 1 ? 'room' : 'rooms'}</span>}
+          {fleet != null && <span> · {fleet} {fleet === 1 ? 'car' : 'cars'} · {vehicleCarry(service).label}</span>}
         </p>
         <div className="mt-auto flex flex-wrap gap-2 pt-4">
           <Link to={href} className={buttonClass('secondary', 'sm')}>View listing</Link>

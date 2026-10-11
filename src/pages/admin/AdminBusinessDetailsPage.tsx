@@ -21,7 +21,7 @@ const offerName = (s: Service) => (s.category && s.category !== s.name ? `${s.ca
 const rowId = (row: OfferRow) => `${row.listing.id}:${row.service.id}`;
 
 const listingColumns: Column<Business>[] = [
-  { id: 'name', header: 'Listing', sortValue: (b) => b.name, cell: (b) => (
+  { id: 'name', header: 'Branch', sortValue: (b) => b.name, cell: (b) => (
     <div className="min-w-0">
       <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link>
       <p className="text-xs text-slate-500">{b.district}</p>
@@ -35,7 +35,7 @@ const listingColumns: Column<Business>[] = [
 ];
 
 const roomColumns = (bookings: Booking[]): Column<OfferRow>[] => [
-  { id: 'listing', header: 'Listing', sortValue: (r) => r.listing.name, cell: (r) => <Link to={`/admin/businesses/${r.listing.id}`} className="font-semibold hover:underline">{r.listing.name}</Link> },
+  { id: 'listing', header: 'Branch', sortValue: (r) => r.listing.name, cell: (r) => <Link to={`/admin/businesses/${r.listing.id}`} className="font-semibold hover:underline">{r.listing.name}</Link> },
   { id: 'name', header: 'Room', sortValue: (r) => r.service.name, cell: (r) => (
     <div className="min-w-0">
       <p className="font-semibold text-ink">{offerName(r.service)}</p>
@@ -64,7 +64,7 @@ const roomColumns = (bookings: Booking[]): Column<OfferRow>[] => [
 ];
 
 const serviceColumns: Column<OfferRow>[] = [
-  { id: 'listing', header: 'Listing', sortValue: (r) => r.listing.name, cell: (r) => <Link to={`/admin/businesses/${r.listing.id}`} className="font-semibold hover:underline">{r.listing.name}</Link> },
+  { id: 'listing', header: 'Branch', sortValue: (r) => r.listing.name, cell: (r) => <Link to={`/admin/businesses/${r.listing.id}`} className="font-semibold hover:underline">{r.listing.name}</Link> },
   { id: 'name', header: 'Service', sortValue: (r) => r.service.name, cell: (r) => (
     <div className="min-w-0">
       <p className="font-semibold text-ink">{offerName(r.service)}</p>
@@ -115,7 +115,7 @@ export default function AdminBusinessDetailsPage() {
       />
 
       <StatGrid className="grid-cols-2">
-        <StatCard label="Listings" icon={Package} value={listings.length} hint={listings.map((item) => listingKindOf(item)).filter((item, i, all) => all.indexOf(item) === i).join(', ')} />
+        <StatCard label="Branches" icon={Package} value={listings.length} hint={listings.map((item) => listingKindOf(item)).filter((item, i, all) => all.indexOf(item) === i).join(', ')} />
         <StatCard label="Rooms" icon={BedDouble} tone="teal" value={rooms.reduce((n, r) => n + (r.service.available ?? 1), 0)} />
         <StatCard label="Services" icon={Sparkles} tone="violet" value={services.length} />
         <StatCard label="Food & drink" icon={UtensilsCrossed} tone="amber" value={listings.reduce((n, item) => n + item.services.filter((s) => s.group === 'food').length, 0)} />
@@ -123,7 +123,7 @@ export default function AdminBusinessDetailsPage() {
       <StatGrid className="mt-4 grid-cols-2">
         <StatCard label="Bookings" icon={CalendarCheck} value={bookings.length} hint={`${confirmed.length} confirmed`} />
         <StatCard label="Revenue" icon={Wallet} tone="teal" value={formatRwf(revenue)} hint="Confirmed bookings" />
-        <StatCard label="Reviews" icon={Star} tone="amber" value={reviews.length} hint={listing.rating ? `This listing ${listing.rating.toFixed(1)}` : 'No rating yet'} />
+        <StatCard label="Reviews" icon={Star} tone="amber" value={reviews.length} hint={listing.rating ? `This branch ${listing.rating.toFixed(1)}` : 'No rating yet'} />
       </StatGrid>
 
       <div className="mt-6">
@@ -133,7 +133,7 @@ export default function AdminBusinessDetailsPage() {
           onChange={setView}
           options={[
             { value: 'overview', label: 'Overview' },
-            { value: 'listings', label: 'Listings', count: listings.length },
+            { value: 'listings', label: 'Branches', count: listings.length },
             { value: 'rooms', label: 'Rooms', count: rooms.length },
             { value: 'services', label: 'Services', count: services.length },
             { value: 'bookings', label: 'Bookings', count: bookings.length },
@@ -186,10 +186,10 @@ export default function AdminBusinessDetailsPage() {
             columns={listingColumns}
             getRowId={(b) => b.id}
             searchText={(b) => `${b.name} ${listingKindOf(b)} ${b.district}`}
-            searchPlaceholder="Search listings"
+            searchPlaceholder="Search branches"
             rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />}
-            emptyTitle="No listings"
-            emptyMessage="This owner has not published a listing."
+            emptyTitle="No branches"
+            emptyMessage="This owner has not published a branch."
           />
         )}
         {view === 'rooms' && (
@@ -200,7 +200,7 @@ export default function AdminBusinessDetailsPage() {
             searchText={(r) => `${r.listing.name} ${r.service.name} ${r.service.category ?? ''}`}
             searchPlaceholder="Search rooms"
             emptyTitle="No rooms"
-            emptyMessage="None of this owner's listings have rooms."
+            emptyMessage="None of this owner's branches have rooms."
           />
         )}
         {view === 'services' && (
@@ -211,7 +211,7 @@ export default function AdminBusinessDetailsPage() {
             searchText={(r) => `${r.listing.name} ${r.service.name} ${r.service.group ?? ''} ${r.service.unit}`}
             searchPlaceholder="Search services"
             emptyTitle="No services"
-            emptyMessage="None of this owner's listings have extra services yet."
+            emptyMessage="None of this owner's branches have extra services yet."
           />
         )}
         {view === 'bookings' && (
@@ -236,7 +236,7 @@ export default function AdminBusinessDetailsPage() {
             searchPlaceholder="Search reviews"
             initialSort={{ id: 'date', desc: true }}
             emptyTitle="No reviews"
-            emptyMessage="None of this owner's listings have been reviewed yet."
+            emptyMessage="None of this owner's branches have been reviewed yet."
           />
         )}
       </div>

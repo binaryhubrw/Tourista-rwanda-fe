@@ -45,6 +45,8 @@ interface Props {
   userPosition?: Coordinates | null;
   className?: string;
   interactive?: boolean;
+  /** Dots are the default; names are used on the public map. */
+  markers?: 'dots' | 'names';
 }
 
 /**
@@ -52,7 +54,7 @@ interface Props {
  * To switch to Google Maps / Leaflet / Mapbox, keep this props contract (points, selectedId, onSelect)
  * and render the provider's map + markers inside a new component with the same signature.
  */
-export function RwandaMap({ points, selectedId, onSelect, userPosition, className, interactive = true }: Props) {
+export function RwandaMap({ points, selectedId, onSelect, userPosition, className, interactive = true, markers = 'dots' }: Props) {
   const [zoom, setZoom] = useState(1);
   const selected = points.find((p) => p.id === selectedId);
 
@@ -96,12 +98,23 @@ export function RwandaMap({ points, selectedId, onSelect, userPosition, classNam
               aria-label={interactive ? `${p.name}, ${s.label}` : undefined}
               onKeyDown={(e) => interactive && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect?.(p.id))}
             >
-              {isSel && <circle r={r * 2.6} fill="#00628B" opacity={0.18}><animate attributeName="r" values={`${r * 1.6};${r * 2.8};${r * 1.6}`} dur="2s" repeatCount="indefinite" /></circle>}
-              <circle r={isSel ? r * 1.5 : r} fill={s.fill} stroke={isSel ? '#002838' : s.stroke} strokeWidth={isSel ? 3 / Math.sqrt(zoom) : 2 / Math.sqrt(zoom)} />
-              {(isSel || zoom >= 2) && (
-                <text y={-r * 2} textAnchor="middle" fontSize={15 / Math.sqrt(zoom)} fontWeight={700} fill="#14232B" stroke="#ffffff" strokeWidth={4 / Math.sqrt(zoom)} paintOrder="stroke">
-                  {p.name}
-                </text>
+              {markers === 'names' ? (
+                <>
+                  {isSel && <circle r={r * 2.2} fill="#00628B" opacity={0.12} pointerEvents="none" />}
+                  <text textAnchor="middle" dominantBaseline="middle" fontSize={(isSel ? 17 : 15) / Math.sqrt(zoom)} fontWeight={isSel ? 800 : 700} fill={isSel ? '#00628B' : '#14232B'} stroke="#ffffff" strokeWidth={5 / Math.sqrt(zoom)} paintOrder="stroke">
+                    {p.name}
+                  </text>
+                </>
+              ) : (
+                <>
+                  {isSel && <circle r={r * 2.6} fill="#00628B" opacity={0.18}><animate attributeName="r" values={`${r * 1.6};${r * 2.8};${r * 1.6}`} dur="2s" repeatCount="indefinite" /></circle>}
+                  <circle r={isSel ? r * 1.5 : r} fill={s.fill} stroke={isSel ? '#002838' : s.stroke} strokeWidth={isSel ? 3 / Math.sqrt(zoom) : 2 / Math.sqrt(zoom)} />
+                  {(isSel || zoom >= 2) && (
+                    <text y={-r * 2} textAnchor="middle" fontSize={15 / Math.sqrt(zoom)} fontWeight={700} fill="#14232B" stroke="#ffffff" strokeWidth={4 / Math.sqrt(zoom)} paintOrder="stroke">
+                      {p.name}
+                    </text>
+                  )}
+                </>
               )}
             </g>
           );

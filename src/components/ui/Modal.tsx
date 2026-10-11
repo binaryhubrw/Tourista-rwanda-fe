@@ -14,20 +14,23 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current();
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
+    const root = panelRef.current;
+    if (root && !root.contains(document.activeElement)) root.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
       prev?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   const width = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl' }[size];

@@ -1,25 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, Menu, Search, X, LayoutDashboard, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
+import { Menu, Search, X, LayoutDashboard, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
-import { useFavorites } from '@/context/FavoritesContext';
 import { Avatar, buttonClass, Container } from '@/components/ui';
 import { cn } from '@/utils/cn';
+import { EXPLORE_SCOPES, exploreScopeHref, normalizeExploreScope } from '@/utils/explore';
 
+export const catalogLinks = EXPLORE_SCOPES.map((item) => ({ to: exploreScopeHref(item.id), label: item.label, scope: item.id }));
 export const navLinks = [
+  ...catalogLinks,
   { to: '/itinerary', label: 'Plan a trip' },
   { to: '/map', label: 'Map' },
 ];
 
-const linkClass = ({ isActive }: { isActive: boolean }) =>
-  cn('whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-semibold transition-colors', isActive ? 'bg-brand-50 text-brand-600' : 'text-slate-700 hover:text-brand-700');
+const linkClass = (active: boolean) =>
+  cn('whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-semibold transition-colors', active ? 'bg-brand-50 text-brand-600' : 'text-slate-700 hover:text-brand-700');
+
+function scrollToCatalog() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('explore-listings')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+}
 
 export function Navbar() {
   const { user, logout } = useAuth();
-  const { favorites } = useFavorites();
   const ownedLabel = user?.role === 'business_owner' ? (user.businessName ?? '') : '';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -62,26 +68,28 @@ export function Navbar() {
       <Container className="relative flex h-16 items-center justify-between gap-3 lg:h-[72px]">
         <Logo />
 
-        <nav aria-label="Main" className="pointer-events-none absolute inset-x-0 hidden justify-center lg:flex">
-          <div className="pointer-events-auto flex items-center gap-1">
-            {navLinks.map((l) => (
-              <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>
-            ))}
+        <nav aria-label="Main" className="hidden min-w-0 flex-1 justify-center px-4 lg:flex">
+          <div className="flex items-center gap-0.5">
+            {catalogLinks.map((l) => {
+              const active = location.pathname === '/explore' && normalizeExploreScope(new URLSearchParams(location.search).get('scope')) === l.scope;
+              return (
+                <Link key={l.scope} to={l.to} aria-current={active ? 'page' : undefined} className={linkClass(active)} onClick={() => { if (location.pathname === '/explore') requestAnimationFrame(scrollToCatalog); }}>
+                  {l.label}
+                </Link>
+              );
+            })}
+            <span className="mx-1.5 h-4 w-px bg-slate-200" aria-hidden />
+            <NavLink to="/itinerary" className={({ isActive }) => linkClass(isActive)}>Plan a trip</NavLink>
+            <NavLink to="/map" className={({ isActive }) => linkClass(isActive)}>Map</NavLink>
           </div>
         </nav>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {location.pathname !== '/explore' && (
             <button onClick={() => setSearchOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-brand-50 hover:text-brand-700" aria-label="Search" aria-expanded={searchOpen}>
               <Search className="h-5 w-5" />
             </button>
           )}
-          <Link to="/favorites" className="relative grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-brand-50 hover:text-brand-700" aria-label={`Favorites (${favorites.length})`}>
-            <Heart className="h-5 w-5" />
-            {favorites.length > 0 && (
-              <span className="absolute right-0.5 top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand-600 px-1 text-[11px] font-bold text-white">{favorites.length}</span>
-            )}
-          </Link>
 
           {user ? (
             <div ref={menuRef} className="relative hidden sm:block">
@@ -102,7 +110,8 @@ export function Navbar() {
           ) : (
             <div className="hidden items-center gap-2 sm:flex">
               <Link to="/login" className={buttonClass('ghost', 'sm', 'whitespace-nowrap')}>Log in</Link>
-              <Link to="/register" className={buttonClass('primary', 'sm', 'whitespace-nowrap')}>Sign up</Link>
+              <Link to="/register" className={buttonClass('secondary', 'sm', 'whitespace-nowrap')}>Sign up</Link>
+              <Link to="/register/business" className={buttonClass('primary', 'sm', 'whitespace-nowrap')}>Register a business</Link>
             </div>
           )}
 
@@ -132,11 +141,18 @@ export function Navbar() {
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <SearchBar onNavigate={() => setMobileOpen(false)} placeholder="Search Rwanda" />
               <nav aria-label="Mobile" className="mt-4 flex flex-col">
-                {navLinks.map((l) => (
-                  <NavLink key={l.to} to={l.to} className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>
-                    {l.label}
-                  </NavLink>
-                ))}
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Browse</p>
+                {catalogLinks.map((l) => {
+                  const active = location.pathname === '/explore' && normalizeExploreScope(new URLSearchParams(location.search).get('scope')) === l.scope;
+                  return (
+                    <Link key={l.scope} to={l.to} aria-current={active ? 'page' : undefined} className={cn('rounded-xl px-3 py-3 text-base font-semibold', active ? 'bg-brand-50 text-brand-600' : 'text-ink')}>
+                      {l.label}
+                    </Link>
+                  );
+                })}
+                <p className="mt-3 px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Plan</p>
+                <NavLink to="/itinerary" className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>Plan a trip</NavLink>
+                <NavLink to="/map" className={({ isActive }) => cn('rounded-xl px-3 py-3 text-base font-semibold', isActive ? 'bg-brand-50 text-brand-600' : 'text-ink')}>Map</NavLink>
               </nav>
             </div>
             <div className="border-t border-slate-100 p-4">
@@ -153,9 +169,12 @@ export function Navbar() {
                   <button onClick={handleLogout} className={buttonClass('ghost', 'md', 'w-full text-red-600 hover:bg-red-50')}>Log out</button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link to="/login" className={buttonClass('secondary', 'md')}>Log in</Link>
-                  <Link to="/register" className={buttonClass('primary', 'md')}>Sign up</Link>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link to="/login" className={buttonClass('secondary', 'md')}>Log in</Link>
+                    <Link to="/register" className={buttonClass('primary', 'md')}>Sign up</Link>
+                  </div>
+                  <Link to="/register/business" className={buttonClass('secondary', 'md', 'w-full')}>Register a business</Link>
                 </div>
               )}
             </div>

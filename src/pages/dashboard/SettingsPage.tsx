@@ -5,9 +5,7 @@ import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Bell, Coins, Languages } from 'lucide-react';
 import { PageHeader, StatCard, StatGrid } from '@/components/dashboard';
-import { Button, ConfirmModal, Select } from '@/components/ui';
-import { resetMockDb } from '@/services/mockDb';
-import { USE_MOCK } from '@/services/config';
+import { Button, Select } from '@/components/ui';
 
 const languages = [{ value: 'en', label: 'English' }, { value: 'rw', label: 'Kinyarwanda' }, { value: 'fr', label: 'Français' }, { value: 'sw', label: 'Kiswahili' }];
 const currencies = [{ value: 'RWF', label: 'Rwandan franc (RWF)' }, { value: 'USD', label: 'US dollar (USD)' }, { value: 'EUR', label: 'Euro (EUR)' }];
@@ -21,7 +19,6 @@ export default function SettingsPage() {
     ...user?.preferences,
   });
   const [saving, setSaving] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
 
   const toggles: { key: 'bookingEmails' | 'reviewReplies' | 'newsletter'; label: string; text: string }[] = [
     { key: 'bookingEmails', label: 'Booking updates', text: 'Email me when a booking is confirmed or canceled.' },
@@ -72,15 +69,7 @@ export default function SettingsPage() {
             }}>Save settings</Button>
           </div>
         </section>
-        {USE_MOCK && (
-          <section className="rounded-3xl border border-red-100 bg-white p-5 sm:p-7">
-            <h2 className="font-display text-lg font-bold text-ink">Demo data</h2>
-            <p className="mt-1 text-sm text-slate-600">Restore the original sample itineraries, reviews, bookings and listings on this device.</p>
-            <Button variant="secondary" className="mt-4 border-red-600 text-red-700 hover:bg-red-50" onClick={() => setResetOpen(true)}>Reset demo data</Button>
-          </section>
-        )}
       </div>
-      <ConfirmModal open={resetOpen} title="Reset all demo data?" message="Everything you created on this device (itineraries, reviews, bookings and listings) will be replaced with the original samples." confirmLabel="Reset data" onCancel={() => setResetOpen(false)} onConfirm={() => { resetMockDb(); setResetOpen(false); toast.success('Demo data restored.'); }} />
     </>
   );
 }

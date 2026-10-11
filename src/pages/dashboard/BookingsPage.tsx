@@ -1,21 +1,20 @@
 import { useMemo, useState } from 'react';
 import { CalendarCheck, CalendarClock, CreditCard, Wallet, XCircle } from 'lucide-react';
-import type { Booking, Payment } from '@/types';
-import { getBookings, getPayoutForBusiness, payBooking, updateBookingStatus } from '@/services';
+import type { Booking } from '@/types';
+import { getBookings, updateBookingStatus } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Button, ButtonLink, ConfirmModal, ErrorState, Loading, Modal } from '@/components/ui';
+import { Button, ButtonLink, ConfirmModal, ErrorState, Loading } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
-import { PaymentForm } from '@/components/payment/PaymentForm';
 import { BookingViewLink, bookingColumns, bookingSearchText, statusOptions, type StatusFilter } from '../shared/tableColumns';
 import { sum } from '@/utils/analytics';
 import { formatDate, formatRwf, formatRwfShort, todayIso } from '@/utils/format';
 
 const columns = bookingColumns(['target', 'date', 'units', 'total', 'status', 'payment', 'created'], { detailsBase: '/dashboard/bookings' });
 const canCancel = (b: Booking) => b.status !== 'Canceled' && b.date >= todayIso();
-const needsPayment = (b: Booking) => b.status === 'Pending' && !b.payment && b.date >= todayIso();
+const needsPayment = (b: Booking) => b.status === 'AwaitingPayment';
 
 export default function BookingsPage() {
   useDocumentTitle('My bookings');
@@ -24,9 +23,7 @@ export default function BookingsPage() {
   const { data, loading, error, reload, setData } = useAsync(() => getBookings({ userId: user!.id }), [user?.id]);
   const [filter, setFilter] = useState<StatusFilter>('All');
   const [cancelling, setCancelling] = useState<{ rows: Booking[]; done?: () => void } | null>(null);
-  const [paying, setPaying] = useState<Booking | null>(null);
   const [busy, setBusy] = useState(false);
-  const payout = useAsync(() => (paying?.businessId ? getPayoutForBusiness(paying.businessId) : Promise.resolve(null)), [paying?.businessId]);
 
   const all = data ?? [];
   const list = useMemo(() => all.filter((b) => filter === 'All' || b.status === filter), [all, filter]);
@@ -54,24 +51,12 @@ export default function BookingsPage() {
     }
   };
 
-  const onPaid = async (payment: Payment) => {
-    if (!paying) return;
-    try {
-      const updated = await payBooking(paying.id, payment);
-      setData((rows) => rows?.map((b) => (b.id === updated.id ? updated : b)));
-      toast.success(`Paid ${formatRwf(payment.amountRwf)}. ${paying.targetName} is confirmed.`);
-      setPaying(null);
-    } catch (e) {
-      toast.error(errorMessage(e));
-    }
-  };
-
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (loading) return <Loading />;
 
   return (
     <>
-      <PageHeader title="Bookings" intro="Bookings are confirmed once they're paid. Cancel an upcoming booking to get a refund." action={<ButtonLink to="/explore" variant="secondary">Book something new</ButtonLink>} />
+      <PageHeader title="Bookings" intro="Send a request, wait for the host, then pay at least 30% from an approved booking. Transfers happen outside Tourista." action={<ButtonLink to="/explore" variant="secondary">Book something new</ButtonLink>} />
 
       <StatGrid>
         <StatCard label="All bookings" icon={CalendarCheck} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed`} />
@@ -101,24 +86,13 @@ export default function BookingsPage() {
         rowActions={(b) => (
           <div className="flex items-center justify-end gap-2">
             <BookingViewLink to={`/dashboard/bookings/${b.id}`} />
-            {needsPayment(b) && <Button size="sm" onClick={() => setPaying(b)}><CreditCard className="h-4 w-4" aria-hidden />Pay now</Button>}
+            {needsPayment(b) && <ButtonLink size="sm" to={`/dashboard/payments/${b.id}`}><CreditCard className="h-4 w-4" aria-hidden />Pay now</ButtonLink>}
             {canCancel(b) && <button onClick={() => setCancelling({ rows: [b] })} className="text-sm font-semibold text-red-600 hover:underline">Cancel</button>}
           </div>
         )}
         emptyTitle={filter === 'All' ? 'No bookings yet' : `No ${filter.toLowerCase()} bookings`}
         emptyMessage="When you book a stay, guide or experience, it will appear here."
       />
-
-      <Modal open={!!paying} onClose={() => setPaying(null)} title={paying ? `Pay for ${paying.targetName}` : 'Pay'} size="lg">
-        {paying && (
-          <>
-            <p className="mb-5 rounded-xl bg-brand-50 px-4 py-3 text-sm text-ink">
-              {paying.serviceName} · {formatDate(paying.date)}{paying.endDate && ` → ${formatDate(paying.endDate)}`} · <strong>{formatRwf(paying.totalRwf)}</strong>
-            </p>
-            <PaymentForm amountRwf={paying.totalRwf} defaultPhone={paying.customerPhone} payout={payout.data} onPaid={onPaid} />
-          </>
-        )}
-      </Modal>
 
       <ConfirmModal
         open={!!cancelling}

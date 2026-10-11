@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Favorite } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { USE_MOCK } from '@/services/config';
 import { addFavorite, getFavorites, removeFavorite as deleteFavorite } from '@/services/favoriteService';
 
 type FavoriteInput = Omit<Favorite, 'id' | 'addedAt'>;
@@ -32,7 +31,7 @@ function saveLocal(favorites: Favorite[]) {
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const useApi = !USE_MOCK && isAuthenticated;
+  const useApi = isAuthenticated;
   const [favorites, setFavorites] = useState<Favorite[]>(load);
 
   useEffect(() => {

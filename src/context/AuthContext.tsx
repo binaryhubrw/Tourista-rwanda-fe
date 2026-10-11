@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User, UserRole } from '@/types';
-import { TOKEN_KEY, USE_MOCK } from '@/services/config';
+import { TOKEN_KEY } from '@/services/config';
 import * as authService from '@/services/authService';
 
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (input: { name: string; email: string; password: string; role: Exclude<UserRole, 'admin'>; businessName?: string; bankAccount?: string; mtnNumber?: string; airtelNumber?: string }) => Promise<User>;
+  register: (input: { name: string; email: string; password: string; role: Exclude<UserRole, 'admin' | 'staff'>; businessName?: string; bankAccount?: string; mtnNumber?: string; airtelNumber?: string }) => Promise<User>;
   updateUser: (user: User) => Promise<void>;
   logout: () => void;
 }
@@ -15,13 +15,13 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const dashboardPathFor = (role: UserRole) =>
-  role === 'admin' ? '/admin' : role === 'business_owner' ? '/business-dashboard' : '/dashboard';
+  role === 'admin' ? '/admin' : role === 'business_owner' || role === 'staff' ? '/business-dashboard' : '/dashboard';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => authService.getStoredUser());
 
   useEffect(() => {
-    if (USE_MOCK || !localStorage.getItem(TOKEN_KEY)) return;
+    if (!localStorage.getItem(TOKEN_KEY)) return;
     authService.fetchMe().then(setUser).catch(() => setUser(null));
   }, []);
 

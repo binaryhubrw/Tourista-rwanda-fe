@@ -9,8 +9,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { ItineraryTimeline, renumber } from '@/components/itinerary/ItineraryTimeline';
 import { ItineraryCard } from '@/components/cards';
-import { Button, ConfirmModal, Container, EmptyState, ErrorState, Input, Loading, PageHeader, SmartImage, Textarea, fieldClass } from '@/components/ui';
-import { daysBetween, formatDate } from '@/utils/format';
+import { Button, ConfirmModal, Container, DatePicker, EmptyState, ErrorState, Input, Loading, PageHeader, SmartImage, Textarea, fieldClass } from '@/components/ui';
+import { daysBetween, formatDate, todayIso } from '@/utils/format';
 import { makeId } from '@/utils/id';
 import NotFoundPage from './NotFoundPage';
 
@@ -115,12 +115,12 @@ export default function ItineraryBuilderPage() {
         const created = await createItinerary(payload);
         localStorage.removeItem(DRAFT_KEY);
         toast.success('Itinerary saved successfully.');
-        navigate(`/itinerary/${created.id}`, { replace: true });
+        navigate(`/dashboard/itineraries/${created.id}`, { replace: true });
       } else {
         const updated = await updateItinerary(id!, payload);
         existing.setData(updated);
-        setMode('view');
         toast.success('Itinerary updated.');
+        navigate(`/dashboard/itineraries/${updated.id}`, { replace: true });
       }
     } catch (err) {
       toast.error(errorMessage(err));
@@ -185,8 +185,26 @@ export default function ItineraryBuilderPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2"><Input label="Trip title" required value={draft.title} onChange={(e) => set('title', e.target.value)} error={errors.title} placeholder="My Rwanda Adventure" maxLength={80} /></div>
                 <div className="sm:col-span-2"><Textarea label="Description" value={draft.description} onChange={(e) => set('description', e.target.value)} placeholder="Who's coming, what you want to see, anything to remember" maxLength={400} /></div>
-                <Input label="Start date" type="date" required value={draft.startDate} onChange={(e) => set('startDate', e.target.value)} error={errors.startDate} />
-                <Input label="End date" type="date" required min={draft.startDate || undefined} value={draft.endDate} onChange={(e) => set('endDate', e.target.value)} error={errors.endDate} hint={days ? `${days} day${days > 1 ? 's' : ''}` : undefined} />
+                <DatePicker
+                  label="Start date"
+                  required
+                  min={todayIso()}
+                  value={draft.startDate}
+                  onChange={(iso) => {
+                    set('startDate', iso);
+                    if (draft.endDate && draft.endDate < iso) set('endDate', iso);
+                  }}
+                  error={errors.startDate}
+                />
+                <DatePicker
+                  label="End date"
+                  required
+                  min={draft.startDate || todayIso()}
+                  value={draft.endDate}
+                  onChange={(iso) => set('endDate', iso)}
+                  error={errors.endDate}
+                  hint={days ? `${days} day${days > 1 ? 's' : ''}` : undefined}
+                />
               </div>
             </section>
           )}

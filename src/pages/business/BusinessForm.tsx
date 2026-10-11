@@ -16,7 +16,7 @@ interface Props {
   locations: Location[];
   ownerId: string;
   ownerName: string;
-  /** When given (admin), the listing's owner can be chosen. */
+  /** When given (admin), the branch's owner can be chosen. */
   owners?: { id: string; name: string }[];
   submitting: boolean;
   onSubmit: (input: BusinessInput) => void;
@@ -44,21 +44,21 @@ export function BusinessForm({ initial, locations, ownerId, ownerName, owners, s
   const kind = kindById(f.kind);
   const wellnessKind = kind?.id === 'Wellness';
   const prompt = useMemo(() => {
-    if (lodging) return { name: 'Listing name', photos: 'Show the outside, the rooms and what guests can book.', extra: 'Rooms come first. Then tick any wellness or food you actually offer.' };
+    if (lodging) return { name: 'Branch name', photos: 'Show the outside, the rooms and what guests can book.', extra: 'Rooms come first. You can also add hire cars the same way as on Add vehicle, then wellness or food you actually offer.' };
     if (kind?.id === 'Restaurant') return { name: 'Place name', photos: 'Show the dining room and a plated dish.', extra: 'Meals are per plate. Say if you also have self-service, and whether guests can book a table.' };
     if (kind?.id === 'Bar') return { name: 'Place name', photos: 'Show the bar and the terrace.', extra: 'Drink prices vary. Enter a starting price for each kind, then say whether guests can book a table.' };
     if (kind?.id === 'Coffee shop') return { name: 'Place name', photos: 'Show the counter and a seating corner.', extra: 'Cup prices vary. Enter a starting price, then say whether guests can book a table.' };
     if (wellnessKind) return { name: 'Studio or spa name', photos: 'Show the treatment rooms and the space guests walk into.', extra: 'Tick each treatment you offer and give it a price.' };
     if (kind?.id === 'Tour guide') return { name: 'Guide or company name', photos: 'A photo of you, your vehicle or a recent trip.', extra: 'Add the tours you lead as extra services.' };
-    if (kind?.id === 'Transportation') return { name: 'Company name', photos: 'Show the vehicles guests will use.', extra: 'Add each transfer or hire as its own service.' };
-    return { name: 'Listing name', photos: 'Show what travellers will see when they arrive.', extra: 'Add each thing a guest can book, with a price.' };
+    if (kind?.id === 'Transportation') return { name: 'Company name', photos: 'Show the vehicles guests will use.', extra: 'Set how many cars you have, then add each one’s photo, level, plate and daily price.' };
+    return { name: 'Branch name', photos: 'Show what travellers will see when they arrive.', extra: 'Add each thing a guest can book, with a price.' };
   }, [kind?.id, lodging, wellnessKind]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const er: Record<string, string> = {};
-    if (f.name.trim().length < 3) er.name = 'Enter the listing name.';
-    if (!kindById(f.kind)) er.kind = 'Choose the kind of listing.';
+    if (f.name.trim().length < 3) er.name = 'Enter the branch name.';
+    if (!kindById(f.kind)) er.kind = 'Choose the kind of branch.';
     if (f.description.trim().length < 30) er.description = 'Describe what you offer in at least 30 characters.';
     if (f.phone.replace(/\D/g, '').length < 9) er.phone = 'Enter a phone number, e.g. +250 788 000 000.';
     if (!/^\S+@\S+\.\S+$/.test(f.email)) er.email = 'Enter a valid email address.';
@@ -83,14 +83,14 @@ export function BusinessForm({ initial, locations, ownerId, ownerName, owners, s
 
   return (
     <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
-      <Select label="What are you listing?" required value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })} options={LISTING_KINDS.map((item) => ({ value: item.id, label: item.id }))} error={errors.kind} />
+      <Select label="What kind of branch?" required value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })} options={LISTING_KINDS.map((item) => ({ value: item.id, label: item.id }))} error={errors.kind} />
       <Select label="Price range" value={f.priceLevel} onChange={(e) => setF({ ...f, priceLevel: e.target.value })} options={[{ value: '1', label: 'Budget' }, { value: '2', label: 'Mid-range' }, { value: '3', label: 'Premium' }]} />
       <div className="sm:col-span-2"><Input label={prompt.name} required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} error={errors.name} /></div>
       <Select label="Nearest destination" value={f.locationId} onChange={(e) => setF({ ...f, locationId: e.target.value })} options={locations.map((l) => ({ value: l.id, label: l.name }))} />
       {owners && (
         <Select label="Owner" value={f.ownerId} onChange={(e) => setF({ ...f, ownerId: e.target.value })} options={owners.map((o) => ({ value: o.id, label: o.name }))} />
       )}
-      <div className="sm:col-span-2"><Textarea label="How should travellers see this listing?" required value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} error={errors.description} placeholder="What you offer, what makes it special and who runs it" /></div>
+      <div className="sm:col-span-2"><Textarea label="How should travellers see this branch?" required value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} error={errors.description} placeholder="What you offer, what makes it special and who runs it" /></div>
       <Input label="Phone guests can call" type="tel" required value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} error={errors.phone} />
       <Input label="Email for bookings" type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} error={errors.email} />
       <div className="sm:col-span-2">
@@ -115,7 +115,7 @@ export function BusinessForm({ initial, locations, ownerId, ownerName, owners, s
       </fieldset>
       <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end">
         <Button variant="ghost" onClick={onCancel}>{cancelLabel ?? 'Cancel'}</Button>
-        <Button type="submit" loading={submitting}>{submitLabel ?? (initial ? 'Save changes' : 'Publish listing')}</Button>
+        <Button type="submit" loading={submitting}>{submitLabel ?? (initial ? 'Save changes' : 'Publish branch')}</Button>
       </div>
     </form>
   );

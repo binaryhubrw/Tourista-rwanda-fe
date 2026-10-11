@@ -134,10 +134,10 @@ export default function AdminAnalyticsPage() {
               <ChartCard title="Businesses by kind" description="How the catalogue is split" className="xl:col-span-2">
                 <BarsChart data={byKind} xKey="name" layout="vertical" series={[{ key: 'value', label: 'Businesses' }]} height={Math.max(220, byKind.length * 36)} categoryWidth={140} />
               </ChartCard>
-              <ChartCard title="Where businesses are" description="Top districts by number of listings">
+              <ChartCard title="Where businesses are" description="Top districts by number of branches">
                 <BarsChart data={byDistrict} xKey="name" layout="vertical" series={[{ key: 'value', label: 'Businesses' }]} height={280} categoryWidth={120} />
               </ChartCard>
-              <ChartCard title="Sustainability badges" description="Listings carrying each badge">
+              <ChartCard title="Sustainability badges" description="Branches carrying each badge">
                 <DonutChart data={byBadge} centerValue={String(businesses.filter((b) => b.badges.length).length)} centerLabel="badged" height={220} />
               </ChartCard>
             </div>

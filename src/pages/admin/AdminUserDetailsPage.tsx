@@ -11,10 +11,10 @@ import { formatDate, formatRwf } from '@/utils/format';
 import { fromPrice } from '@/utils/pricing';
 import { listingKindOf } from '@/utils/catalog';
 
-const roleTone = { tourist: 'brand', business_owner: 'warning', admin: 'solid' } as const;
+const roleTone = { tourist: 'brand', business_owner: 'warning', admin: 'solid', staff: 'neutral' } as const;
 
 const businessColumns: Column<Business>[] = [
-  { id: 'name', header: 'Listing', sortValue: (b) => b.name, cell: (b) => <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link> },
+  { id: 'name', header: 'Branch', sortValue: (b) => b.name, cell: (b) => <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link> },
   { id: 'kind', header: 'Kind', sortValue: (b) => listingKindOf(b), cell: (b) => listingKindOf(b) },
   { id: 'district', header: 'District', sortValue: (b) => b.district, cell: (b) => b.district },
   { id: 'from', header: 'From', align: 'right', sortValue: (b) => fromPrice(b)?.priceRwf ?? 0, cell: (b) => { const price = fromPrice(b); return price ? formatRwf(price.priceRwf) : '—'; } },
@@ -68,8 +68,8 @@ export default function AdminUserDetailsPage() {
 
       {user.role === 'business_owner' && (
         <div className="mt-6">
-          <h2 className="mb-3 font-display text-xl font-bold text-ink">Listings</h2>
-          <DataTable data={businesses} columns={businessColumns} getRowId={(b) => b.id} searchText={(b) => `${b.name} ${b.district} ${listingKindOf(b)}`} searchPlaceholder="Search listings" emptyTitle="No listings" emptyMessage="This owner has not published a listing yet." rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />} />
+          <h2 className="mb-3 font-display text-xl font-bold text-ink">Branches</h2>
+          <DataTable data={businesses} columns={businessColumns} getRowId={(b) => b.id} searchText={(b) => `${b.name} ${b.district} ${listingKindOf(b)}`} searchPlaceholder="Search branches" emptyTitle="No branches" emptyMessage="This owner has not published a branch yet." rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />} />
         </div>
       )}
 

@@ -1,9 +1,7 @@
 import type { Favorite } from '@/types';
-import { USE_MOCK } from './config';
 import { api } from './apiClient';
 
 export async function getFavorites(): Promise<Favorite[]> {
-  if (USE_MOCK) return [];
   return api.get<Favorite[]>('/favorites/');
 }
 

@@ -38,6 +38,7 @@ export function parseRecords(text: string, fileName: string, fields: { key: stri
   const toRecord = (entries: [string, unknown][]) => {
     const rec: Record<string, string> = {};
     entries.forEach(([h, v]) => {
+      if (normalize(h).endsWith('selectfrom')) return;
       const key = lookup.get(normalize(h));
       if (key) rec[key] = Array.isArray(v) ? v.join('; ') : v === null || v === undefined ? '' : String(v).trim();
     });
@@ -52,7 +53,10 @@ export function parseRecords(text: string, fileName: string, fields: { key: stri
       throw { message: 'This JSON file could not be read. Check that it is valid JSON.' };
     }
     const list = Array.isArray(data) ? data : [data];
-    return list.filter((x) => x && typeof x === 'object').map((x) => toRecord(Object.entries(x as object)));
+    return list
+      .filter((x) => x && typeof x === 'object')
+      .map((x) => toRecord(Object.entries(x as object)))
+      .filter((rec) => fields.some((f) => (rec[f.key] ?? '').trim() !== ''));
   }
 
   const rows = parseCsv(text);
@@ -60,9 +64,12 @@ export function parseRecords(text: string, fileName: string, fields: { key: stri
   const [header, ...body] = rows;
   const known = header.filter((h) => lookup.has(normalize(h)));
   if (!known.length) throw { message: `None of the column headers match. Expected columns like: ${fields.slice(0, 4).map((f) => f.label).join(', ')}.` };
-  return body.map((r) => toRecord(header.map((h, i) => [h, r[i] ?? ''])));
+  return body
+    .map((r) => toRecord(header.map((h, i) => [h, r[i] ?? ''])))
+    .filter((rec) => fields.some((f) => (rec[f.key] ?? '').trim() !== ''));
 }
 
+/** Header + sample row (CSV cannot host Excel-style dropdowns). */
 export function csvTemplate(fields: { label: string; example: string }[]) {
   const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   return [fields.map((f) => esc(f.label)).join(','), fields.map((f) => esc(f.example)).join(',')].join('\r\n');

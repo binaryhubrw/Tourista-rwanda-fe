@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Pencil, Phone, Mail, MapPin, BedDouble, Sparkles, UtensilsCrossed, Package } from 'lucide-react';
+import { ChevronLeft, Pencil, Phone, Mail, MapPin, BedDouble, Sparkles, UtensilsCrossed, Package, Plus } from 'lucide-react';
 import { getBookings, getReviews } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Badge, ButtonLink, ErrorState, Loading, Rating, SmartImage, spanLabel } from '@/components/ui';
-import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
+import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, VehicleCategoryBadge, type Column } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
-import { BookingViewLink, bookingColumns, bookingSearchText } from '../shared/tableColumns';
+import { BookingViewLink, ListingViewLink, bookingColumns, bookingSearchText } from '../shared/tableColumns';
 import { formatRwf } from '@/utils/format';
 import { isRoom } from '@/utils/pricing';
-import { listingKindOf } from '@/utils/catalog';
+import { listingKindOf, vehicleCarry, vehicleLevelPhoto, vehicleUnits } from '@/utils/catalog';
 import { roomStatus } from '@/utils/availability';
 import { useOwnerBusinesses } from './useOwnerBusinesses';
 import type { Booking, Service } from '@/types';
 
-type View = 'overview' | 'rooms' | 'services' | 'bookings';
+interface VehicleRow {
+  service: Service;
+  plate: string;
+  image: string;
+  level: string;
+}
+
+type View = 'overview' | 'rooms' | 'services' | 'vehicles' | 'bookings';
 
 const offerName = (s: Service) => (s.category && s.category !== s.name ? `${s.category} · ${s.name}` : s.name);
 
@@ -47,6 +54,25 @@ const roomColumns = (bookings: Booking[]): Column<Service>[] => [
   { id: 'price', header: 'Per night', align: 'right', sortValue: (s) => s.priceRwf, cell: (s) => <span className="tabular-nums">{formatRwf(s.priceRwf)}</span> },
 ];
 
+const vehicleColumns: Column<VehicleRow>[] = [
+  {
+    id: 'name', header: 'Vehicle', sortValue: (r) => r.service.name,
+    cell: (r) => (
+      <div className="flex min-w-[240px] items-center gap-3">
+        <SmartImage src={r.image} alt="" className="h-14 w-20 shrink-0 rounded-xl" />
+        <div className="min-w-0">
+          <p className="font-semibold text-ink">{r.service.brand ? `${r.service.brand} · ${r.service.name}` : offerName(r.service)}</p>
+          <p className="line-clamp-1 text-xs text-slate-500">{vehicleCarry(r.service).label}</p>
+        </div>
+      </div>
+    ),
+  },
+  { id: 'category', header: 'Category', sortValue: (r) => r.level, cell: (r) => <VehicleCategoryBadge category={r.level} /> },
+  { id: 'plate', header: 'Plate', sortValue: (r) => r.plate, cell: (r) => <span className="whitespace-nowrap font-semibold tabular-nums tracking-wide">{r.plate}</span> },
+  { id: 'seats', header: 'Seats', align: 'right', sortValue: (r) => r.service.capacity ?? 0, cell: (r) => <span className="tabular-nums">{vehicleCarry(r.service).peopleLabel}</span> },
+  { id: 'price', header: 'Per day', align: 'right', sortValue: (r) => r.service.priceRwf, cell: (r) => <span className="tabular-nums">{formatRwf(r.service.priceRwf)}</span> },
+];
+
 const serviceColumns: Column<Service>[] = [
   { id: 'name', header: 'Service', sortValue: (s) => s.name, cell: (s) => (
     <div className="min-w-0">
@@ -70,28 +96,37 @@ export default function OwnerListingDetailsPage() {
     const [bookings, reviews] = await Promise.all([getBookings({ businessIds: [id] }), getReviews({ targetId: id })]);
     return { bookings, reviews };
   }, [id]);
-  useDocumentTitle(listing ? listing.name : 'Listing');
+  useDocumentTitle(listing ? listing.name : 'Branch');
   useEffect(() => { setPhoto(0); setView('overview'); }, [id]);
 
-  if (biz.loading || extra.loading) return <Loading label="Loading listing" />;
+  if (biz.loading || extra.loading) return <Loading label="Loading branch" />;
   if (biz.error) return <ErrorState message={biz.error} onRetry={biz.reload} />;
-  if (!listing) return <ErrorState message="That listing was not found." onRetry={() => navigate('/business-dashboard/business')} />;
+  if (!listing) return <ErrorState message="That branch was not found." onRetry={() => navigate('/business-dashboard/business')} />;
   if (extra.error || !extra.data) return <ErrorState message={extra.error ?? undefined} onRetry={extra.reload} />;
 
   const kind = listingKindOf(listing);
   const rooms = listing.services.filter(isRoom);
   const wellness = listing.services.filter((s) => s.group === 'wellness');
   const food = listing.services.filter((s) => s.group === 'food');
+  const vehicles = listing.services.filter((s) => s.group === 'vehicle');
+  const vehicleRows: VehicleRow[] = vehicles.flatMap((service) =>
+    vehicleUnits(service).map((unit) => ({
+      service,
+      plate: unit.plate,
+      image: unit.image || vehicleLevelPhoto(unit.level || service.category),
+      level: unit.level || service.category || 'Standard',
+    })),
+  );
   const { bookings, reviews } = extra.data;
   const photos = [listing.image, ...(listing.gallery ?? [])].filter((src, i, all) => src && all.indexOf(src) === i);
 
   return (
     <>
-      <ButtonLink to="/business-dashboard/business" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to listings</ButtonLink>
+      <ButtonLink to="/business-dashboard/business" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to branches</ButtonLink>
       <PageHeader
         title={listing.name}
-        intro={`${kind} in ${listing.district}. This is your listing, not the public page.`}
-        action={<ButtonLink to={`/business-dashboard/business/${listing.id}/edit`}><Pencil className="h-4 w-4" aria-hidden />Edit listing</ButtonLink>}
+        intro={`${kind} in ${listing.district}. This is your branch, not the public page.`}
+        action={<ButtonLink to={`/business-dashboard/business/${listing.id}/edit`}><Pencil className="h-4 w-4" aria-hidden />Edit branch</ButtonLink>}
       />
 
       <StatGrid className="grid-cols-2">
@@ -103,13 +138,14 @@ export default function OwnerListingDetailsPage() {
 
       <div className="mt-6">
         <FilterTabs
-          label="Listing views"
+          label="Branch views"
           value={view}
           onChange={setView}
           options={[
             { value: 'overview', label: 'Overview' },
             { value: 'rooms', label: 'Rooms', count: rooms.length },
-            { value: 'services', label: 'Services', count: listing.services.filter((s) => !isRoom(s)).length },
+            { value: 'services', label: 'Services', count: listing.services.filter((s) => !isRoom(s) && s.group !== 'vehicle').length },
+            { value: 'vehicles', label: 'Vehicles', count: vehicleRows.length },
             { value: 'bookings', label: 'Bookings', count: bookings.length },
           ]}
         />
@@ -157,13 +193,13 @@ export default function OwnerListingDetailsPage() {
             getRowId={(s) => s.id}
             searchText={(s) => `${s.name} ${s.category ?? ''} ${s.bedType ?? ''}`}
             searchPlaceholder="Search rooms"
-            emptyTitle="No rooms on this listing"
+            emptyTitle="No rooms on this branch"
             emptyMessage="Stays show room categories here. For a restaurant or bar, open Services."
           />
         )}
         {view === 'services' && (
           <DataTable
-            data={listing.services.filter((s) => !isRoom(s))}
+            data={listing.services.filter((s) => !isRoom(s) && s.group !== 'vehicle')}
             columns={serviceColumns}
             getRowId={(s) => s.id}
             searchText={(s) => `${s.name} ${s.category ?? ''} ${s.unit} ${s.group ?? ''}`}
@@ -171,6 +207,30 @@ export default function OwnerListingDetailsPage() {
             emptyTitle="No services yet"
             emptyMessage="Wellness, meals, drinks and extra bookings appear here."
           />
+        )}
+        {view === 'vehicles' && (
+          <>
+          <div className="mb-4 flex justify-end">
+            <ButtonLink to={`/business-dashboard/vehicles/new?listing=${listing.id}&from=listing`}><Plus className="h-4 w-4" aria-hidden />Add vehicle</ButtonLink>
+          </div>
+          <DataTable
+            data={vehicleRows}
+            columns={vehicleColumns}
+            getRowId={(r) => `${r.service.id}:${r.plate}`}
+            searchText={(r) => `${r.service.name} ${r.service.brand ?? ''} ${r.level} ${r.plate} ${r.service.description}`}
+            initialPageSize={25}
+            searchPlaceholder="Search vehicles"
+            emptyTitle="No vehicles yet"
+            emptyMessage="Add cars with a photo, level and plate. Travellers book them on the public branch."
+            emptyAction={<ButtonLink to={`/business-dashboard/vehicles/new?listing=${listing.id}&from=listing`}><Plus className="h-4 w-4" aria-hidden />Add vehicle</ButtonLink>}
+            rowActions={(r) => (
+              <div className="flex justify-end gap-1">
+                <ListingViewLink to={`/business-dashboard/vehicles/${listing.id}/${r.service.id}`} name={r.plate} />
+                <Link to={`/business-dashboard/vehicles/${listing.id}/${r.service.id}/edit?from=listing`} className="inline-grid h-9 w-9 place-items-center rounded-lg text-brand-600 hover:bg-brand-50" aria-label={`Edit ${r.plate}`}><Pencil className="h-4 w-4" /></Link>
+              </div>
+            )}
+          />
+          </>
         )}
         {view === 'bookings' && (
           <DataTable
@@ -182,7 +242,7 @@ export default function OwnerListingDetailsPage() {
             initialSort={{ id: 'date', desc: true }}
             rowActions={(b) => <BookingViewLink to={`/business-dashboard/bookings/${b.id}`} />}
             emptyTitle="No bookings yet"
-            emptyMessage="When travellers book this listing, they will appear here."
+            emptyMessage="When travellers book this branch, they will appear here."
           />
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ChevronsLeft, X } from 'lucide-react';
 import { Logo } from '@/components/layout/Logo';
@@ -16,8 +16,6 @@ interface SidebarProps {
   /** Mobile/tablet only: drawer visibility. */
   mobileOpen: boolean;
   onMobileClose: () => void;
-  /** Bottom area (e.g. the signed-in user); receives the collapsed state. */
-  footer?: (collapsed: boolean) => ReactNode;
   label?: string;
 }
 
@@ -25,7 +23,7 @@ interface SidebarProps {
  * Fixed dashboard sidebar. On large screens it sticks to the left edge and can
  * collapse to an icon rail; below `lg` it becomes an off-canvas drawer.
  */
-export function Sidebar({ sections, collapsed, onToggleCollapsed, mobileOpen, onMobileClose, footer, label = 'Dashboard' }: SidebarProps) {
+export function Sidebar({ sections, collapsed, onToggleCollapsed, mobileOpen, onMobileClose, label = 'Dashboard' }: SidebarProps) {
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onMobileClose();
@@ -100,8 +98,6 @@ export function Sidebar({ sections, collapsed, onToggleCollapsed, mobileOpen, on
             </div>
           ))}
         </nav>
-
-        {footer && <div className="shrink-0 border-t border-white/20 p-3">{footer(collapsed)}</div>}
 
         {/* Desktop collapse handle on the sidebar edge */}
         <button

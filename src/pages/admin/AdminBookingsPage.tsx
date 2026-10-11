@@ -6,7 +6,7 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useToast } from '@/context/ToastContext';
-import { Button, ErrorState, Input, Loading, Modal, Select } from '@/components/ui';
+import { Button, DatePicker, ErrorState, Input, Loading, Modal, Select } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { BookingViewLink, bookingColumns, bookingSearchText, statusOptions, type StatusFilter } from '../shared/tableColumns';
 import { byMonth, periodTrend, sum } from '@/utils/analytics';
@@ -109,10 +109,26 @@ export default function AdminBookingsPage() {
         {data && business && service && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><Select label="Customer" value={customer?.id ?? ''} onChange={(e) => setForm({ ...form, customerId: e.target.value })} options={data.customers.map((c) => ({ value: c.id, label: `${c.name} · ${c.email}` }))} error={errors.customer} /></div>
-            <Select label="Listing" value={business.id} onChange={(e) => setForm({ ...form, businessId: e.target.value, serviceId: '' })} options={data.businesses.map((b) => ({ value: b.id, label: b.name }))} />
+            <Select label="Branch" value={business.id} onChange={(e) => setForm({ ...form, businessId: e.target.value, serviceId: '' })} options={data.businesses.map((b) => ({ value: b.id, label: b.name }))} />
             <Select label={mode === 'stay' ? 'Room' : 'Service'} value={service.id} onChange={(e) => setForm({ ...form, serviceId: e.target.value })} options={business.services.map((s) => ({ value: s.id, label: `${s.name} · ${formatRwf(s.priceRwf)} ${s.unit}` }))} />
-            <Input label={ranged ? (mode === 'stay' ? 'Check-in' : 'From') : 'Date'} type="date" min={todayIso()} value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value, end: mode === 'stay' && e.target.value && (!form.end || form.end <= e.target.value) ? addDaysIso(e.target.value, 1) : form.end })} error={errors.start} />
-            {ranged ? <Input label={mode === 'stay' ? 'Check-out' : 'To'} type="date" min={form.start || todayIso()} value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} error={errors.end} /> : <span className="hidden sm:block" />}
+            <DatePicker
+              label={ranged ? (mode === 'stay' ? 'Check-in' : 'From') : 'Date'}
+              required
+              min={todayIso()}
+              value={form.start}
+              onChange={(iso) => setForm({ ...form, start: iso, end: mode === 'stay' && iso && (!form.end || form.end <= iso) ? addDaysIso(iso, 1) : form.end })}
+              error={errors.start}
+            />
+            {ranged ? (
+              <DatePicker
+                label={mode === 'stay' ? 'Check-out' : 'To'}
+                required
+                min={form.start ? (mode === 'stay' ? addDaysIso(form.start, 1) : form.start) : todayIso()}
+                value={form.end}
+                onChange={(iso) => setForm({ ...form, end: iso })}
+                error={errors.end}
+              />
+            ) : <span className="hidden sm:block" />}
             {mode !== 'perPerson' && <Input label={mode === 'stay' ? 'Rooms' : 'Quantity'} type="number" min={1} max={service.available} value={form.units} onChange={(e) => setForm({ ...form, units: e.target.value })} error={errors.units} hint={service.available ? `${service.available} available` : undefined} />}
             <Input label={mode === 'stay' ? 'Guests' : 'People'} type="number" min={1} value={form.people} onChange={(e) => setForm({ ...form, people: e.target.value })} error={errors.people} />
             <div className="sm:col-span-2"><Select label="Payment" value={form.payment} onChange={(e) => setForm({ ...form, payment: e.target.value as typeof form.payment })} options={[

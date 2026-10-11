@@ -1,8 +1,7 @@
 import type { Booking, Business, Experience, Interest, Location, PriceLevel, Service } from '@/types';
 import { availableServices, hasAvailability } from '@/utils/availability';
-import { fromPrice } from '@/utils/pricing';
 
-export type ExploreKind = 'destination' | 'experience' | 'accommodation' | 'restaurant' | 'guide' | 'business' | 'service';
+export type ExploreKind = 'destination' | 'experience' | 'accommodation' | 'restaurant' | 'guide' | 'business' | 'service' | 'vehicle';
 
 export type ExploreItem = {
   key: string;
@@ -35,6 +34,51 @@ export function termsMatch(haystack: string, query: string) {
   return terms.every((term) => text.includes(term) || (term.endsWith('s') && term.length > 3 && text.includes(term.slice(0, -1))));
 }
 
+export type ExploreScope = 'hotels' | 'food' | 'vehicles' | 'services';
+
+export const EXPLORE_SCOPES: { id: ExploreScope; label: string }[] = [
+  { id: 'hotels', label: 'Hotels' },
+  { id: 'food', label: 'Food' },
+  { id: 'vehicles', label: 'Vehicles' },
+  { id: 'services', label: 'Services' },
+];
+
+const SCOPE_ALIASES: Record<string, ExploreScope> = {
+  hotels: 'hotels',
+  food: 'food',
+  vehicles: 'vehicles',
+  services: 'services',
+  accommodations: 'hotels',
+  accommodation: 'hotels',
+  restaurants: 'food',
+  restaurant: 'food',
+  cars: 'vehicles',
+  vehicle: 'vehicles',
+  businesses: 'services',
+};
+
+export function normalizeExploreScope(raw: string | null | undefined): ExploreScope | '' {
+  if (!raw) return '';
+  return SCOPE_ALIASES[raw] ?? '';
+}
+
+export function exploreScopeHref(scope: ExploreScope) {
+  return `/explore?scope=${scope}#explore-listings`;
+}
+
+/** Whether a business actually offers this catalog slice (rooms, meals, cars or extra services). */
+export function businessMatchesScope(business: Business, scope: ExploreScope): boolean {
+  const groups = new Set(business.services.map((service) => service.group));
+  if (scope === 'hotels') return business.category === 'Accommodation' || groups.has('room');
+  if (scope === 'food') return business.category === 'Restaurants' || groups.has('food');
+  if (scope === 'vehicles') return business.category === 'Transportation' || groups.has('vehicle');
+  return groups.has('wellness') || groups.has('activity')
+    || business.category === 'Tour Guides'
+    || business.category === 'Handcrafts'
+    || business.category === 'Local Products'
+    || business.category === 'Community Tourism';
+}
+
 const businessKind = (b: Business): ExploreKind =>
   b.category === 'Accommodation' ? 'accommodation' : b.category === 'Restaurants' ? 'restaurant' : b.category === 'Tour Guides' ? 'guide' : 'business';
 
@@ -46,12 +90,17 @@ const businessInterests = (b: Business): Interest[] =>
 export function buildExploreItems(locations: Location[], experiences: Experience[], businesses: Business[], bookings: Booking[] = []): ExploreItem[] {
   const provinceOf = (locationId: string) => locations.find((l) => l.id === locationId)?.province ?? 'Rwanda';
   const openBusinesses = businesses.filter((business) => hasAvailability(business, bookings));
-  const serviceItems = openBusinesses.flatMap((business) => availableServices(business.services, bookings).map<ExploreItem>((service) => ({
-    key: `s-${service.id}`, type: 'service', node: service, business, kind: 'service', title: `${service.category ?? service.name} · ${business.name}`,
-    text: `${service.name} ${service.category ?? ''} ${service.description} ${business.name} ${business.district} ${fromPrice({ services: [service] })?.priceRwf ?? ''}`,
-    rating: business.rating, reviewCount: business.reviewCount, province: provinceOf(business.locationId), priceLevel: business.priceLevel,
-    interests: businessInterests(business), sustainable: business.badges.length > 0, createdAt: business.createdAt, popularity: business.reviewCount * 20,
-  })));
+  const vehicleItems = openBusinesses.flatMap((business) =>
+    availableServices(business.services, bookings)
+      .filter((service) => service.group === 'vehicle')
+      .map<ExploreItem>((service) => ({
+        key: `v-${service.id}`, type: 'service', node: service, business, kind: 'vehicle',
+        title: `${service.brand ? `${service.brand} ` : ''}${service.name}`,
+        text: `${service.name} ${service.brand ?? ''} ${service.category ?? ''} ${service.description} car vehicle hire rental ${business.name} ${business.district}`,
+        rating: business.rating, reviewCount: business.reviewCount, province: provinceOf(business.locationId), priceLevel: business.priceLevel,
+        interests: ['Adventure'], sustainable: business.badges.length > 0, createdAt: business.createdAt, popularity: business.reviewCount * 25,
+      })),
+  );
   return [
     ...locations.map<ExploreItem>((l) => ({
       key: `l-${l.id}`, type: 'location', node: l, kind: 'destination', title: l.name, text: `${l.name} ${l.district} ${l.shortDescription} ${l.description} ${l.category} ${l.thingsToDo.join(' ')}`,
@@ -68,12 +117,12 @@ export function buildExploreItems(locations: Location[], experiences: Experience
       const services = availableServices(b.services, bookings);
       return {
         key: `b-${b.id}`, type: 'business', node: { ...b, services }, kind: businessKind(b), title: b.name,
-        text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${services.map((service) => `${service.name} ${service.category ?? ''} ${service.description}`).join(' ')} ${b.badges.join(' ')} ${place ? locationHaystack(place) : ''}`,
+        text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${services.map((service) => `${service.name} ${service.brand ?? ''} ${service.category ?? ''} ${service.description} ${service.group ?? ''}`).join(' ')} ${b.badges.join(' ')} ${place ? locationHaystack(place) : ''}`,
         rating: b.rating, reviewCount: b.reviewCount, province: provinceOf(b.locationId), priceLevel: b.priceLevel, interests: businessInterests(b),
         sustainable: b.badges.length > 0, createdAt: b.createdAt, popularity: b.reviewCount * 40,
       };
     }),
-    ...serviceItems,
+    ...vehicleItems,
   ];
 }
 
@@ -92,10 +141,12 @@ const FEATURED_KINDS = ['House', 'Hotel', 'Lodge', 'Guesthouse', 'Restaurant', '
 export function featuredRank(item: ExploreItem): number {
   const last = FEATURED_KINDS.length;
   if (item.type === 'business') {
+    if (item.node.id === 'demo-kigali-car-hire') return 0;
     const index = FEATURED_KINDS.indexOf(item.node.listingKind ?? '');
     return index >= 0 ? index : last;
   }
   if (item.type === 'service') {
+    if (item.kind === 'vehicle') return 0;
     if (item.node.category === 'Bar') return FEATURED_KINDS.indexOf('Bar');
     if (item.node.category === 'Massage') return FEATURED_KINDS.indexOf('Massage');
   }

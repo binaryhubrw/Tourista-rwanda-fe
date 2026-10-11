@@ -1,4 +1,5 @@
-import type { PaymentMethod, User } from '@/types';
+import type { Booking, Payment, PaymentLedgerStatus, PaymentMethod, PaymentTransfer, Refund, User } from '@/types';
+import { refundIsClosed } from '@/utils/refund';
 
 export type PayoutTarget = {
   businessName: string;
@@ -8,10 +9,65 @@ export type PayoutTarget = {
 };
 
 export const paymentMethodLabel: Record<PaymentMethod, string> = {
-  card: 'Credit / debit card',
+  card: 'Bank transfer',
   mtn: 'MTN Mobile Money',
   airtel: 'Airtel Money',
 };
+
+export function payoutAccountFor(payout: PayoutTarget | null | undefined, method: PaymentMethod) {
+  if (!payout) return '';
+  if (method === 'card') return payout.bankAccount?.trim() ?? '';
+  if (method === 'mtn') return payout.mtnNumber?.trim() ?? '';
+  return payout.airtelNumber?.trim() ?? '';
+}
+
+export function formatPayAccount(method: PaymentMethod, account: string) {
+  return method === 'card' ? account.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').trim() : formatMobile(account);
+}
+
+export function paymentTransfers(p?: Payment | null): PaymentTransfer[] {
+  if (!p) return [];
+  if (p.transfers?.length) return p.transfers;
+  return [{
+    id: p.id ?? p.reference,
+    method: p.method,
+    senderName: p.senderName ?? p.account,
+    senderAccount: p.senderAccount ?? p.account,
+    amountRwf: p.amountRwf,
+    screenshot: p.screenshot,
+    sentTo: p.sentTo,
+    sentToLabel: p.sentToLabel,
+    reference: p.reference,
+    paidAt: p.paidAt,
+    status: p.status === 'Pending' ? 'Pending' : 'Paid',
+  }];
+}
+
+export function paidToward(booking: Pick<Booking, 'payment'>) {
+  return paymentTransfers(booking.payment).reduce((sum, t) => sum + t.amountRwf, 0);
+}
+
+export function remainingDue(booking: Pick<Booking, 'payment' | 'totalRwf'>) {
+  return Math.max(0, booking.totalRwf - paidToward(booking));
+}
+
+export function paymentDisplayStatus(
+  booking: Pick<Booking, 'id' | 'status' | 'payment' | 'totalRwf'>,
+  refunds: Pick<Refund, 'bookingId' | 'status'>[],
+): PaymentLedgerStatus | null {
+  if (!booking.payment && booking.status !== 'PaymentReview') return null;
+  const openRefund = refunds.some((r) => r.bookingId === booking.id && !refundIsClosed(r.status));
+  if (booking.payment?.status === 'Refunded' || booking.payment?.ledger === 'refunded') return 'refunded';
+  if (openRefund) return 'refund_requested';
+  if (booking.payment?.status === 'Pending' || booking.payment?.ledger === 'pending' || (!booking.payment && booking.status === 'PaymentReview')) {
+    return 'pending';
+  }
+  if (booking.payment && remainingDue(booking) > 0 && (booking.payment.status === 'Paid' || booking.payment.ledger === 'approved')) {
+    return 'partial';
+  }
+  if (booking.payment?.status === 'Paid' || booking.payment?.ledger === 'approved') return 'approved';
+  return booking.payment?.ledger ?? null;
+}
 
 export const paymentMethodShort: Record<PaymentMethod, string> = { card: 'Card', mtn: 'MTN MoMo', airtel: 'Airtel Money' };
 

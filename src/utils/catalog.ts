@@ -1,15 +1,18 @@
 import type { BusinessCategory, OfferingGroup, PropertyType, Service } from '@/types';
+import { images } from '@/data/images';
 import { makeId } from '@/utils/id';
 
 export const ROOM_CATEGORIES = ['Regular', 'VIP', 'VVIP', 'Premium', 'Diamond'] as const;
 export const WELLNESS_CATEGORIES = ['Massage', 'Gym', 'Sauna', 'Spa', 'Yoga'] as const;
 export const FOOD_CATEGORIES = ['Restaurant', 'Bar', 'Coffee shop'] as const;
 export const DRINK_CATEGORIES = ['Beer', 'Wine', 'Cocktail', 'Soft drink'] as const;
+export const VEHICLE_LEVELS = ['Economy', 'Standard', 'VIP', 'VVIP', 'Luxury'] as const;
 
 export type RoomCategory = (typeof ROOM_CATEGORIES)[number];
 export type WellnessCategory = (typeof WELLNESS_CATEGORIES)[number];
 export type FoodCategory = (typeof FOOD_CATEGORIES)[number];
 export type DrinkCategory = (typeof DRINK_CATEGORIES)[number];
+export type VehicleLevel = (typeof VEHICLE_LEVELS)[number];
 export type ServiceStyle = 'table' | 'self' | 'both';
 export type BookingMode = 'book' | 'walk-in' | 'both';
 
@@ -57,6 +60,7 @@ export function offeringBlurb(group: OfferingGroup, category: string) {
     if (category === 'Spa') return 'A spa treatment.';
     return 'A yoga session.';
   }
+  if (group === 'vehicle') return `${category} hire car. Price is per day.`;
   if (group === 'food') {
     if (category === 'Restaurant' || category === 'Table service') return 'A plated meal. Price is per plate.';
     if (category === 'Self-service') return 'Buffet or self-service. Price is per person.';
@@ -73,6 +77,25 @@ export interface OfferDraft {
   price: string;
   count: string;
   description: string;
+}
+
+export interface VehicleDraft extends OfferDraft {
+  brand: string;
+  seats: string;
+  plateNumber: string;
+}
+
+export interface FleetDraft {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  description: string;
+  price: string;
+  count: string;
+  seats: string;
+  plateNumber: string;
+  image?: string;
 }
 
 export interface ExtraDraft {
@@ -99,6 +122,8 @@ export interface CatalogDraft {
   rooms: Record<string, OfferDraft>;
   wellness: Record<string, OfferDraft>;
   food: Record<string, OfferDraft>;
+  vehicles: Record<string, VehicleDraft>;
+  fleet: FleetDraft[];
   extras: ExtraDraft[];
   venue: VenueDraft;
 }
@@ -108,6 +133,96 @@ const blankOffer = (group: OfferingGroup, category: string, count: string): Offe
   price: '',
   count,
   description: offeringBlurb(group, category),
+});
+
+export const defaultVehicleSeats = (level: string) =>
+  ({ Economy: 4, Standard: 5, VIP: 7, VVIP: 22, Luxury: 7 }[level] ?? 4);
+
+export const VEHICLE_LEVEL_PHOTOS: Record<string, string> = {
+  Economy: images.carEconomy,
+  Standard: images.carStandard,
+  VIP: images.carVip,
+  VVIP: images.carVvip,
+  Luxury: images.carLuxury,
+};
+
+export const vehicleLevelPhoto = (level?: string) => VEHICLE_LEVEL_PHOTOS[level ?? ''] ?? images.car;
+
+/** Photo of this car, or the stock photo for its hire level. */
+export function vehiclePhoto(service: Pick<Service, 'image' | 'category'>) {
+  return service.image || vehicleLevelPhoto(service.category);
+}
+
+export function parsePlateList(raw: string) {
+  return raw.split(/[\n,;]+/).map((s) => s.trim().replace(/\s+/g, ' ').toUpperCase()).filter(Boolean);
+}
+
+export function vehiclePlates(service: Pick<Service, 'plateNumber' | 'plates' | 'units'>) {
+  if (service.units?.length) return service.units.map((unit) => unit.plate).filter(Boolean);
+  if (service.plates?.length) return service.plates;
+  return service.plateNumber?.trim() ? [service.plateNumber.trim()] : [];
+}
+
+export function vehicleUnits(service: Pick<Service, 'plateNumber' | 'plates' | 'units' | 'image' | 'category'>) {
+  const fallback = service.image || vehicleLevelPhoto(service.category);
+  if (service.units?.length) {
+    return service.units.map((unit) => ({
+      plate: unit.plate,
+      image: unit.image || fallback,
+      level: unit.level || service.category,
+    }));
+  }
+  return vehiclePlates(service).map((plate) => ({ plate, image: fallback, level: service.category }));
+}
+
+/** How many individual cars a listing has, not how many vehicle types. */
+export function fleetCount(services: Pick<Service, 'group' | 'plateNumber' | 'plates' | 'units' | 'image' | 'category' | 'available'>[]) {
+  return services.filter((s) => s.group === 'vehicle').reduce((n, s) => n + (vehicleUnits(s).length || s.available || 0), 0);
+}
+
+export function withoutPlates(service: Service, plates: Set<string>): Service {
+  const units = vehicleUnits(service).filter((unit) => !plates.has(unit.plate));
+  return {
+    ...service,
+    units,
+    plates: units.map((unit) => unit.plate),
+    plateNumber: units[0]?.plate,
+    image: units[0]?.image || service.image,
+    available: units.length,
+    category: units[0]?.level || service.category,
+  };
+}
+
+export function plateLabel(service: Pick<Service, 'plateNumber' | 'plates' | 'units'>) {
+  const plates = vehiclePlates(service);
+  if (!plates.length) return '—';
+  if (plates.length === 1) return plates[0];
+  return `${plates[0]} · +${plates.length - 1}`;
+}
+
+export function platesPhrase(plates: string[]) {
+  if (!plates.length) return '';
+  if (plates.length === 1) return plates[0];
+  if (plates.length === 2) return `${plates[0]} and ${plates[1]}`;
+  return `${plates.slice(0, -1).join(', ')} and ${plates[plates.length - 1]}`;
+}
+
+/** How many people one car of this type can carry. */
+export function vehicleCarry(service: Pick<Service, 'capacity' | 'category'>) {
+  const n = Math.max(1, service.capacity ?? defaultVehicleSeats(service.category ?? ''));
+  return {
+    seats: n,
+    seatsLabel: n === 1 ? '1 seat' : `${n} seats`,
+    peopleLabel: n === 1 ? '1 person' : `${n} people`,
+    label: n === 1 ? '1 seat · carries 1 person' : `${n} seats · carries ${n} people`,
+  };
+}
+
+const blankVehicle = (level: string, count: string): VehicleDraft => ({
+  ...blankOffer('vehicle', level, count),
+  brand: '',
+  seats: String(defaultVehicleSeats(level)),
+  plateNumber: '',
 });
 
 export function emptyVenue(): VenueDraft {
@@ -128,6 +243,8 @@ export function emptyCatalog(): CatalogDraft {
     rooms: Object.fromEntries(ROOM_CATEGORIES.map((c, i) => [c, blankOffer('room', c, String([8, 4, 2, 2, 1][i]))])),
     wellness: Object.fromEntries(WELLNESS_CATEGORIES.map((c) => [c, blankOffer('wellness', c, '8')])),
     food: Object.fromEntries(FOOD_CATEGORIES.map((c) => [c, blankOffer('food', c, '30')])),
+    vehicles: Object.fromEntries(VEHICLE_LEVELS.map((c, i) => [c, blankVehicle(c, String([4, 3, 2, 2, 1][i]))])),
+    fleet: [],
     extras: [],
     venue: emptyVenue(),
   };
@@ -135,6 +252,10 @@ export function emptyCatalog(): CatalogDraft {
 
 export function emptyExtra(): ExtraDraft {
   return { id: makeId('svc'), name: '', description: '', price: '', unit: 'per person', count: '' };
+}
+
+export function emptyFleet(): FleetDraft {
+  return { id: makeId('veh'), name: '', brand: '', category: 'Standard', description: offeringBlurb('vehicle', 'Standard'), price: '', count: '1', seats: String(defaultVehicleSeats('Standard')), plateNumber: '', image: vehicleLevelPhoto('Standard') };
 }
 
 function findService(services: Service[], ...names: string[]) {
@@ -163,6 +284,9 @@ export function catalogFromServices(services: Service[]): CatalogDraft {
     if (group === 'room') place(draft.rooms, service);
     else if (group === 'wellness') place(draft.wellness, service);
     else if (group === 'food' && service.category && FOOD_CATEGORIES.includes(service.category as FoodCategory)) place(draft.food, service);
+    else if (group === 'vehicle') {
+      used.add(service.id);
+    }
   }
 
   const table = findService(services, 'Table service', 'Restaurant');
@@ -194,6 +318,22 @@ export function catalogFromServices(services: Service[]): CatalogDraft {
     draft.venue.bookable = 'walk-in';
   }
 
+  draft.fleet = services.filter((s) => s.group === 'vehicle').flatMap((s) => {
+    used.add(s.id);
+    const level = s.category && VEHICLE_LEVELS.includes(s.category as VehicleLevel) ? s.category : 'Standard';
+    return vehicleUnits(s).map((unit) => ({
+      id: `${s.id}__${unit.plate.replace(/\s+/g, '')}`,
+      name: s.name,
+      brand: s.brand ?? '',
+      category: unit.level && VEHICLE_LEVELS.includes(unit.level as VehicleLevel) ? unit.level : level,
+      description: s.description,
+      price: String(s.priceRwf),
+      count: '1',
+      seats: String(s.capacity ?? defaultVehicleSeats(level)),
+      plateNumber: unit.plate,
+      image: unit.image || s.image || vehicleLevelPhoto(level),
+    }));
+  });
   draft.extras = services.filter((s) => !used.has(s.id)).map((s) => ({
     id: s.id,
     name: s.name,
@@ -237,14 +377,16 @@ function pushNamed(
 
 export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [], kindId = ''): Service[] {
   const lodging = isLodgingKind(kindId);
+  const transport = kindId === 'Transportation';
   const out: Service[] = [];
   const push = (group: OfferingGroup, category: string, row: OfferDraft, unit: string) => {
     if (!row.enabled) return;
     const prev = existing.find((s) => (s.group === group || (group === 'room' && s.unit === 'per night')) && s.category === category);
     const count = Math.round(Number(row.count));
+    const vehicle = group === 'vehicle' ? (row as VehicleDraft) : null;
     out.push({
-      id: prev?.id ?? makeId('svc'),
-      name: category,
+      id: prev?.id ?? makeId(group === 'vehicle' ? 'veh' : 'svc'),
+      name: vehicle?.brand ? `${vehicle.brand} ${category}` : category,
       category,
       group,
       description: row.description.trim(),
@@ -252,12 +394,54 @@ export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [
       unit,
       ...(Number.isFinite(count) && count > 0 ? { available: count } : {}),
       ...(group === 'room' ? { capacity: 1, bedType: '1 bed', amenities: prev?.amenities } : {}),
+      ...(vehicle ? {
+        brand: vehicle.brand.trim(),
+        capacity: Math.max(1, Math.round(Number(vehicle.seats)) || defaultVehicleSeats(category)),
+        image: prev?.image || vehicleLevelPhoto(category),
+        plateNumber: parsePlateList(vehicle.plateNumber)[0],
+        plates: parsePlateList(vehicle.plateNumber),
+        units: parsePlateList(vehicle.plateNumber).map((plate) => ({ plate, image: prev?.image || vehicleLevelPhoto(category), level: category })),
+      } : {}),
     });
   };
 
   if (lodging) ROOM_CATEGORIES.forEach((c) => push('room', c, draft.rooms[c], 'per night'));
   if (lodging || kindId === 'Wellness') WELLNESS_CATEGORIES.forEach((c) => push('wellness', c, draft.wellness[c], 'per person'));
   if (lodging) FOOD_CATEGORIES.forEach((c) => push('food', c, draft.food[c], foodUnit(c)));
+  if (lodging || transport) VEHICLE_LEVELS.forEach((c) => push('vehicle', c, draft.vehicles[c], 'per day'));
+
+  const fleetGroups = new Map<string, FleetDraft[]>();
+  for (const car of draft.fleet ?? []) {
+    if (car.name.trim().length < 2 || car.brand.trim().length < 2 || !(Number(car.price) > 0)) continue;
+    const key = [car.name.trim().toLowerCase(), car.brand.trim().toLowerCase(), car.category, car.price, car.seats].join('|');
+    fleetGroups.set(key, [...(fleetGroups.get(key) ?? []), car]);
+  }
+  for (const cars of fleetGroups.values()) {
+    const first = cars[0];
+    const plates = cars.map((car) => parsePlateList(car.plateNumber)[0]).filter(Boolean);
+    const sourceId = first.id.includes('__') ? first.id.slice(0, first.id.indexOf('__')) : first.id;
+    const prev = existing.find((s) => s.id === sourceId) ?? existing.find((s) => s.group === 'vehicle' && s.name === first.name.trim() && (s.brand ?? '') === first.brand.trim() && (s.category ?? '') === (first.category || 'Standard'));
+    out.push({
+      id: prev?.id ?? sourceId ?? makeId('veh'),
+      name: first.name.trim(),
+      brand: first.brand.trim(),
+      category: first.category || 'Standard',
+      group: 'vehicle',
+      description: first.description.trim(),
+      priceRwf: Math.round(Number(first.price)),
+      unit: 'per day',
+      available: cars.length,
+      capacity: Math.max(1, Math.round(Number(first.seats)) || prev?.capacity || defaultVehicleSeats(first.category)),
+      image: first.image || prev?.image || vehicleLevelPhoto(first.category),
+      plateNumber: plates[0] || prev?.plateNumber,
+      plates,
+      units: cars.map((car) => ({
+        plate: parsePlateList(car.plateNumber)[0],
+        image: car.image || vehicleLevelPhoto(car.category),
+        level: car.category,
+      })),
+    });
+  }
 
   const v = draft.venue;
   const seats = venueSeats(draft);
@@ -319,6 +503,7 @@ export function servicesFromCatalog(draft: CatalogDraft, existing: Service[] = [
 
 export function catalogErrors(draft: CatalogDraft, kindId: string): Record<string, string> {
   const lodging = isLodgingKind(kindId);
+  const transport = kindId === 'Transportation';
   const errors: Record<string, string> = {};
   const check = (key: string, row: OfferDraft, needsCount: boolean) => {
     if (!row.enabled) return false;
@@ -329,8 +514,20 @@ export function catalogErrors(draft: CatalogDraft, kindId: string): Record<strin
   };
 
   let roomsOn = 0;
+  let vehiclesOn = 0;
   let any = false;
   for (const c of ROOM_CATEGORIES) if (lodging && check(`rooms.${c}`, draft.rooms[c], true)) { roomsOn += 1; any = true; }
+  if (lodging || transport) {
+    for (const c of VEHICLE_LEVELS) {
+      const row = draft.vehicles[c];
+      if (!check(`vehicles.${c}`, row, true)) continue;
+      vehiclesOn += 1;
+      any = true;
+      if (row.brand.trim().length < 2) errors[`vehicles.${c}.brand`] = 'Enter the brand.';
+      if (!(Number(row.seats) >= 1)) errors[`vehicles.${c}.seats`] = 'Enter how many people this car carries.';
+      if (!parsePlateList(row.plateNumber).length) errors[`vehicles.${c}.plateNumber`] = 'Enter a plate number for each car.';
+    }
+  }
   if (lodging || kindId === 'Wellness') {
     for (const c of WELLNESS_CATEGORIES) if (check(`wellness.${c}`, draft.wellness[c], false)) any = true;
   }
@@ -363,6 +560,21 @@ export function catalogErrors(draft: CatalogDraft, kindId: string): Record<strin
     if (needsSeats && !(Number(v.seats) >= 1)) errors.seats = 'Enter how many seats guests can book.';
   }
 
+  const seenPlates = new Set<string>();
+  (draft.fleet ?? []).forEach((car, i) => {
+    any = true;
+    vehiclesOn += 1;
+    if (car.name.trim().length < 3) errors[`fleet.${i}.name`] = 'Enter a vehicle name.';
+    if (car.brand.trim().length < 2) errors[`fleet.${i}.brand`] = 'Enter the brand.';
+    if (!(Number(car.price) > 0)) errors[`fleet.${i}.price`] = 'Enter a daily price in RWF.';
+    if (!(Number(car.seats) >= 1)) errors[`fleet.${i}.seats`] = 'Enter how many people this car carries.';
+    if (!car.image) errors[`fleet.${i}.image`] = 'Add a photo of this car.';
+    const plate = parsePlateList(car.plateNumber)[0];
+    if (!plate) errors[`fleet.${i}.plateNumber`] = 'Enter this car’s plate number.';
+    else if (seenPlates.has(plate)) errors[`fleet.${i}.plateNumber`] = 'That plate is already used.';
+    if (plate) seenPlates.add(plate);
+  });
+
   draft.extras.forEach((extra, i) => {
     const started = extra.name.trim() || extra.price || extra.description.trim();
     if (!started) return;
@@ -373,7 +585,8 @@ export function catalogErrors(draft: CatalogDraft, kindId: string): Record<strin
   });
 
   if (lodging && roomsOn === 0) errors.rooms = 'Choose at least one room category, with a price and how many rooms you have.';
-  if (!any) errors.catalog = 'Add a price for at least one room, service or place to eat.';
+  if (transport && vehiclesOn === 0) errors.vehicles = 'Add at least one car, with its photo, level, plate and daily price.';
+  if (!any) errors.catalog = 'Add a price for at least one room, vehicle, service or place to eat.';
   return errors;
 }
 

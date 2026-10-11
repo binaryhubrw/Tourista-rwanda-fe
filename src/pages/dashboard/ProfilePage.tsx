@@ -16,7 +16,7 @@ export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const listings = useAsync(() => (user!.role === 'business_owner' ? getBusinessesByOwner(user!.id) : Promise.resolve([])), [user!.id, user!.role]);
-  const caption = user!.role === 'business_owner' ? ownerRoleCaption(user!.businessName) : roleLabel[user!.role];
+  const caption = user!.role === 'business_owner' || user!.role === 'staff' ? ownerRoleCaption(user!.businessName) : roleLabel[user!.role];
   const [form, setForm] = useState({
     name: user!.name, email: user!.email, phone: user!.phone ?? '', country: user!.country ?? '', businessName: user!.businessName ?? '',
     bankAccount: user!.bankAccount ?? '', mtnNumber: user!.mtnNumber ?? '', airtelNumber: user!.airtelNumber ?? '',
@@ -63,7 +63,7 @@ export default function ProfilePage() {
       <PageHeader title="Profile" intro="How you appear to hosts, travellers and the Tourista team." />
       <StatGrid className="mb-6">
         <StatCard label="Member since" icon={CalendarDays} value={formatDate(user!.joinedAt, { month: 'short', year: 'numeric' })} hint={`${memberDays.toLocaleString()} days on Tourista`} />
-        <StatCard label="Account type" icon={BadgeCheck} tone="violet" value={user!.role === 'business_owner' ? 'Business owner' : roleLabel[user!.role]} hint={user!.role === 'business_owner' ? (user!.businessName ? `${user!.businessName} · ${listingCount} listing${listingCount === 1 ? '' : 's'}` : 'No business name yet') : undefined} />
+        <StatCard label="Account type" icon={BadgeCheck} tone="violet" value={user!.role === 'business_owner' ? 'Business owner' : roleLabel[user!.role]} hint={user!.role === 'business_owner' ? (user!.businessName ? `${user!.businessName} · ${listingCount} branch${listingCount === 1 ? '' : 'es'}` : 'No business name yet') : undefined} />
         <StatCard label="Profile complete" icon={UserCheck} tone={completeness === 100 ? 'teal' : 'amber'} value={`${completeness}%`} hint={completeness === 100 ? 'All details filled in' : 'Add your phone and country'} />
         <StatCard label="Country" icon={Globe2} tone="slate" value={user!.country || '—'} />
       </StatGrid>
@@ -77,7 +77,7 @@ export default function ProfilePage() {
           <Input label="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={error && !form.businessName ? error : undefined} />
           <Input label="Email" type="email" value={form.email} disabled hint="Contact support to change your email." />
           {user!.role === 'business_owner' && (
-            <Input label="Business name" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} hint="The company travellers and the dashboard will show. Listings stay separate." error={error && form.name.trim().length >= 2 && !form.businessName.trim() ? error : undefined} />
+            <Input label="Business name" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} hint="The company travellers and the dashboard will show. Branches stay separate." error={error && form.name.trim().length >= 2 && !form.businessName.trim() ? error : undefined} />
           )}
           <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+250 788 000 000" />
           <Input label="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Rwanda" />

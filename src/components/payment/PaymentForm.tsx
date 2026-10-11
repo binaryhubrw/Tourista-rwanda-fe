@@ -4,6 +4,7 @@ import type { Payment, PaymentMethod } from '@/types';
 import { Button, Input, Loading } from '@/components/ui';
 import { AirtelLogo, CardIcon, MastercardLogo, MtnLogo, VisaLogo } from './PaymentIcons';
 import { cn } from '@/utils/cn';
+import { errorMessage } from '@/hooks/useAsync';
 import { formatRwf } from '@/utils/format';
 import {
   DECLINED_CARD, TEST_CARD, cardBrand, expiryValid, formatCardNumber, formatMobile, formatPayoutAccount, luhnValid, maskCard, maskMobile, mobileNetwork, paymentMethodLabel, paymentReference, payoutAccount, type PayoutTarget,
@@ -84,8 +85,14 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel, pa
       sentTo: destination ? formatPayoutAccount(method, destination) : undefined,
       sentToLabel: destinationLabel,
     };
-    setPhase('success');
-    await onPaid(payment);
+    setPhase('processing');
+    try {
+      await onPaid(payment);
+      setPhase('success');
+    } catch (err) {
+      setFailure(errorMessage(err));
+      setPhase('failed');
+    }
   };
 
   const pay = async () => {

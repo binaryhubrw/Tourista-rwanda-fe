@@ -22,7 +22,7 @@ export default function ListingEditorPage() {
   const locations = useAsync(getLocations);
   const listing = biz.data?.find((item) => item.id === id);
   const [saving, setSaving] = useState(false);
-  useDocumentTitle(creating ? 'Add listing' : listing ? `Edit ${listing.name}` : 'Edit listing');
+  useDocumentTitle(creating ? 'Add branch' : listing ? `Edit ${listing.name}` : 'Edit branch');
 
   const back = () => navigate('/business-dashboard/business');
 
@@ -31,10 +31,10 @@ export default function ListingEditorPage() {
     try {
       if (creating) {
         const created = await createBusiness(input);
-        toast.success(`${created.name} is now listed.`);
+        toast.success(`${created.name} is now a branch.`);
       } else if (listing) {
         await updateBusiness(listing.id, input);
-        toast.success('Listing updated.');
+        toast.success('Branch updated.');
       }
       back();
     } catch (e) {
@@ -46,14 +46,14 @@ export default function ListingEditorPage() {
 
   if (biz.loading || locations.loading) return <Loading />;
   if (biz.error || locations.error) return <ErrorState message={biz.error ?? locations.error ?? undefined} onRetry={() => { biz.reload(); locations.reload(); }} />;
-  if (!creating && !listing) return <ErrorState message="That listing was not found." onRetry={back} />;
+  if (!creating && !listing) return <ErrorState message="That branch was not found." onRetry={back} />;
 
   return (
     <>
-      <ButtonLink to="/business-dashboard/business" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to listings</ButtonLink>
+      <ButtonLink to="/business-dashboard/business" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to branches</ButtonLink>
       <PageHeader
-        title={creating ? 'Add a listing' : `Edit ${listing!.name}`}
-        intro={creating ? 'Choose the kind of listing first. The questions below follow what you choose.' : 'Change what travellers see, then save.'}
+        title={creating ? 'Add a branch' : `Edit ${listing!.name}`}
+        intro={creating ? 'Choose the kind of branch first. The questions below follow what you choose.' : 'Change what travellers see, then save.'}
       />
       <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-7">
         <BusinessForm
@@ -64,8 +64,8 @@ export default function ListingEditorPage() {
           submitting={saving}
           onSubmit={submit}
           onCancel={back}
-          cancelLabel="Back to listings"
-          submitLabel={creating ? 'Publish listing' : 'Save changes'}
+          cancelLabel="Back to branches"
+          submitLabel={creating ? 'Publish branch' : 'Save changes'}
         />
       </div>
     </>

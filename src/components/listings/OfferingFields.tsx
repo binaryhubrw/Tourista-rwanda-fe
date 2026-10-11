@@ -1,9 +1,11 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Button, Input, Select } from '@/components/ui';
+import { VehicleCarsEditor, emptyCar, type CarDraft } from '@/components/business/VehicleCarsEditor';
 import {
   DRINK_CATEGORIES, FOOD_CATEGORIES, ROOM_CATEGORIES, WELLNESS_CATEGORIES,
-  emptyExtra, type BookingMode, type CatalogDraft, type ExtraDraft, type OfferDraft, type ServiceStyle, type VenueDraft,
+  emptyExtra, vehicleLevelPhoto, type BookingMode, type CatalogDraft, type ExtraDraft, type OfferDraft, type ServiceStyle, type VenueDraft,
 } from '@/utils/catalog';
+import { makeId } from '@/utils/id';
 
 const units = ['per person', 'per night', 'per day', 'per item', 'per group', 'per plate', 'per drink', 'per cup', 'per session'];
 
@@ -20,8 +22,37 @@ function toggle(row: OfferDraft, enabled: boolean): OfferDraft {
 }
 
 export function OfferingFields({ lodging, kind, value, errors, onChange }: Props) {
+  const fleet = value.fleet ?? [];
+  const hireCars = lodging || kind === 'Transportation';
   const setRow = (group: 'rooms' | 'wellness' | 'food', category: string, row: OfferDraft) => {
     onChange({ ...value, [group]: { ...value[group], [category]: row } });
+  };
+  const fleetAsCars: CarDraft[] = fleet.map((car) => ({
+    name: car.name,
+    brand: car.brand,
+    category: car.category || 'Standard',
+    plate: car.plateNumber,
+    image: car.image || vehicleLevelPhoto(car.category),
+    seats: car.seats,
+    priceRwf: car.price,
+    description: car.description,
+  }));
+  const setFleetCars = (cars: CarDraft[]) => {
+    onChange({
+      ...value,
+      fleet: cars.map((car, i) => ({
+        id: fleet[i]?.id ?? makeId('veh'),
+        name: car.name,
+        brand: car.brand,
+        category: car.category,
+        description: car.description,
+        price: car.priceRwf,
+        count: '1',
+        seats: car.seats,
+        plateNumber: car.plate,
+        image: car.image,
+      })),
+    });
   };
   const setExtra = (index: number, extra: ExtraDraft) => {
     const extras = value.extras.map((item, i) => (i === index ? extra : item));
@@ -73,6 +104,21 @@ export function OfferingFields({ lodging, kind, value, errors, onChange }: Props
       )}
       {(kind === 'Restaurant' || kind === 'Bar' || kind === 'Coffee shop') && (
         <VenueFields kind={kind} value={value.venue} errors={errors} onChange={(venue) => onChange({ ...value, venue })} />
+      )}
+
+      {hireCars && (
+        <fieldset className="rounded-2xl border border-slate-200 p-4">
+          <legend className="px-1 font-display text-lg font-bold text-ink">Vehicles</legend>
+          <p className="mb-3 text-sm text-slate-600">Set how many cars you have, then fill in each one: photo, level, plate, seats and daily price.</p>
+          {errors.vehicles && <p className="mb-3 text-sm text-red-600">{errors.vehicles}</p>}
+          <VehicleCarsEditor
+            cars={fleetAsCars.length ? fleetAsCars : (kind === 'Transportation' ? [emptyCar()] : [])}
+            errors={errors}
+            errorPrefix="fleet"
+            min={kind === 'Transportation' ? 1 : 0}
+            onChange={setFleetCars}
+          />
+        </fieldset>
       )}
 
       <fieldset className="rounded-2xl border border-slate-200 p-4">

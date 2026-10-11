@@ -27,7 +27,7 @@ export default {
         lift: '0 12px 32px -12px rgba(0, 59, 83, 0.28)',
       },
       keyframes: {
-        'toast-in': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        'toast-in': { from: { opacity: '0', transform: 'translateY(-8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         'modal-in': { from: { opacity: '0', transform: 'scale(.97)' }, to: { opacity: '1', transform: 'scale(1)' } },
         'load-spin': { to: { transform: 'rotate(360deg)' } },
         'load-pulse': { '0%, 100%': { transform: 'scale(0.72)', opacity: '0.55' }, '50%': { transform: 'scale(1)', opacity: '1' } },

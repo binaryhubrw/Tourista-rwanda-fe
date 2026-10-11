@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { MapPin, Phone, Mail, Leaf, ChevronLeft, User, BedDouble, DoorOpen, Check, Search } from 'lucide-react';
+import { MapPin, Phone, Mail, Leaf, ChevronLeft, User, Users, BedDouble, DoorOpen, Check, Search } from 'lucide-react';
 import { getAvailability, getBusinessById } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -10,7 +10,7 @@ import { Badge, Button, Container, ErrorState, Loading, Rating, SmartImage, butt
 import { formatRwf, todayIso } from '@/utils/format';
 import { addDaysIso, fromPrice, isRoom } from '@/utils/pricing';
 import { remaining } from '@/utils/availability';
-import { listingKindOf } from '@/utils/catalog';
+import { listingKindOf, vehicleCarry, vehiclePlates } from '@/utils/catalog';
 import { cn } from '@/utils/cn';
 import type { Accommodation, Restaurant, Service } from '@/types';
 import NotFoundPage from './NotFoundPage';
@@ -19,6 +19,7 @@ const sections: { group: Service['group']; title: string; intro: string }[] = [
   { group: 'room', title: 'Rooms', intro: 'Prices are per room, per night. Tick one or more categories, then continue.' },
   { group: 'wellness', title: 'Wellness', intro: 'Massage, gym, sauna, spa and yoga. Each has its own price.' },
   { group: 'food', title: 'Food and drink', intro: 'Meals are per plate. Drinks and coffee show a starting price — the bill depends on what you order.' },
+  { group: 'vehicle', title: 'Vehicles', intro: 'Cars for hire by level and brand. Prices are per day.' },
   { group: 'activity', title: 'More to book', intro: 'Tours, workshops and anything else you can add to the same booking.' },
 ];
 
@@ -56,7 +57,7 @@ export default function BusinessDetailsPage() {
         if (group !== item.group) return false;
         if (section !== 'all' && group !== section) return false;
         if (!q) return true;
-        return `${service.name} ${service.category ?? ''} ${service.description}`.toLowerCase().includes(q);
+        return `${service.name} ${service.brand ?? ''} ${service.category ?? ''} ${service.description}`.toLowerCase().includes(q);
       });
       return { ...item, items };
     }).filter((item) => item.items.length);
@@ -96,7 +97,7 @@ export default function BusinessDetailsPage() {
           <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-brand-600" checked={on} onChange={() => toggle(service.id)} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <p className="font-display text-lg font-bold text-ink">{label}</p>
+              <p className="font-display text-lg font-bold text-ink">{service.brand ? `${service.brand} · ${label}` : label}</p>
               <p className="whitespace-nowrap font-semibold text-ink">{formatRwf(service.priceRwf)} <span className="text-sm font-normal text-slate-500">{service.unit}</span></p>
             </div>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">{service.description}</p>
@@ -104,6 +105,12 @@ export default function BusinessDetailsPage() {
               <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
                 <span className="inline-flex items-center gap-1.5"><BedDouble className="h-4 w-4 text-brand-600" aria-hidden />{service.available ?? 1} {(service.available ?? 1) === 1 ? 'bed' : 'beds'}</span>
                 {service.available !== undefined && <span className="inline-flex items-center gap-1.5"><DoorOpen className="h-4 w-4 text-brand-600" aria-hidden />{service.available} {service.available === 1 ? 'room' : 'rooms'}</span>}
+              </p>
+            )}
+            {service.group === 'vehicle' && (
+              <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4 text-brand-600" aria-hidden />{vehicleCarry(service).label}</span>
+                <span>{service.available ?? 1} {(service.available ?? 1) === 1 ? 'car' : 'cars'}{service.category ? ` · ${service.category}` : ''}{vehiclePlates(service).length ? ` · ${vehiclePlates(service).join(' · ')}` : ''}</span>
               </p>
             )}
             {!!service.amenities?.length && (
@@ -201,7 +208,7 @@ export default function BusinessDetailsPage() {
               </p>
             )}
             <h2 className="font-display text-lg font-bold">Book {picked.length ? `${picked.length} selected` : 'what you need'}</h2>
-            <p className="text-sm text-slate-600">{picked.length ? 'You will pay once, then the booking is confirmed.' : 'Select one or more rooms, services or meals, then continue to payment.'}</p>
+            <p className="text-sm text-slate-600">{picked.length ? 'Continue to send a request. You pay after the host approves.' : 'Select rooms, services, meals or vehicles, then continue.'}</p>
             {picked.length > 0 && (
               <ul className="space-y-1 text-sm text-slate-700">
                 {picked.map((serviceId) => {

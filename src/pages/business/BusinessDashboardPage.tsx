@@ -22,15 +22,15 @@ export default function BusinessDashboardPage() {
   if (!data?.businesses.length) {
     return (
       <>
-        <PageHeader title={`Welcome, ${firstName}`} intro={user!.businessName ? `${user!.businessName} has no listings yet. Add one so travellers can book you.` : 'Add a listing so travellers can find and book you.'} />
+        <PageHeader title={`Welcome, ${firstName}`} intro={user!.businessName ? `${user!.businessName} has no branches yet. Add one so travellers can book you.` : 'Add a branch so travellers can find and book you.'} />
         <StatGrid>
-          <StatCard label="Listings" icon={Store} value={0} hint="Add your first listing" />
+          <StatCard label="Branches" icon={Store} value={0} hint="Add your first branch" />
           <StatCard label="Bookings" icon={CalendarCheck} tone="teal" value={0} />
           <StatCard label="Revenue" icon={Wallet} tone="violet" value={formatRwfShort(0)} />
           <StatCard label="Rating" icon={Star} tone="amber" value="New" />
         </StatGrid>
         <div className="mt-6">
-          <EmptyState icon={<Store className="h-7 w-7" />} title="You haven't listed anything yet" message="Add a stay, restaurant, guide, workshop or product. The form asks only for what that kind of listing needs." action={<ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add listing</ButtonLink>} />
+          <EmptyState icon={<Store className="h-7 w-7" />} title="You haven't added a branch yet" message="Add a stay, restaurant, guide, workshop or product. The form asks only for what that kind of branch needs." action={<ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add branch</ButtonLink>} />
         </div>
       </>
     );
@@ -62,7 +62,7 @@ export default function BusinessDashboardPage() {
     <>
       <PageHeader
         title={`Welcome, ${firstName}`}
-        intro={`${user!.businessName ? `${user!.businessName} · ` : ''}${businesses.length} listing${businesses.length === 1 ? '' : 's'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
+        intro={`${user!.businessName ? `${user!.businessName} · ` : ''}${businesses.length} branch${businesses.length === 1 ? '' : 'es'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
         action={<ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink>}
       />
 
@@ -82,7 +82,7 @@ export default function BusinessDashboardPage() {
             </ChartCard>
           </div>
 
-          <ChartCard className="mt-6" title="Revenue per listing" description={`Confirmed bookings · ${formatRwf(sum(confirmed, (b) => b.totalRwf))} in total`}>
+          <ChartCard className="mt-6" title="Revenue per branch" description={`Confirmed bookings · ${formatRwf(sum(confirmed, (b) => b.totalRwf))} in total`}>
             {byListing.length ? (
               <BarsChart
                 data={byListing}
@@ -95,7 +95,7 @@ export default function BusinessDashboardPage() {
                 categoryWidth={160}
               />
             ) : (
-              <p className="py-10 text-center text-sm text-slate-500">Revenue will split across listings once travellers book.</p>
+              <p className="py-10 text-center text-sm text-slate-500">Revenue will split across branches once travellers book.</p>
             )}
           </ChartCard>
 
@@ -138,7 +138,7 @@ export default function BusinessDashboardPage() {
                 <p className="text-sm text-slate-500">{main.district}</p>
                 <Rating value={main.rating} count={main.reviewCount} className="mt-1 text-sm" />
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <ButtonLink to={`/business-dashboard/business/${main.id}/edit`} size="sm">Edit listing</ButtonLink>
+                  <ButtonLink to={`/business-dashboard/business/${main.id}/edit`} size="sm">Edit branch</ButtonLink>
                   <ButtonLink to={`/businesses/${main.id}`} size="sm" variant="secondary">View public page</ButtonLink>
                 </div>
               </div>

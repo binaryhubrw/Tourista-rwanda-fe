@@ -17,7 +17,8 @@ function expireSession() {
 
 /** Thin fetch wrapper for the Node API. Sends `Authorization: Bearer <token>`. */
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const raw = localStorage.getItem(TOKEN_KEY);
+  const token = raw && !raw.startsWith('demo.') ? raw : null;
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {

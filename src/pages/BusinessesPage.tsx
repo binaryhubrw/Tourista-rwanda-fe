@@ -62,7 +62,7 @@ export default function BusinessesPage() {
   return (
     <>
       <PageHeader title="Listings and services" intro="Hotels, lodges, guesthouses, guides, meals and services such as massage, gym and sauna. Everything shows a price and a description. Places that are fully booked today are hidden.">
-        <ButtonLink to="/register?role=business_owner" variant="light"><Store className="h-4 w-4" aria-hidden />List your business</ButtonLink>
+        <ButtonLink to="/register/business" variant="light"><Store className="h-4 w-4" aria-hidden />List your business</ButtonLink>
       </PageHeader>
       <Container className="py-8 lg:py-10">
         <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">

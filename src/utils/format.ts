@@ -21,7 +21,24 @@ export const daysBetween = (start: string, end: string) => {
   return Math.round((b - a) / 86_400_000) + 1;
 };
 
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+export const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 /** Short money for charts and stat cards: "RWF 1.2M". */
 export const formatRwfShort = (amount: number) => `RWF ${formatCompact(amount)}`;
+
+/** Compact relative time for inboxes, e.g. "12m ago". */
+export function formatWhen(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const mins = Math.round((Date.now() - d.getTime()) / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatDate(iso);
+}

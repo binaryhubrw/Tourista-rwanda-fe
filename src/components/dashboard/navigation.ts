@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, BarChart3, Heart, CalendarCheck, MessageSquare, Store, Package, Users, MapPin, Building2, User, Settings,
+  LayoutDashboard, BarChart3, Heart, CalendarCheck, MessageSquare, Store, Package, Users, MapPin, Map, Building2, Wallet, RotateCcw, CreditCard, Car,
   type LucideIcon,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
@@ -31,7 +31,8 @@ export interface SidebarSection {
   items: SidebarLink[];
 }
 
-const ALL: UserRole[] = ['tourist', 'business_owner', 'admin'];
+const ALL: UserRole[] = ['tourist', 'business_owner', 'admin', 'staff'];
+const HOST: UserRole[] = ['business_owner', 'staff'];
 
 /**
  * Single source of truth for dashboard navigation. Each item lists the roles
@@ -48,8 +49,10 @@ export const NAVIGATION: NavSection[] = [
   {
     title: 'My travel',
     items: [
-      // { label: 'Itineraries', icon: Map, path: 'itineraries', roles: ['tourist'] },
+      { label: 'Itineraries', icon: Map, path: 'itineraries', roles: ['tourist'] },
       { label: 'Bookings', icon: CalendarCheck, path: 'bookings', roles: ['tourist'] },
+      { label: 'Payments', icon: CreditCard, path: 'payments', roles: ['tourist'] },
+      { label: 'Refunds', icon: RotateCcw, path: 'refunds', roles: ['tourist'] },
       { label: 'Favorites', icon: Heart, path: 'favorites', roles: ['tourist'] },
       { label: 'My reviews', icon: MessageSquare, path: 'reviews', roles: ['tourist'] },
     ],
@@ -57,10 +60,14 @@ export const NAVIGATION: NavSection[] = [
   {
     title: 'My business',
     items: [
-      { label: 'Listings', icon: Store, path: 'business', roles: ['business_owner'] },
-      { label: 'Rooms & services', icon: Package, path: 'services', roles: ['business_owner'] },
-      { label: 'Bookings', icon: CalendarCheck, path: 'bookings', roles: ['business_owner'] },
-      { label: 'Reviews', icon: MessageSquare, path: 'reviews', roles: ['business_owner'] },
+      { label: 'Branches', icon: Store, path: 'business', roles: HOST },
+      { label: 'Rooms & services', icon: Package, path: 'services', roles: HOST },
+      { label: 'Vehicles', icon: Car, path: 'vehicles', roles: HOST },
+      { label: 'Bookings', icon: CalendarCheck, path: 'bookings', roles: HOST },
+      { label: 'Payments', icon: CreditCard, path: 'payments', roles: HOST },
+      { label: 'Refunds', icon: RotateCcw, path: 'refunds', roles: HOST },
+      { label: 'Staff', icon: Users, path: 'staff', roles: ['business_owner'] },
+      { label: 'Reviews', icon: MessageSquare, path: 'reviews', roles: HOST },
     ],
   },
   {
@@ -70,14 +77,10 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Locations', icon: MapPin, path: 'locations', roles: ['admin'] },
       { label: 'Businesses', icon: Building2, path: 'businesses', roles: ['admin'] },
       { label: 'Bookings', icon: CalendarCheck, path: 'bookings', roles: ['admin'] },
+      { label: 'Payments', icon: CreditCard, path: 'payments', roles: ['admin'] },
+      { label: 'Refunds', icon: RotateCcw, path: 'refunds', roles: ['admin'] },
+      { label: 'Wallet', icon: Wallet, path: 'wallet', roles: ['admin'] },
       { label: 'Reviews', icon: MessageSquare, path: 'reviews', roles: ['admin'] },
-    ],
-  },
-  {
-    title: 'Account',
-    items: [
-      { label: 'Profile', icon: User, path: 'profile', roles: ALL },
-      { label: 'Settings', icon: Settings, path: 'settings', roles: ALL },
     ],
   },
 ];
@@ -86,6 +89,7 @@ export const roleLabel: Record<UserRole, string> = {
   tourist: 'Traveller',
   business_owner: 'Business owner',
   admin: 'Admin',
+  staff: 'Staff',
 };
 
 /** Role line for a signed-in owner, e.g. "Business owner · Virunga Hospitality". */

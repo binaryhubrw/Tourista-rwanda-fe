@@ -1,72 +1,96 @@
-import type { Business } from '@/types';
-import { USE_MOCK } from './config';
+import type { Business, User } from '@/types';
 import { api } from './apiClient';
-import { delay, notFound, read, write } from './mockDb';
-import { makeId } from '@/utils/id';
-import { getUserById } from './userService';
-import { payoutFromUser, type PayoutTarget } from '@/utils/payment';
+import { mergeVehicles, persistFleet, payoutForOwner } from '@/demo/store';
+import { DEMO_PAYOUT, demoHireBusiness, isDemoHire, withDemoListings } from '@/demo/vehicles';
+import { getStoredUser } from './authService';
+import type { PayoutTarget } from '@/utils/payment';
+
+function attach(b: Business): Business {
+  return mergeVehicles(b) as Business;
+}
+
+function scoped(list: Business[], user: User | null) {
+  if (user?.role !== 'staff') return list;
+  const allowed = new Set(user.assignedListingIds ?? []);
+  return list.filter((b) => allowed.has(b.id) || isDemoHire(b.id));
+}
+
+function hireFor(ownerId?: string, ownerName?: string): Business {
+  const hire = demoHireBusiness();
+  return { ...hire, ownerId: ownerId ?? hire.ownerId, ownerName: ownerName ?? hire.ownerName };
+}
+
+async function remoteBusinesses() {
+  try {
+    return await api.get<Business[]>('/businesses/');
+  } catch {
+    return [] as Business[];
+  }
+}
 
 export async function getBusinesses(): Promise<Business[]> {
-  if (!USE_MOCK) return api.get<Business[]>('/businesses/');
-  await delay();
-  return read('businesses');
+  return withDemoListings(await remoteBusinesses()).map(attach);
 }
 
 export async function getBusinessById(id: string): Promise<Business> {
-  if (!USE_MOCK) return api.get<Business>(`/businesses/${id}/`);
-  await delay();
-  return read('businesses').find((b) => b.id === id) ?? notFound('Business');
+  if (isDemoHire(id)) return attach(hireFor());
+  try {
+    return attach(await api.get<Business>(`/businesses/${id}/`));
+  } catch (e) {
+    if (isDemoHire(id)) return attach(hireFor());
+    throw e;
+  }
 }
 
 export async function getBusinessesByOwner(ownerId: string): Promise<Business[]> {
-  if (!USE_MOCK) return api.get<Business[]>(`/businesses/?owner=${ownerId}`);
-  await delay();
-  return read('businesses').filter((b) => b.ownerId === ownerId);
+  const user = getStoredUser();
+  const id = user?.role === 'staff' ? (user.ownerId ?? ownerId) : ownerId;
+  let list: Business[] = [];
+  try {
+    list = await api.get<Business[]>(`/businesses/?owner=${id}`);
+  } catch {
+    list = (await remoteBusinesses()).filter((b) => b.ownerId === id);
+  }
+  const hire = hireFor(id, user?.name);
+  if (!list.some((b) => isDemoHire(b.id))) list = [hire, ...list];
+  return scoped(list.map(attach), user);
 }
 
 export async function getPayoutForBusiness(businessId: string): Promise<PayoutTarget | null> {
-  if (!USE_MOCK) {
-    try {
-      return await api.get<PayoutTarget>(`/businesses/${businessId}/payout/`);
-    } catch {
-      return null;
-    }
-  }
-  const listing = await getBusinessById(businessId);
-  if (!listing.ownerId) return { businessName: listing.name };
+  if (isDemoHire(businessId)) return DEMO_PAYOUT;
+  let remote: PayoutTarget | null = null;
   try {
-    return payoutFromUser(await getUserById(listing.ownerId));
-  } catch {
-    return { businessName: listing.name };
-  }
+    remote = await api.get<PayoutTarget>(`/businesses/${businessId}/payout/`);
+  } catch { /* demo overlay still applies */ }
+  try {
+    const b = await getBusinessById(businessId);
+    const demo = payoutForOwner(b.ownerId);
+    if (demo) return demo;
+    const hasRemote = remote && (remote.bankAccount || remote.mtnNumber || remote.airtelNumber);
+    if (hasRemote) return remote;
+    return { ...DEMO_PAYOUT, businessName: b.name };
+  } catch { /* listing may be missing */ }
+  return remote ?? DEMO_PAYOUT;
 }
 
 export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'createdAt'>;
 
 export async function createBusiness(input: BusinessInput): Promise<Business> {
-  if (!USE_MOCK) return api.post<Business>('/businesses/', input);
-  await delay();
-  const business: Business = { ...input, id: makeId('biz'), rating: 0, reviewCount: 0, createdAt: new Date().toISOString() };
-  write('businesses', [business, ...read('businesses')]);
-  return business;
+  const created = await api.post<Business>('/businesses/', input);
+  persistFleet(created.id, input.services ?? []);
+  return attach(created);
 }
 
 export async function updateBusiness(id: string, patch: Partial<Business>): Promise<Business> {
-  if (!USE_MOCK) return api.patch<Business>(`/businesses/${id}/`, patch);
-  await delay();
-  const all = read('businesses');
-  const idx = all.findIndex((b) => b.id === id);
-  if (idx < 0) notFound('Business');
-  all[idx] = { ...all[idx], ...patch };
-  write('businesses', all);
-  return all[idx];
+  if (isDemoHire(id)) {
+    if (patch.services) persistFleet(id, patch.services);
+    return attach({ ...hireFor(), ...patch, id, services: patch.services ?? hireFor().services });
+  }
+  const updated = await api.patch<Business>(`/businesses/${id}/`, patch);
+  if (patch.services) persistFleet(id, patch.services);
+  return attach(updated);
 }
 
 export async function createBusinesses(inputs: BusinessInput[]): Promise<Business[]> {
-  if (!USE_MOCK) return api.post<Business[]>('/businesses/bulk/', inputs);
-  await delay();
-  const now = new Date().toISOString();
-  const created = inputs.map((input) => ({ ...input, id: makeId('biz'), rating: 0, reviewCount: 0, createdAt: now }));
-  write('businesses', [...created, ...read('businesses')]);
-  return created;
+  return api.post<Business[]>('/businesses/bulk/', inputs);
 }

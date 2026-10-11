@@ -55,19 +55,19 @@ export default function BusinessBookingsPage() {
     return (
       <>
         <PageHeader title="Bookings" />
-        <StatGrid><StatCard label="Bookings" icon={CalendarCheck} value={0} hint="Add a listing to start receiving bookings" /></StatGrid>
-        <div className="mt-6"><ButtonLink to="/business-dashboard/business/new">Add listing</ButtonLink></div>
+        <StatGrid><StatCard label="Bookings" icon={CalendarCheck} value={0} hint="Add a branch to start receiving bookings" /></StatGrid>
+        <div className="mt-6"><ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink></div>
       </>
     );
   }
 
   return (
     <>
-      <PageHeader title="Bookings" intro="Guests pay when they book, which confirms the booking. Pending bookings are waiting for the guest's payment." />
+      <PageHeader title="Bookings" intro="Approve or decline new requests. Once you approve, the guest has two hours to pay at least 30%. Confirm when their transfer arrives." />
 
       <StatGrid>
         <StatCard label="All bookings" icon={CalendarCheck} loading={loading} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed and paid`} />
-        <StatCard label="Awaiting guest payment" icon={Clock} tone="teal" loading={loading} value={pending.length} hint={pending.length ? 'Unpaid bookings expire before arrival' : 'Nothing pending'} />
+        <StatCard label="Awaiting your decision" icon={Clock} tone="teal" loading={loading} value={pending.length} hint={pending.length ? 'Approve or decline from the booking' : 'Nothing waiting'} />
         <StatCard label="Paid revenue" icon={Wallet} tone="amber" loading={loading} value={formatRwfShort(sum(all.filter((b) => b.payment?.status === 'Paid'), (b) => b.totalRwf))} hint="Card, MTN MoMo and Airtel Money" />
         <StatCard label="Room-nights ahead" icon={BedDouble} tone="violet" loading={loading} value={nightsBooked} hint="Confirmed upcoming stays" />
       </StatGrid>

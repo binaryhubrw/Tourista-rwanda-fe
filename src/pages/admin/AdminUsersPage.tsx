@@ -14,7 +14,7 @@ import { byMonth, periodTrend } from '@/utils/analytics';
 import { formatDate } from '@/utils/format';
 
 type RoleFilter = 'all' | UserRole;
-const roleTone = { tourist: 'brand', business_owner: 'warning', admin: 'solid' } as const;
+const roleTone = { tourist: 'brand', business_owner: 'warning', admin: 'solid', staff: 'neutral' } as const;
 const ROLES: UserRole[] = ['tourist', 'business_owner', 'admin'];
 const isEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v);
 
@@ -27,14 +27,7 @@ function parseRole(v: string): UserRole | null {
   return null;
 }
 
-const importFields: ImportField[] = [
-  { key: 'name', label: 'Full name', required: true, example: 'Aline Mukamana' },
-  { key: 'email', label: 'Email', required: true, example: 'aline@example.com' },
-  { key: 'role', label: 'Role', example: 'tourist', hint: 'tourist, business owner or admin. Defaults to tourist.' },
-  { key: 'phone', label: 'Phone', example: '+250 788 555 010' },
-  { key: 'country', label: 'Country', example: 'Rwanda' },
-  { key: 'password', label: 'Password', example: 'welcome123', hint: 'At least 6 characters. Defaults to "password".' },
-];
+const ROLE_OPTIONS = ROLES.map((r) => roleLabel[r]);
 
 const columns: Column<User>[] = [
   {
@@ -63,6 +56,18 @@ export default function AdminUsersPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const all = data ?? [];
+  const countries = useMemo(() => {
+    const found = [...new Set(all.map((u) => u.country?.trim()).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b));
+    return found.includes('Rwanda') ? found : ['Rwanda', ...found];
+  }, [all]);
+  const importFields: ImportField[] = useMemo(() => [
+    { key: 'name', label: 'Full name', required: true, example: 'Aline Mukamana' },
+    { key: 'email', label: 'Email', required: true, example: 'aline@example.com' },
+    { key: 'role', label: 'Role', example: ROLE_OPTIONS[0], options: ROLE_OPTIONS, hint: 'Use the Excel dropdown.' },
+    { key: 'phone', label: 'Phone', example: '+250 788 555 010' },
+    { key: 'country', label: 'Country', example: countries[0] ?? 'Rwanda', options: countries, strict: false, hint: 'Use the dropdown, or type a new country.' },
+    { key: 'password', label: 'Password', example: 'welcome123', hint: 'At least 6 characters. Leave empty to generate one.' },
+  ], [countries]);
   const list = useMemo(() => all.filter((u) => filter === 'all' || u.role === filter), [all, filter]);
   const newUsers = periodTrend(all, (u) => u.joinedAt, () => 1, 90);
   const monthly = byMonth(all, (u) => u.joinedAt, { users: () => 1 });
@@ -96,7 +101,14 @@ export default function AdminUsersPage() {
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
-      const created = await createUser(form);
+      const created = await createUser({
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        role: form.role,
+        phone: form.phone.trim() || undefined,
+        country: form.country.trim() || undefined,
+        password: form.password.trim() || undefined,
+      });
       setData((l) => [created, ...(l ?? [])]);
       toast.success(`${created.name} added as ${roleLabel[created.role].toLowerCase()}.`);
       setAdding(false);
@@ -185,7 +197,7 @@ export default function AdminUsersPage() {
           <Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })} options={ROLES.map((r) => ({ value: r, label: roleLabel[r] }))} />
           <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+250 788 000 000" />
           <Input label="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-          <div className="sm:col-span-2"><Input label="Temporary password" type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} hint={'Leave empty to use "password". Ask them to change it after signing in.'} /></div>
+          <div className="sm:col-span-2"><Input label="Temporary password" type="text" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} hint="At least 6 characters. Leave empty to generate one and send a reset link." /></div>
         </div>
       </Modal>
 

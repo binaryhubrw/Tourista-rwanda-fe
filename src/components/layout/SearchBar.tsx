@@ -1,8 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Store, X } from 'lucide-react';
-import { search, searchSync, type SearchScope } from '@/services/searchService';
-import { USE_MOCK } from '@/services/config';
+import { search, type SearchScope } from '@/services/searchService';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/utils/cn';
 import type { SearchResult } from '@/types';
@@ -38,10 +37,6 @@ export function SearchBar({ variant = 'compact', placeholder = 'What do you want
     const q = debounced.trim();
     if (q.length < 2) {
       setSuggestions([]);
-      return;
-    }
-    if (USE_MOCK) {
-      setSuggestions(searchSync(q, scope, 6));
       return;
     }
     let cancelled = false;

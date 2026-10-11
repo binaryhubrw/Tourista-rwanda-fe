@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { addDaysIso, nightsBetween } from '@/utils/pricing';
 import { formatDate, todayIso } from '@/utils/format';
@@ -72,9 +72,13 @@ export function DatePicker({ label, value, onChange, min = todayIso(), max, isDi
         onClick={() => { setCursor(monthStart(value || min || todayIso())); setOpen((o) => !o); }}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={cn('h-[46px] w-full rounded-xl border bg-white px-3.5 text-left text-[15px] focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100', error ? 'border-red-400' : 'border-slate-300', value ? 'text-ink' : 'text-slate-400')}
+        aria-label={value ? `${label}: ${formatDate(value, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}` : `${label}, choose a date`}
+        className={cn('flex h-[46px] w-full items-center gap-2.5 rounded-xl border bg-white px-3.5 text-left text-[15px] focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100', error ? 'border-red-400' : 'border-slate-300', value ? 'text-ink' : 'text-slate-400')}
       >
-        {value ? formatDate(value) : 'Choose a date'}
+        <CalendarDays className="h-4 w-4 shrink-0 text-brand-600" aria-hidden />
+        <span className="min-w-0 flex-1 truncate font-medium tabular-nums">
+          {value ? formatDate(value, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : 'Choose a date'}
+        </span>
       </button>
       {open && (
         <div role="dialog" aria-label={label} className="absolute z-30 mt-2 w-[min(100%,20rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
@@ -116,7 +120,7 @@ export function DatePicker({ label, value, onChange, min = todayIso(), max, isDi
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-slate-500">Struck-through days are already booked.</p>
+          {isDisabled && <p className="mt-2 text-xs text-slate-500">Struck-through days are already booked.</p>}
         </div>
       )}
       {error ? <p className="mt-1.5 text-sm text-red-600">{error}</p> : hint ? <p className="mt-1.5 text-sm text-slate-500">{hint}</p> : null}
