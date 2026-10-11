@@ -43,7 +43,7 @@ export const NAVIGATION: NavSection[] = [
     title: 'General',
     items: [
       { label: 'Overview', icon: LayoutDashboard, path: '', roles: ALL },
-      { label: 'Analytics', icon: BarChart3, path: 'analytics', roles: ['admin'] },
+      { label: 'Analytics', icon: BarChart3, path: 'analytics', roles: ['admin', 'business_owner', 'staff'] },
     ],
   },
   {

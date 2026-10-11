@@ -37,6 +37,7 @@ const SettingsPage = lazy(() => import('@/pages/dashboard/SettingsPage'));
 const NotificationsPage = lazy(() => import('@/pages/dashboard/NotificationsPage'));
 
 const BusinessDashboardPage = lazy(() => import('@/pages/business/BusinessDashboardPage'));
+const BusinessAnalyticsPage = lazy(() => import('@/pages/business/BusinessAnalyticsPage'));
 const MyBusinessPage = lazy(() => import('@/pages/business/MyBusinessPage'));
 const ListingEditorPage = lazy(() => import('@/pages/business/ListingEditorPage'));
 const OwnerListingDetailsPage = lazy(() => import('@/pages/business/OwnerListingDetailsPage'));
@@ -128,7 +129,7 @@ export function AppRoutes() {
         <Route element={<ProtectedRoute roles={['business_owner', 'staff']} />}>
           <Route path="business-dashboard" element={<DashboardLayout />}>
             <Route index element={<BusinessDashboardPage />} />
-            <Route path="analytics" element={<Navigate to="/business-dashboard" replace />} />
+            <Route path="analytics" element={<BusinessAnalyticsPage />} />
             <Route path="business" element={<MyBusinessPage />} />
             <Route path="business/new" element={<ListingEditorPage />} />
             <Route path="business/:id" element={<OwnerListingDetailsPage />} />

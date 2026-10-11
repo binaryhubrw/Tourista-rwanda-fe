@@ -78,7 +78,7 @@ export default function BusinessDashboardPage() {
         highlight={company}
         title={`Welcome, ${firstName}`}
         intro={`${businesses.length} ${staff ? 'assigned ' : ''}branch${businesses.length === 1 ? '' : 'es'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
-        action={<ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink>}
+        action={<><ButtonLink to="/business-dashboard/analytics" variant="secondary">Analytics</ButtonLink><ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink></>}
       />
 
       <StatGrid>
