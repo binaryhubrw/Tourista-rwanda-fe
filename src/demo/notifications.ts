@@ -33,6 +33,16 @@ export function seedNotifications(user: User): AppNotification[] {
     ];
   }
 
+  if (user.role === 'staff') {
+    return [
+      item(id, 1, { kind: 'booking', title: 'New booking on an assigned branch', body: 'Amani Kayitesi asked to hire a Corolla for three days. Approve or decline it.', href: `${base}/bookings`, createdAt: '2026-10-11T13:18:00.000Z' }),
+      item(id, 2, { kind: 'payment', title: 'Guest sent payment proof', body: 'Check the MTN screenshot for Kigali Wheels Inn and mark the payment approved.', href: `${base}/payments`, createdAt: '2026-10-11T11:02:00.000Z' }),
+      item(id, 3, { kind: 'refund', title: 'Refund requested', body: 'A guest asked to cancel a hire on Kigali Wheels. Review it before it goes to admin.', href: `${base}/refunds`, createdAt: '2026-10-10T15:44:00.000Z' }),
+      item(id, 4, { kind: 'review', title: 'New review on an assigned branch', body: 'Someone left 5 stars on Kigali Wheels Inn.', href: `${base}/reviews`, createdAt: '2026-10-09T08:30:00.000Z', readAt: '2026-10-09T09:01:00.000Z' }),
+      item(id, 5, { kind: 'system', title: 'You manage two branches', body: 'Kigali Wheels and Kigali Wheels Inn are assigned to you. Staff cannot add branches or manage the team.', href: `${base}/business`, createdAt: '2026-10-01T08:00:00.000Z', readAt: '2026-10-01T08:20:00.000Z' }),
+    ];
+  }
+
   return [
     item(id, 1, { kind: 'booking', title: 'New booking request', body: 'Amani Kayitesi asked to hire a Corolla for three days. Approve or decline it.', href: `${base}/bookings`, createdAt: '2026-10-11T13:18:00.000Z' }),
     item(id, 2, { kind: 'payment', title: 'Guest sent payment proof', body: 'Check the MTN screenshot and mark the payment approved or send it back.', href: `${base}/payments`, createdAt: '2026-10-11T11:02:00.000Z' }),

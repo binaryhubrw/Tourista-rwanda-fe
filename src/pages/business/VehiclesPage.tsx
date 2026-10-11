@@ -12,6 +12,7 @@ import { formatRwf, formatRwfShort } from '@/utils/format';
 import { VEHICLE_LEVELS, vehicleCarry, vehicleLevelPhoto, vehicleUnits, withoutPlates } from '@/utils/catalog';
 import { bookingLines } from '@/utils/availability';
 import { useOwnerActivity } from './useOwnerBusinesses';
+import { useAuth } from '@/context/AuthContext';
 
 type LevelFilter = 'All' | (typeof VEHICLE_LEVELS)[number];
 
@@ -30,6 +31,7 @@ const rowId = (r: Row) => `${r.business.id}:${r.service.id}:${r.plate}`;
 export default function VehiclesPage() {
   useDocumentTitle('Vehicles');
   const toast = useToast();
+  const { user } = useAuth();
   const { data, loading, error, reload, setData } = useOwnerActivity();
   const [level, setLevel] = useState<LevelFilter>('All');
   const [removing, setRemoving] = useState<{ rows: Row[]; done?: () => void } | null>(null);
@@ -131,7 +133,7 @@ export default function VehiclesPage() {
     return (
       <>
         <PageHeader title="Vehicles" />
-        <div className="mt-6"><EmptyState title="Add a branch first" message="Vehicles belong to a branch, the same way rooms do." action={<ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink>} /></div>
+        <div className="mt-6"><EmptyState title={user?.role === 'staff' ? 'No assigned branches' : 'Add a branch first'} message={user?.role === 'staff' ? 'Vehicles belong to a branch. Once a branch is assigned to you, its fleet appears here.' : 'Vehicles belong to a branch, the same way rooms do.'} action={user?.role === 'business_owner' ? <ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink> : undefined} /></div>
       </>
     );
   }

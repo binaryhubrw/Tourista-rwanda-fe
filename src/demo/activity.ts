@@ -1,5 +1,5 @@
 import type { Booking, Payment, Refund } from '@/types';
-import { DEMO_HIRE_ID, DEMO_HIRE_OWNER } from './vehicles';
+import { DEMO_HIRE_ID, DEMO_HIRE_OWNER, DEMO_INN_ID } from './vehicles';
 
 const MIN_PAY_RATE = 0.3;
 const SUBSCRIPTION_RATE = 0.1;
@@ -16,6 +16,7 @@ export function bookingBelongsToTourist(b: { userId: string; customerEmail: stri
 }
 
 const HIRE = { businessId: DEMO_HIRE_ID, targetId: DEMO_HIRE_ID, targetType: 'business' as const, targetName: 'Kigali Wheels', ownerId: DEMO_HIRE_OWNER };
+const INN = { businessId: DEMO_INN_ID, targetId: DEMO_INN_ID, targetType: 'business' as const, targetName: 'Kigali Wheels Inn', ownerId: DEMO_HIRE_OWNER };
 const AMANI = {
   userId: DEMO_TOURIST_USER_ID,
   customerName: 'Amani Kayitesi',
@@ -345,6 +346,86 @@ export const DEMO_BOOKINGS: Booking[] = [
     status: 'Confirmed',
     payment: pay('pay-demo-ines-corolla', 90000, 'card', '2026-10-11T18:30:00.000Z', 'Paid', { senderName: 'Inès Rousseau' }),
     createdAt: '2026-10-10T19:00:00.000Z',
+  },
+  {
+    ...INN,
+    ...AMANI,
+    id: 'bkg-demo-amani-inn',
+    serviceId: 'inn-std',
+    serviceName: 'Standard room',
+    lines: [line('inn-std', 'Standard room', 2, 85000), line('inn-breakfast', 'Breakfast', 2, 12000)],
+    date: '2026-10-04',
+    endDate: '2026-10-06',
+    nights: 2,
+    units: 1,
+    unitPriceRwf: 85000,
+    people: 2,
+    totalRwf: 194000,
+    status: 'Confirmed',
+    payment: pay('pay-demo-amani-inn', 194000, 'mtn', '2026-10-02T16:10:00.000Z', 'Paid', { senderName: 'Amani Kayitesi' }),
+    createdAt: '2026-10-01T11:20:00.000Z',
+  },
+  {
+    ...INN,
+    id: 'bkg-demo-mei-inn',
+    userId: 'u-demo-mei',
+    customerName: 'Mei Chen',
+    customerEmail: 'mei.chen@example.com',
+    customerPhone: '+86 138 0000 2211',
+    serviceId: 'inn-vip',
+    serviceName: 'Deluxe room',
+    lines: [line('inn-vip', 'Deluxe room', 3, 140000)],
+    date: '2026-10-18',
+    endDate: '2026-10-21',
+    nights: 3,
+    units: 1,
+    unitPriceRwf: 140000,
+    people: 2,
+    totalRwf: 420000,
+    status: 'Pending',
+    createdAt: '2026-10-11T08:40:00.000Z',
+  },
+  {
+    ...INN,
+    id: 'bkg-demo-lisa-inn',
+    userId: 'u-demo-lisa',
+    customerName: 'Lisa Berg',
+    customerEmail: 'lisa.berg@example.com',
+    customerPhone: '+46 70 123 45 67',
+    serviceId: 'inn-std',
+    serviceName: 'Standard room',
+    lines: [line('inn-std', 'Standard room', 1, 85000)],
+    date: '2026-10-13',
+    endDate: '2026-10-14',
+    nights: 1,
+    units: 1,
+    unitPriceRwf: 85000,
+    people: 1,
+    totalRwf: 85000,
+    status: 'AwaitingPayment',
+    paymentDueAt: '2026-10-11T22:00:00.000Z',
+    createdAt: '2026-10-11T09:15:00.000Z',
+  },
+  {
+    ...INN,
+    id: 'bkg-demo-noah-inn',
+    userId: 'u-demo-noah',
+    customerName: 'Noah Mensah',
+    customerEmail: 'noah.mensah@example.com',
+    customerPhone: '+233 24 555 0199',
+    serviceId: 'inn-vip',
+    serviceName: 'Deluxe room',
+    lines: [line('inn-vip', 'Deluxe room', 2, 140000), line('inn-breakfast', 'Breakfast', 2, 12000)],
+    date: '2026-09-28',
+    endDate: '2026-09-30',
+    nights: 2,
+    units: 1,
+    unitPriceRwf: 140000,
+    people: 2,
+    totalRwf: 304000,
+    status: 'PaymentReview',
+    payment: pay('pay-demo-noah-inn', 304000, 'card', '2026-09-27T19:05:00.000Z', 'Pending', { senderName: 'Noah Mensah' }),
+    createdAt: '2026-09-26T14:00:00.000Z',
   },
 ];
 

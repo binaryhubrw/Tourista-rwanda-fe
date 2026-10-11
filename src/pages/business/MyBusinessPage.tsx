@@ -47,7 +47,7 @@ export default function MyBusinessPage() {
 
   return (
     <>
-      <PageHeader title="Branches" intro="Every branch you have on Tourista Rwanda, with a count of rooms, services, food and vehicles." action={user?.role === 'business_owner' ? <ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add branch</ButtonLink> : undefined} />
+      <PageHeader title="Branches" intro={user?.role === 'staff' ? 'The branches assigned to you, with rooms, services, food and vehicles.' : 'Every branch you have on Tourista Rwanda, with a count of rooms, services, food and vehicles.'} action={user?.role === 'business_owner' ? <ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add branch</ButtonLink> : undefined} />
       <StatGrid className="mb-6 grid-cols-2">
         <StatCard label="Branches" icon={Store} value={list.length} hint={list.map((b) => listingKindOf(b)).filter((c, i, a) => a.indexOf(c) === i).join(', ') || 'No branches yet'} />
         <StatCard label="Rooms" icon={BedDouble} tone="teal" value={rooms} />
@@ -61,7 +61,7 @@ export default function MyBusinessPage() {
         <StatCard label="Sustainability badges" icon={Leaf} tone="violet" value={new Set(list.flatMap((b) => b.badges)).size} />
       </StatGrid>
       {!list.length ? (
-        <EmptyState title="No branches yet" message="Add your first branch so travellers can find and book you." action={<ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink>} />
+        <EmptyState title={user?.role === 'staff' ? 'No assigned branches' : 'No branches yet'} message={user?.role === 'staff' ? 'Ask the owner to assign a branch. You will then see its bookings, payments and reviews here.' : 'Add your first branch so travellers can find and book you.'} action={user?.role === 'business_owner' ? <ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink> : undefined} />
       ) : (
         <DataTable
           data={list}

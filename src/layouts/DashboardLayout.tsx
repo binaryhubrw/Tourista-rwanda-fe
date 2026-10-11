@@ -2,7 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { Loading } from '@/components/ui';
-import { DashboardHeader, Sidebar, activeLink, navigationFor, ownerRoleCaption, roleLabel } from '@/components/dashboard';
+import { DashboardHeader, Sidebar, activeLink, hostRoleCaption, navigationFor, roleLabel } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
 
 const COLLAPSED_KEY = 'tourista.sidebar.collapsed';
@@ -31,7 +31,7 @@ export function DashboardLayout() {
   const sections = useMemo(() => navigationFor(role), [role]);
   const current = activeLink(sections, pathname);
   const basePath = dashboardPathFor(role);
-  const roleCaption = role === 'business_owner' || role === 'staff' ? ownerRoleCaption(user!.businessName) : roleLabel[role];
+  const roleCaption = role === 'business_owner' || role === 'staff' ? hostRoleCaption(role, user!.businessName) : roleLabel[role];
   const pageTitle = pathname === `${basePath}/notifications` ? 'Notifications' : current?.label;
 
   const toggleCollapsed = useCallback(() => {

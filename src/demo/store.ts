@@ -6,7 +6,7 @@ import type { PayoutTarget } from '@/utils/payment';
 import { paymentTransfers, remainingDue, paymentMethodShort, paymentReference } from '@/utils/payment';
 import { DEMO_BOOKINGS, DEMO_REFUNDS } from './activity';
 import { DEMO_STAFF, REMOVED_STAFF_IDS, staffRole } from './staff';
-import { DEMO_FLEET, DEMO_HIRE_ID, DEMO_HIRE_OWNER, DEMO_PAYOUT } from './vehicles';
+import { DEMO_FLEET, DEMO_HIRE_COMPANY, DEMO_HIRE_ID, DEMO_HIRE_OWNER, DEMO_INN_ID, DEMO_PAYOUT } from './vehicles';
 
 export const SUBSCRIPTION_RATE = 0.1;
 export const MIN_PAY_RATE = 0.3;
@@ -115,8 +115,43 @@ function expireWindows(now = Date.now()) {
   if (changed) save();
 }
 
+function ensureHireStaff() {
+  persistDemoActivity();
+  const seed = DEMO_STAFF.find((s) => s.preferHire);
+  if (!seed) return;
+  const assigned = seed.assignedListingIds?.length ? seed.assignedListingIds : [DEMO_HIRE_ID, DEMO_INN_ID];
+  const match = state.staff.find((s) => s.id === seed.id || s.email.toLowerCase() === seed.email.toLowerCase());
+  const row: StaffAccount = {
+    id: seed.id,
+    name: seed.name,
+    email: seed.email,
+    password: seed.password,
+    ownerId: DEMO_HIRE_OWNER,
+    assignedListingIds: assigned,
+    phone: seed.phone,
+    title: 'Manager',
+    joinedAt: seed.joinedAt,
+    active: true,
+  };
+  if (!match) {
+    state.staff = [row, ...state.staff];
+    save();
+    return;
+  }
+  const same =
+    match.ownerId === row.ownerId
+    && match.assignedListingIds.length === assigned.length
+    && assigned.every((id) => match.assignedListingIds.includes(id))
+    && match.password === row.password
+    && match.active !== false;
+  if (same) return;
+  state.staff = state.staff.map((s) => (s.id === match.id ? { ...match, ...row, joinedAt: match.joinedAt } : s));
+  save();
+}
+
 export function getDemoState() {
   persistDemoActivity();
+  ensureHireStaff();
   expireWindows();
   return state;
 }
@@ -142,6 +177,7 @@ export function staffToUser(s: StaffAccount): User {
     phone: s.phone,
     ownerId: s.ownerId,
     assignedListingIds: s.assignedListingIds,
+    businessName: s.ownerId === DEMO_HIRE_OWNER ? DEMO_HIRE_COMPANY : undefined,
     joinedAt: s.joinedAt,
   };
 }
@@ -169,8 +205,9 @@ export function managerForListing(ownerId: string, listingId: string, exceptStaf
 }
 
 function dedupeManagers(ownerId: string, listingIds: string[]) {
+  const locked = new Set(DEMO_STAFF.filter((s) => s.preferHire).map((s) => s.id));
   const managers = state.staff
-    .filter((s) => s.ownerId === ownerId && isManager(s))
+    .filter((s) => s.ownerId === ownerId && isManager(s) && !locked.has(s.id))
     .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
   const claimed = new Set<string>();
   const assigned = new Map<string, string[]>();
@@ -209,10 +246,8 @@ export function ensureDemoStaff(ownerId: string, listingIds: string[]) {
   const emails = new Set(state.staff.map((s) => s.email.toLowerCase()));
   const ids = new Set(state.staff.map((s) => s.id));
   const used = new Set(state.staff.filter((s) => s.ownerId === ownerId).flatMap((s) => s.assignedListingIds));
-  const rows = DEMO_STAFF.filter((s) => !emails.has(s.email) && !ids.has(s.id)).map((s) => {
-    const prefer = s.preferHire && listingIds.includes(DEMO_HIRE_ID) && !used.has(DEMO_HIRE_ID)
-      ? DEMO_HIRE_ID
-      : listingIds.find((id) => !used.has(id));
+  const rows = DEMO_STAFF.filter((s) => !s.preferHire && !emails.has(s.email.toLowerCase()) && !ids.has(s.id)).map((s) => {
+    const prefer = listingIds.find((id) => !used.has(id));
     if (prefer) used.add(prefer);
     return {
       id: s.id,

@@ -92,10 +92,16 @@ export const roleLabel: Record<UserRole, string> = {
   staff: 'Staff',
 };
 
+/** Role line for a signed-in host, e.g. "Staff · Kigali Wheels". */
+export function hostRoleCaption(role: UserRole, businessName?: string) {
+  const name = businessName?.trim();
+  const label = roleLabel[role] ?? role;
+  return name ? `${label} · ${name}` : label;
+}
+
 /** Role line for a signed-in owner, e.g. "Business owner · Virunga Hospitality". */
 export function ownerRoleCaption(businessName?: string) {
-  const name = businessName?.trim();
-  return name ? `${roleLabel.business_owner} · ${name}` : roleLabel.business_owner;
+  return hostRoleCaption('business_owner', businessName);
 }
 
 /** The sections and links a given role is allowed to see. Empty sections are dropped. */

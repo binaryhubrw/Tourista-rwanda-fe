@@ -11,6 +11,7 @@ import { BookingViewLink, bookingColumns, bookingSearchText, statusOptions, type
 import { sum } from '@/utils/analytics';
 import { formatRwfShort, todayIso } from '@/utils/format';
 import { useOwnerActivity } from './useOwnerBusinesses';
+import { useAuth } from '@/context/AuthContext';
 
 /** Upcoming bookings that can still be declined (paid ones are refunded). */
 const canDecline = (b: Booking) => b.status !== 'Canceled' && b.date >= todayIso();
@@ -18,6 +19,7 @@ const canDecline = (b: Booking) => b.status !== 'Canceled' && b.date >= todayIso
 export default function BusinessBookingsPage() {
   useDocumentTitle('Bookings');
   const toast = useToast();
+  const { user } = useAuth();
   const { data, loading, error, reload, setData } = useOwnerActivity();
   const [filter, setFilter] = useState<StatusFilter>('All');
   const [declining, setDeclining] = useState<{ rows: Booking[]; done?: () => void } | null>(null);
@@ -56,7 +58,7 @@ export default function BusinessBookingsPage() {
       <>
         <PageHeader title="Bookings" />
         <StatGrid><StatCard label="Bookings" icon={CalendarCheck} value={0} hint="Add a branch to start receiving bookings" /></StatGrid>
-        <div className="mt-6"><ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink></div>
+        {user?.role === 'business_owner' ? <div className="mt-6"><ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink></div> : null}
       </>
     );
   }

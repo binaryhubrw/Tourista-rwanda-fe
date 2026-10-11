@@ -5,7 +5,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { errorMessage, useAsync } from '@/hooks/useAsync';
 import { BadgeCheck, CalendarDays, Globe2, UserCheck } from 'lucide-react';
 import { Avatar, Button, Input, Loading, LoadingOverlay } from '@/components/ui';
-import { PageHeader, StatCard, StatGrid, ownerRoleCaption, roleLabel } from '@/components/dashboard';
+import { PageHeader, StatCard, StatGrid, hostRoleCaption, roleLabel } from '@/components/dashboard';
 import { PayoutFields } from '@/components/business/PayoutFields';
 import { getBusinessesByOwner } from '@/services';
 import { formatDate } from '@/utils/format';
@@ -15,8 +15,8 @@ export default function ProfilePage() {
   useDocumentTitle('Profile');
   const { user, updateUser } = useAuth();
   const toast = useToast();
-  const listings = useAsync(() => (user!.role === 'business_owner' ? getBusinessesByOwner(user!.id) : Promise.resolve([])), [user!.id, user!.role]);
-  const caption = user!.role === 'business_owner' || user!.role === 'staff' ? ownerRoleCaption(user!.businessName) : roleLabel[user!.role];
+  const listings = useAsync(() => (user!.role === 'business_owner' || user!.role === 'staff' ? getBusinessesByOwner(user!.id) : Promise.resolve([])), [user!.id, user!.role]);
+  const caption = user!.role === 'business_owner' || user!.role === 'staff' ? hostRoleCaption(user!.role, user!.businessName) : roleLabel[user!.role];
   const [form, setForm] = useState({
     name: user!.name, email: user!.email, phone: user!.phone ?? '', country: user!.country ?? '', businessName: user!.businessName ?? '',
     bankAccount: user!.bankAccount ?? '', mtnNumber: user!.mtnNumber ?? '', airtelNumber: user!.airtelNumber ?? '',
@@ -31,7 +31,7 @@ export default function ProfilePage() {
   const memberDays = Math.max(0, Math.floor((Date.now() - new Date(user!.joinedAt).getTime()) / 86_400_000));
   const listingCount = listings.data?.length ?? 0;
 
-  if (user!.role === 'business_owner' && listings.loading) return <Loading />;
+  if ((user!.role === 'business_owner' || user!.role === 'staff') && listings.loading) return <Loading />;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +63,7 @@ export default function ProfilePage() {
       <PageHeader title="Profile" intro="How you appear to hosts, travellers and the Tourista team." />
       <StatGrid className="mb-6">
         <StatCard label="Member since" icon={CalendarDays} value={formatDate(user!.joinedAt, { month: 'short', year: 'numeric' })} hint={`${memberDays.toLocaleString()} days on Tourista`} />
-        <StatCard label="Account type" icon={BadgeCheck} tone="violet" value={user!.role === 'business_owner' ? 'Business owner' : roleLabel[user!.role]} hint={user!.role === 'business_owner' ? (user!.businessName ? `${user!.businessName} · ${listingCount} branch${listingCount === 1 ? '' : 'es'}` : 'No business name yet') : undefined} />
+        <StatCard label="Account type" icon={BadgeCheck} tone="violet" value={roleLabel[user!.role]} hint={user!.role === 'business_owner' ? (user!.businessName ? `${user!.businessName} · ${listingCount} branch${listingCount === 1 ? '' : 'es'}` : 'No business name yet') : user!.role === 'staff' ? `${user!.businessName ? `${user!.businessName} · ` : ''}${listingCount} assigned branch${listingCount === 1 ? '' : 'es'}` : undefined} />
         <StatCard label="Profile complete" icon={UserCheck} tone={completeness === 100 ? 'teal' : 'amber'} value={`${completeness}%`} hint={completeness === 100 ? 'All details filled in' : 'Add your phone and country'} />
         <StatCard label="Country" icon={Globe2} tone="slate" value={user!.country || '—'} />
       </StatGrid>

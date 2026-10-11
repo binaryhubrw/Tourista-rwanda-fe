@@ -16,6 +16,7 @@ import { VEHICLE_LEVELS, parsePlateList, plateLabel, vehicleCarry, vehicleLevelP
 import { bookingLines } from '@/utils/availability';
 import { isRoom } from '@/utils/pricing';
 import { useOwnerActivity } from './useOwnerBusinesses';
+import { useAuth } from '@/context/AuthContext';
 
 type View = 'rooms' | 'services' | 'vehicles';
 const isVehicle = (s: Service) => s.group === 'vehicle';
@@ -37,6 +38,7 @@ const rowId = (r: Row) => r.plate ? `${r.business.id}:${r.service.id}:${r.plate}
 export default function MyServicesPage() {
   useDocumentTitle('Rooms & services');
   const toast = useToast();
+  const { user } = useAuth();
   const { data, loading, error, reload, setData } = useOwnerActivity();
   const [view, setView] = useState<View>('rooms');
   const [editing, setEditing] = useState<Row | 'new' | null>(null);
@@ -286,7 +288,7 @@ export default function MyServicesPage() {
       <>
         <PageHeader title="Rooms & services" />
         <StatGrid><StatCard label="Branches" icon={Package} value={0} hint="Rooms and services belong to a branch" /></StatGrid>
-        <div className="mt-6"><EmptyState title="Add a branch first" message="Rooms and services belong to a branch." action={<ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink>} /></div>
+        <div className="mt-6"><EmptyState title={user?.role === 'staff' ? 'No assigned branches' : 'Add a branch first'} message={user?.role === 'staff' ? 'Rooms and services appear once a branch is assigned to you.' : 'Rooms and services belong to a branch.'} action={user?.role === 'business_owner' ? <ButtonLink to="/business-dashboard/business/new">Add branch</ButtonLink> : undefined} /></div>
       </>
     );
   }

@@ -44,6 +44,15 @@ export default function ListingEditorPage() {
     }
   };
 
+  if (creating && user?.role === 'staff') {
+    return (
+      <>
+        <ButtonLink to="/business-dashboard/business" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to branches</ButtonLink>
+        <ErrorState message="Only the business owner can add a branch. You can edit the branches assigned to you." onRetry={back} />
+      </>
+    );
+  }
+
   if (biz.loading || locations.loading) return <Loading />;
   if (biz.error || locations.error) return <ErrorState message={biz.error ?? locations.error ?? undefined} onRetry={() => { biz.reload(); locations.reload(); }} />;
   if (!creating && !listing) return <ErrorState message="That branch was not found." onRetry={back} />;

@@ -15,22 +15,36 @@ export default function BusinessDashboardPage() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useOwnerActivity();
   const firstName = user!.name.split(' ')[0];
+  const company = user!.businessName?.trim();
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (loading) return <Loading />;
 
+  const staff = user!.role === 'staff';
+
   if (!data?.businesses.length) {
     return (
       <>
-        <PageHeader title={`Welcome, ${firstName}`} intro={user!.businessName ? `${user!.businessName} has no branches yet. Add one so travellers can book you.` : 'Add a branch so travellers can find and book you.'} />
+        <PageHeader
+          highlight={company}
+          title={`Welcome, ${firstName}`}
+          intro={staff
+            ? 'No branches are assigned to you yet. Ask the owner to assign a branch so you can manage bookings and reviews.'
+            : company ? `${company} has no branches yet. Add one so travellers can book you.` : 'Add a branch so travellers can find and book you.'}
+        />
         <StatGrid>
-          <StatCard label="Branches" icon={Store} value={0} hint="Add your first branch" />
+          <StatCard label="Branches" icon={Store} value={0} hint={staff ? 'Assigned branches' : 'Add your first branch'} />
           <StatCard label="Bookings" icon={CalendarCheck} tone="teal" value={0} />
           <StatCard label="Revenue" icon={Wallet} tone="violet" value={formatRwfShort(0)} />
           <StatCard label="Rating" icon={Star} tone="amber" value="New" />
         </StatGrid>
         <div className="mt-6">
-          <EmptyState icon={<Store className="h-7 w-7" />} title="You haven't added a branch yet" message="Add a stay, restaurant, guide, workshop or product. The form asks only for what that kind of branch needs." action={<ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add branch</ButtonLink>} />
+          <EmptyState
+            icon={<Store className="h-7 w-7" />}
+            title={staff ? 'No assigned branches' : "You haven't added a branch yet"}
+            message={staff ? 'The owner chooses which branches you manage. Once assigned, bookings and reviews for those branches appear here.' : 'Add a stay, restaurant, guide, workshop or product. The form asks only for what that kind of branch needs.'}
+            action={staff ? undefined : <ButtonLink to="/business-dashboard/business/new"><Plus className="h-4 w-4" aria-hidden />Add branch</ButtonLink>}
+          />
         </div>
       </>
     );
@@ -61,8 +75,9 @@ export default function BusinessDashboardPage() {
   return (
     <>
       <PageHeader
+        highlight={company}
         title={`Welcome, ${firstName}`}
-        intro={`${user!.businessName ? `${user!.businessName} · ` : ''}${businesses.length} branch${businesses.length === 1 ? '' : 'es'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
+        intro={`${businesses.length} ${staff ? 'assigned ' : ''}branch${businesses.length === 1 ? '' : 'es'}.${pending.length ? ` ${pending.length} booking${pending.length > 1 ? 's are' : ' is'} waiting for the guest's payment.` : ' Every booking is paid and confirmed.'}`}
         action={<ButtonLink to="/business-dashboard/bookings">Review bookings</ButtonLink>}
       />
 

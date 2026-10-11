@@ -3,7 +3,9 @@ import { images } from '@/data/images';
 import type { PayoutTarget } from '@/utils/payment';
 
 export const DEMO_HIRE_ID = 'demo-kigali-car-hire';
+export const DEMO_INN_ID = 'demo-kigali-wheels-inn';
 export const DEMO_HIRE_OWNER = 'demo-owner-hire';
+export const DEMO_HIRE_COMPANY = 'Kigali Wheels';
 
 let fleetPhoto = 0;
 function nextFleetPhoto() {
@@ -65,13 +67,54 @@ export function demoHireBusiness(place?: { locationId: string; district: string 
   };
 }
 
+export function demoInnBusiness(place?: { locationId: string; district: string }): Business {
+  return {
+    id: DEMO_INN_ID,
+    name: 'Kigali Wheels Inn',
+    ownerName: 'Eric Ndayisaba',
+    ownerId: DEMO_HIRE_OWNER,
+    category: 'Accommodation',
+    listingKind: 'Guesthouse',
+    propertyType: 'Guesthouse',
+    locationId: place?.locationId ?? 'loc-kigali',
+    district: place?.district ?? 'Nyarugenge',
+    description: 'A 12-room guesthouse next to the Kigali Wheels yard. Drivers and self-drive guests stay here the night before an early airport or park departure.',
+    image: images.hotel,
+    gallery: [images.hotel, images.hotelExterior, images.kigali],
+    rating: 4.6,
+    reviewCount: 28,
+    badges: ['Community-owned'],
+    phone: '+250 788 123 457',
+    email: 'inn@kigaliwheels.rw',
+    coordinates: { lat: -1.9462, lng: 30.0588 },
+    services: [
+      { id: 'inn-std', name: 'Standard room', description: 'Queen bed, desk and en-suite shower. Street parking for the hired car.', priceRwf: 85000, unit: 'per night', group: 'room', category: 'Regular', capacity: 2, available: 8, bedType: 'Queen' },
+      { id: 'inn-vip', name: 'Deluxe room', description: 'King bed, sitting area and a quiet courtyard view.', priceRwf: 140000, unit: 'per night', group: 'room', category: 'VIP', capacity: 2, available: 4, bedType: 'King' },
+      { id: 'inn-breakfast', name: 'Breakfast', description: 'Buffet with fruit, eggs and Rwandan coffee, served from 6am.', priceRwf: 12000, unit: 'per person', group: 'food', category: 'Restaurant', available: 24 },
+    ],
+    priceLevel: 2,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  };
+}
+
+export function demoStaffBranches(): Business[] {
+  return [demoHireBusiness(), demoInnBusiness()];
+}
+
 /** Always put the demo hire company on the public list so cars show without an owner adding them. */
 export function withDemoListings(list: Business[]): Business[] {
   const sample = list.find((b) => /kigali|gasabo|nyarugenge|kicukiro/i.test(b.district)) ?? list[0];
-  const hire = demoHireBusiness(sample ? { locationId: sample.locationId, district: sample.district } : undefined);
-  return [hire, ...list.filter((b) => b.id !== DEMO_HIRE_ID)];
+  const place = sample ? { locationId: sample.locationId, district: sample.district } : undefined;
+  const hire = demoHireBusiness(place);
+  const inn = demoInnBusiness(place);
+  const rest = list.filter((b) => b.id !== DEMO_HIRE_ID && b.id !== DEMO_INN_ID);
+  return [hire, inn, ...rest];
 }
 
 export function isDemoHire(id: string) {
   return id === DEMO_HIRE_ID;
+}
+
+export function isDemoListing(id: string) {
+  return id === DEMO_HIRE_ID || id === DEMO_INN_ID;
 }

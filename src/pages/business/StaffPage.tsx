@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Briefcase, Pencil, Plus, Trash2, UserPlus, Users } from 'lucide-react';
 import type { Business } from '@/types';
 import { getBusinessesByOwner } from '@/services';
@@ -128,7 +129,7 @@ export default function StaffPage() {
     setTick((n) => n + 1);
   };
 
-  if (user?.role !== 'business_owner') return <ErrorState message="Only the business owner can add staff." />;
+  if (user?.role !== 'business_owner') return <Navigate to="/business-dashboard" replace />;
   if (listings.error) return <ErrorState message={listings.error} onRetry={listings.reload} />;
   if (listings.loading) return <Loading />;
 

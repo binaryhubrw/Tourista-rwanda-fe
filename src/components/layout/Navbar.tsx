@@ -26,7 +26,7 @@ function scrollToCatalog() {
 
 export function Navbar() {
   const { user, logout } = useAuth();
-  const ownedLabel = user?.role === 'business_owner' ? (user.businessName ?? '') : '';
+  const ownedLabel = user?.role === 'business_owner' || user?.role === 'staff' ? (user.businessName ?? '') : '';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

@@ -1,7 +1,7 @@
 import type { Business, User } from '@/types';
 import { api } from './apiClient';
 import { mergeVehicles, persistFleet, payoutForOwner } from '@/demo/store';
-import { DEMO_PAYOUT, demoHireBusiness, isDemoHire, withDemoListings } from '@/demo/vehicles';
+import { DEMO_INN_ID, DEMO_PAYOUT, demoHireBusiness, demoInnBusiness, demoStaffBranches, isDemoHire, isDemoListing, withDemoListings } from '@/demo/vehicles';
 import { getStoredUser } from './authService';
 import type { PayoutTarget } from '@/utils/payment';
 
@@ -12,12 +12,26 @@ function attach(b: Business): Business {
 function scoped(list: Business[], user: User | null) {
   if (user?.role !== 'staff') return list;
   const allowed = new Set(user.assignedListingIds ?? []);
-  return list.filter((b) => allowed.has(b.id) || isDemoHire(b.id));
+  const fromOwner = list.filter((b) => allowed.has(b.id));
+  const seen = new Set(fromOwner.map((b) => b.id));
+  const assignedDemo = demoStaffBranches().filter((b) => allowed.has(b.id) && !seen.has(b.id)).map(attach);
+  return [...assignedDemo, ...fromOwner];
 }
 
 function hireFor(ownerId?: string, ownerName?: string): Business {
   const hire = demoHireBusiness();
   return { ...hire, ownerId: ownerId ?? hire.ownerId, ownerName: ownerName ?? hire.ownerName };
+}
+
+function innFor(ownerId?: string, ownerName?: string): Business {
+  const inn = demoInnBusiness();
+  return { ...inn, ownerId: ownerId ?? inn.ownerId, ownerName: ownerName ?? inn.ownerName };
+}
+
+function demoById(id: string, ownerId?: string, ownerName?: string): Business | null {
+  if (isDemoHire(id)) return hireFor(ownerId, ownerName);
+  if (id === DEMO_INN_ID) return innFor(ownerId, ownerName);
+  return null;
 }
 
 async function remoteBusinesses() {
@@ -33,11 +47,13 @@ export async function getBusinesses(): Promise<Business[]> {
 }
 
 export async function getBusinessById(id: string): Promise<Business> {
-  if (isDemoHire(id)) return attach(hireFor());
+  const demo = demoById(id);
+  if (demo) return attach(demo);
   try {
     return attach(await api.get<Business>(`/businesses/${id}/`));
   } catch (e) {
-    if (isDemoHire(id)) return attach(hireFor());
+    const fallback = demoById(id);
+    if (fallback) return attach(fallback);
     throw e;
   }
 }
@@ -51,13 +67,14 @@ export async function getBusinessesByOwner(ownerId: string): Promise<Business[]>
   } catch {
     list = (await remoteBusinesses()).filter((b) => b.ownerId === id);
   }
+  if (user?.role === 'staff') return scoped(list.map(attach), user);
   const hire = hireFor(id, user?.name);
   if (!list.some((b) => isDemoHire(b.id))) list = [hire, ...list];
-  return scoped(list.map(attach), user);
+  return list.map(attach);
 }
 
 export async function getPayoutForBusiness(businessId: string): Promise<PayoutTarget | null> {
-  if (isDemoHire(businessId)) return DEMO_PAYOUT;
+  if (isDemoListing(businessId)) return DEMO_PAYOUT;
   let remote: PayoutTarget | null = null;
   try {
     remote = await api.get<PayoutTarget>(`/businesses/${businessId}/payout/`);
@@ -82,9 +99,10 @@ export async function createBusiness(input: BusinessInput): Promise<Business> {
 }
 
 export async function updateBusiness(id: string, patch: Partial<Business>): Promise<Business> {
-  if (isDemoHire(id)) {
+  const demo = demoById(id);
+  if (demo) {
     if (patch.services) persistFleet(id, patch.services);
-    return attach({ ...hireFor(), ...patch, id, services: patch.services ?? hireFor().services });
+    return attach({ ...demo, ...patch, id, services: patch.services ?? demo.services });
   }
   const updated = await api.patch<Business>(`/businesses/${id}/`, patch);
   if (patch.services) persistFleet(id, patch.services);
