@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CalendarCheck, Car, ChevronLeft, Pencil, Users, Wallet } from 'lucide-react';
-import { getBookings } from '@/services';
+import { getBookings, getBusinessById, getBusinessesByOwner } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Badge, ButtonLink, ErrorState, Loading, SmartImage } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
@@ -10,19 +11,26 @@ import { BookingViewLink, bookingColumns, bookingSearchText } from '@/pages/shar
 import { formatRwf } from '@/utils/format';
 import { VehicleUnitGallery } from '@/components/business/VehicleCategoryGallery';
 import { plateLabel, vehicleCarry, vehiclePhoto, vehiclePlates, vehicleUnits } from '@/utils/catalog';
-import { useOwnerBusinesses } from './useOwnerBusinesses';
 import type { Booking } from '@/types';
 
 type View = 'overview' | 'bookings' | 'categories';
 
-export default function VehicleDetailsPage() {
+export default function VehicleDetailsPage({ variant = 'owner' }: { variant?: 'owner' | 'admin' }) {
   const { businessId = '', serviceId = '' } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const admin = variant === 'admin';
   const [view, setView] = useState<View>('overview');
-  const biz = useOwnerBusinesses();
+  const biz = useAsync(async () => {
+    if (admin) return [await getBusinessById(businessId)];
+    return getBusinessesByOwner(user!.id);
+  }, [admin, businessId, user?.id]);
   const listing = biz.data?.find((item) => item.id === businessId);
   const vehicle = listing?.services.find((s) => s.id === serviceId && s.group === 'vehicle');
   const extra = useAsync(() => getBookings({ businessIds: [businessId] }), [businessId]);
+  const vehiclesTo = admin ? '/admin/vehicles' : '/business-dashboard/vehicles';
+  const bookingsBase = admin ? '/admin/bookings' : '/business-dashboard/bookings';
+  const branchTo = listing ? (admin ? `/admin/businesses/${listing.id}/branch` : `/business-dashboard/business/${listing.id}`) : vehiclesTo;
   useDocumentTitle(vehicle ? `${vehicle.brand ? `${vehicle.brand} · ` : ''}${vehicle.name}` : 'Vehicle');
   useEffect(() => { setView('overview'); }, [businessId, serviceId]);
 
@@ -34,7 +42,7 @@ export default function VehicleDetailsPage() {
 
   if (biz.loading || extra.loading) return <Loading label="Loading vehicle" />;
   if (biz.error) return <ErrorState message={biz.error} onRetry={biz.reload} />;
-  if (!listing || !vehicle) return <ErrorState message="That vehicle was not found." onRetry={() => navigate('/business-dashboard/vehicles')} />;
+  if (!listing || !vehicle) return <ErrorState message="That vehicle was not found." onRetry={() => navigate(vehiclesTo)} />;
   if (extra.error) return <ErrorState message={extra.error} onRetry={extra.reload} />;
 
   const carry = vehicleCarry(vehicle);
@@ -44,11 +52,11 @@ export default function VehicleDetailsPage() {
 
   return (
     <>
-      <ButtonLink to="/business-dashboard/vehicles" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to vehicles</ButtonLink>
+      <ButtonLink to={vehiclesTo} variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to vehicles</ButtonLink>
       <PageHeader
         title={title}
         intro={`${vehicle.category ?? 'Hire car'} on ${listing.name}. ${carry.label}.`}
-        action={<ButtonLink to={`/business-dashboard/vehicles/${listing.id}/${vehicle.id}/edit`}><Pencil className="h-4 w-4" aria-hidden />Edit vehicle</ButtonLink>}
+        action={admin ? undefined : <ButtonLink to={`/business-dashboard/vehicles/${listing.id}/${vehicle.id}/edit`}><Pencil className="h-4 w-4" aria-hidden />Edit vehicle</ButtonLink>}
       />
 
       <StatGrid>
@@ -88,21 +96,21 @@ export default function VehicleDetailsPage() {
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Plates</dt><dd className="text-right font-semibold tracking-wide">{vehiclePlates(vehicle).join(' · ') || plateLabel(vehicle)}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Cars of this type</dt><dd className="font-semibold tabular-nums">{vehicle.available ?? 1}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Seats / people</dt><dd className="font-semibold">{carry.label}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-slate-500">Branch</dt><dd><Link to={`/business-dashboard/business/${listing.id}`} className="font-semibold text-brand-600 hover:underline">{listing.name}</Link></dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-slate-500">Branch</dt><dd><Link to={branchTo} className="font-semibold text-brand-600 hover:underline">{listing.name}</Link></dd></div>
               </dl>
-              <ButtonLink to={`/businesses/${listing.id}#offer-${vehicle.id}`} variant="secondary" className="mt-5">View public branch</ButtonLink>
+              {!admin && <ButtonLink to={`/businesses/${listing.id}#offer-${vehicle.id}`} variant="secondary" className="mt-5">View public branch</ButtonLink>}
             </section>
           </div>
         )}
         {view === 'bookings' && (
           <DataTable
             data={bookings}
-            columns={bookingColumns(['guest', 'date', 'units', 'people', 'total', 'status', 'payment'], { detailsBase: '/business-dashboard/bookings' })}
+            columns={bookingColumns(['guest', 'date', 'units', 'people', 'total', 'status', 'payment'], { detailsBase: bookingsBase })}
             getRowId={(b: Booking) => b.id}
             searchText={bookingSearchText}
             searchPlaceholder="Search bookings"
             initialSort={{ id: 'date', desc: true }}
-            rowActions={(b) => <BookingViewLink to={`/business-dashboard/bookings/${b.id}`} />}
+            rowActions={(b) => <BookingViewLink to={`${bookingsBase}/${b.id}`} />}
             emptyTitle="No bookings for this vehicle"
             emptyMessage="When travellers hire this car, the requests appear here."
           />

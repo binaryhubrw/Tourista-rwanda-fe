@@ -48,6 +48,10 @@ const SCOPE_ALIASES: Record<string, ExploreScope> = {
   food: 'food',
   vehicles: 'vehicles',
   services: 'services',
+  Hotels: 'hotels',
+  Food: 'food',
+  Vehicles: 'vehicles',
+  Services: 'services',
   accommodations: 'hotels',
   accommodation: 'hotels',
   restaurants: 'food',
@@ -148,11 +152,45 @@ const businessInterests = (b: Business): Interest[] =>
   b.category === 'Handcrafts' || b.category === 'Community Tourism' ? ['Culture'] :
   b.category === 'Transportation' ? ['Adventure'] : b.category === 'Accommodation' ? ['Relaxation', 'Nature'] : ['Culture', 'Nature'];
 
-export function buildExploreItems(locations: Location[], experiences: Experience[], businesses: Business[], bookings: Booking[] = []): ExploreItem[] {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function validExploreDate(value: string | null | undefined) {
+  if (!value || !ISO_DATE.test(value)) return '';
+  return value;
+}
+
+export function exploreDatesFromSearch(params: { get: (key: string) => string | null }) {
+  const start = validExploreDate(params.get('checkin'));
+  const end = validExploreDate(params.get('checkout'));
+  return { start, end: start && end && end < start ? start : end };
+}
+
+export function writeExploreDates(next: URLSearchParams, start: string, end: string) {
+  if (start) next.set('checkin', start); else next.delete('checkin');
+  if (end) next.set('checkout', end); else next.delete('checkout');
+  return next;
+}
+
+export function withExploreDates(path: string, start?: string, end?: string, extra?: Record<string, string>) {
+  const next = new URLSearchParams(extra);
+  writeExploreDates(next, start ?? '', end ?? '');
+  const query = next.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+export function buildExploreItems(
+  locations: Location[],
+  experiences: Experience[],
+  businesses: Business[],
+  bookings: Booking[] = [],
+  range?: { start?: string; end?: string },
+): ExploreItem[] {
+  const start = range?.start || undefined;
+  const end = range?.end || undefined;
   const provinceOf = (locationId: string) => locations.find((l) => l.id === locationId)?.province ?? 'Rwanda';
-  const openBusinesses = businesses.filter((business) => hasAvailability(business, bookings));
+  const openBusinesses = businesses.filter((business) => hasAvailability(business, bookings, start, end));
   const vehicleItems = businesses.flatMap((business) =>
-    business.services
+    availableServices(business.services, bookings, start, end)
       .filter((service) => service.group === 'vehicle')
       .map<ExploreItem>((service) => ({
         key: `v-${service.id}`, type: 'service', node: service, business, kind: 'vehicle',
@@ -175,7 +213,7 @@ export function buildExploreItems(locations: Location[], experiences: Experience
     })),
     ...openBusinesses.map<ExploreItem>((b) => {
       const place = locations.find((location) => location.id === b.locationId);
-      const services = availableServices(b.services, bookings);
+      const services = availableServices(b.services, bookings, start, end);
       return {
         key: `b-${b.id}`, type: 'business', node: { ...b, services }, kind: businessKind(b), title: b.name,
         text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${services.map((service) => `${service.name} ${service.brand ?? ''} ${service.category ?? ''} ${service.description} ${service.group ?? ''}`).join(' ')} ${b.badges.join(' ')} ${place ? locationHaystack(place) : ''}`,

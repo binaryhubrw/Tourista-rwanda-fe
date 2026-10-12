@@ -1,31 +1,84 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Leaf, HeartHandshake, Star, Plus, Upload } from 'lucide-react';
-import type { Business, BusinessCategory, PriceLevel, SustainabilityBadge } from '@/types';
-import { createBusiness, createBusinesses, getBusinesses, getLocations, getUsers } from '@/services';
+import type { Booking, Business, BusinessCategory, PriceLevel, SustainabilityBadge, User } from '@/types';
+import { createBusiness, createBusinesses, getBookings, getBusinesses, getLocations, getUsers } from '@/services';
 import type { BusinessInput } from '@/services/businessService';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ErrorState, Loading, Modal, Select } from '@/components/ui';
+import { Button, ErrorState, Loading, Modal, Select } from '@/components/ui';
 import { BulkImportModal, DataTable, PageHeader, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
 import { BADGE_OPTIONS, BUSINESS_CATEGORIES, BusinessForm, PROPERTY_TYPES } from '../business/BusinessForm';
 import { images } from '@/data/images';
 import { average } from '@/utils/analytics';
 import { formatRwf } from '@/utils/format';
-import { fromPrice } from '@/utils/pricing';
+import { listingKindOf, fleetCount } from '@/utils/catalog';
+import { bookingsForListing, subscriptionsPaid } from '@/utils/lifecycle';
 import { ListingViewLink } from '../shared/tableColumns';
 
-const columns: Column<Business>[] = [
-  { id: 'name', header: 'Business', sortValue: (b) => b.name, cell: (b) => <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-600 hover:underline">{b.name}</Link> },
-  { id: 'owner', header: 'Owner', sortValue: (b) => b.ownerName, cell: (b) => b.ownerName },
-  { id: 'category', header: 'Kind', sortValue: (b) => b.listingKind ?? b.propertyType ?? b.category, cell: (b) => <span className="whitespace-nowrap">{b.listingKind ?? b.propertyType ?? b.category}</span> },
-  { id: 'district', header: 'District', sortValue: (b) => b.district, cell: (b) => b.district },
-  { id: 'from', header: 'From', align: 'right', sortValue: (b) => fromPrice(b)?.priceRwf ?? 0, cell: (b) => { const p = fromPrice(b); return p ? <span className="whitespace-nowrap tabular-nums">{formatRwf(p.priceRwf)} <span className="text-xs text-slate-500">{p.unit}</span></span> : <span className="text-slate-400">No prices</span>; } },
-  { id: 'badges', header: 'Badges', exportValue: (b) => b.badges.join('; '), cell: (b) => <div className="flex min-w-[160px] flex-wrap gap-1">{b.badges.map((x) => <Badge key={x}>{x}</Badge>)}</div> },
-  { id: 'rating', header: 'Rating', align: 'right', sortValue: (b) => b.rating, cell: (b) => <span className="tabular-nums">{b.rating ? b.rating.toFixed(1) : 'New'}</span> },
+interface CompanyRow {
+  id: string;
+  href: string;
+  name: string;
+  ownerName: string;
+  kinds: string;
+  districts: string;
+  categories: BusinessCategory[];
+  branchCount: number;
+  vehicleCount: number;
+  bookingCount: number;
+  subscriptionRwf: number;
+  rating: number;
+  search: string;
+}
+
+function companyRows(listings: Business[], owners: User[], bookings: Booking[]): CompanyRow[] {
+  const ownerById = new Map(owners.map((owner) => [owner.id, owner]));
+  const groups = new Map<string, Business[]>();
+  listings.forEach((listing) => {
+    const key = listing.ownerId || `listing:${listing.id}`;
+    const group = groups.get(key) ?? [];
+    group.push(listing);
+    groups.set(key, group);
+  });
+  return [...groups.entries()].map(([key, branches]) => {
+    const owner = branches[0].ownerId ? ownerById.get(branches[0].ownerId) : undefined;
+    const name = owner?.businessName?.trim() || owner?.name || branches[0].ownerName || branches[0].name;
+    const kinds = [...new Set(branches.map((branch) => listingKindOf(branch)))].join(', ');
+    const districts = [...new Set(branches.map((branch) => branch.district))].join(', ');
+    const mine = branches.flatMap((branch) => bookingsForListing(bookings, branch.id));
+    const rated = branches.filter((branch) => branch.rating > 0);
+    return {
+      id: key,
+      href: `/admin/businesses/${branches[0].id}`,
+      name,
+      ownerName: owner?.name || branches[0].ownerName,
+      kinds,
+      districts,
+      categories: [...new Set(branches.map((branch) => branch.category))],
+      branchCount: branches.length,
+      vehicleCount: branches.reduce((sum, branch) => sum + fleetCount(branch.services), 0),
+      bookingCount: mine.length,
+      subscriptionRwf: subscriptionsPaid(mine),
+      rating: rated.length ? average(rated.map((branch) => branch.rating)) : 0,
+      search: `${name} ${owner?.name ?? ''} ${branches.map((branch) => `${branch.name} ${branch.district} ${listingKindOf(branch)}`).join(' ')}`,
+    };
+  });
+}
+
+const columns: Column<CompanyRow>[] = [
+  { id: 'name', header: 'Business', sortValue: (row) => row.name, cell: (row) => <Link to={row.href} className="font-semibold text-ink hover:text-brand-600 hover:underline">{row.name}</Link> },
+  { id: 'owner', header: 'Owner', sortValue: (row) => row.ownerName, cell: (row) => row.ownerName },
+  { id: 'kind', header: 'Kind', sortValue: (row) => row.kinds, cell: (row) => <span className="whitespace-nowrap">{row.kinds}</span> },
+  { id: 'districts', header: 'Districts', sortValue: (row) => row.districts, cell: (row) => row.districts },
+  { id: 'branches', header: 'Branches', align: 'right', sortValue: (row) => row.branchCount, cell: (row) => <span className="tabular-nums">{row.branchCount}</span> },
+  { id: 'vehicles', header: 'Vehicles', align: 'right', sortValue: (row) => row.vehicleCount, cell: (row) => <span className="tabular-nums">{row.vehicleCount}</span> },
+  { id: 'bookings', header: 'Bookings', align: 'right', sortValue: (row) => row.bookingCount, cell: (row) => <span className="tabular-nums">{row.bookingCount}</span> },
+  { id: 'fees', header: 'Subscriptions paid', align: 'right', sortValue: (row) => row.subscriptionRwf, cell: (row) => <span className="whitespace-nowrap tabular-nums">{formatRwf(row.subscriptionRwf)}</span> },
+  { id: 'rating', header: 'Rating', align: 'right', sortValue: (row) => row.rating, cell: (row) => <span className="tabular-nums">{row.rating ? row.rating.toFixed(1) : 'New'}</span> },
 ];
 
 const PRICE_OPTIONS = ['budget', 'mid-range', 'premium'];
@@ -47,8 +100,8 @@ export default function AdminBusinessesPage() {
   const { user } = useAuth();
   const toast = useToast();
   const { data, loading, error, reload, setData } = useAsync(async () => {
-    const [businesses, locations, users] = await Promise.all([getBusinesses(), getLocations(), getUsers()]);
-    return { businesses, locations, owners: users.filter((u) => u.role === 'business_owner') };
+    const [businesses, locations, users, bookings] = await Promise.all([getBusinesses(), getLocations(), getUsers(), getBookings()]);
+    return { businesses, locations, owners: users.filter((u) => u.role === 'business_owner'), bookings };
   });
   const [category, setCategory] = useState<'all' | BusinessCategory>('all');
   const [adding, setAdding] = useQueryFlag('new');
@@ -78,8 +131,9 @@ export default function AdminBusinessesPage() {
     { key: 'badges', label: 'Badges', example: BADGE_OPTIONS.slice(0, 2).join('; '), options: [...BADGE_OPTIONS], strict: false, hint: 'Use the dropdown, or list several separated by ;' },
     { key: 'photoUrl', label: 'Photo URL', example: '', hint: 'Optional. Add photos later from the branch.' },
   ], [destinations, ownerEmails]);
+  const companies = useMemo(() => companyRows(all, data?.owners ?? [], data?.bookings ?? []), [all, data?.owners, data?.bookings]);
   const categories = [...new Set(all.map((b) => b.category))].sort();
-  const list = useMemo(() => all.filter((b) => category === 'all' || b.category === category), [all, category]);
+  const list = useMemo(() => companies.filter((row) => category === 'all' || row.categories.includes(category)), [companies, category]);
   const ownerOptions = useMemo(() => [{ id: user!.id, name: `${user!.name} (you)` }, ...(data?.owners ?? []).map((o) => ({ id: o.id, name: o.name }))], [data, user]);
 
   const add = async (input: BusinessInput) => {
@@ -152,13 +206,13 @@ export default function AdminBusinessesPage() {
   if (loading) return <Loading />;
 
   const has = (badge: SustainabilityBadge) => all.filter((b) => b.badges.includes(badge)).length;
-  const rated = all.filter((b) => b.rating > 0);
+  const rated = companies.filter((row) => row.rating > 0);
 
   return (
     <>
       <PageHeader
         title="Businesses"
-        intro="Registered stays and local businesses, with their prices and sustainability badges."
+        intro="Each row is one company. Open it to see branches, vehicles, bookings, and fees."
         action={<>
           <Button variant="secondary" onClick={() => setImporting(true)} disabled={loading}><Upload className="h-4 w-4" aria-hidden />Bulk import</Button>
           <Button onClick={() => setAdding(true)} disabled={loading}><Plus className="h-4 w-4" aria-hidden />Add business</Button>
@@ -166,10 +220,10 @@ export default function AdminBusinessesPage() {
       />
 
       <StatGrid>
-        <StatCard label="Businesses" icon={Building2} value={all.length} hint={`${all.filter((b) => b.category === 'Accommodation').length} places to stay`} />
-        <StatCard label="Eco-certified" icon={Leaf} tone="teal" value={has('Eco-certified')} hint={all.length ? `${Math.round((has('Eco-certified') / all.length) * 100)}% of businesses` : undefined} />
+        <StatCard label="Businesses" icon={Building2} value={companies.length} hint={`${all.length} branch${all.length === 1 ? '' : 'es'}`} />
+        <StatCard label="Eco-certified" icon={Leaf} tone="teal" value={has('Eco-certified')} hint={companies.length ? `${Math.round((has('Eco-certified') / Math.max(all.length, 1)) * 100)}% of branches` : undefined} />
         <StatCard label="Women-led" icon={HeartHandshake} tone="violet" value={has('Women-led')} hint={`${has('Community-owned')} community-owned`} />
-        <StatCard label="Average rating" icon={Star} tone="amber" value={rated.length ? average(rated.map((b) => b.rating)).toFixed(2) : '—'} />
+        <StatCard label="Average rating" icon={Star} tone="amber" value={rated.length ? average(rated.map((row) => row.rating)).toFixed(2) : '—'} />
       </StatGrid>
 
       <DataTable
@@ -178,7 +232,7 @@ export default function AdminBusinessesPage() {
         columns={columns}
         getRowId={(b) => b.id}
         initialSort={{ id: 'rating', desc: true }}
-        searchText={(b) => `${b.name} ${b.ownerName} ${b.district} ${b.propertyType ?? ''} ${b.badges.join(' ')}`}
+        searchText={(row) => row.search}
         searchPlaceholder="Search businesses"
         filters={
           <div className="w-52">
@@ -187,7 +241,7 @@ export default function AdminBusinessesPage() {
         }
         exportFileName="businesses"
         emptyTitle="No businesses"
-        rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />}
+        rowActions={(row) => <ListingViewLink to={row.href} name={row.name} />}
       />
 
       <Modal open={adding && !!data} onClose={() => setAdding(false)} title="Add a business" size="lg">

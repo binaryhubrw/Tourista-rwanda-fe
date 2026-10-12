@@ -5,12 +5,14 @@ import { getAvailability, getBusinesses, getLocations } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { BusinessCard, ServiceCard } from '@/components/cards';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
-import { Button, EmptyState, ErrorState, fieldClass } from '@/components/ui';
+import { Button, DatePicker, EmptyState, ErrorState, fieldClass } from '@/components/ui';
 import { ExploreReveal } from '@/components/ExploreReveal';
 import {
-  EXPLORE_SCOPES, buildExploreItems, businessHasService, businessMatchesScope, featuredRank, locationHaystack, normalizeExploreScope, normalizeExploreService, sortItems, sortOptions, termsMatch,
+  EXPLORE_SCOPES, buildExploreItems, businessHasService, businessMatchesScope, exploreDatesFromSearch, featuredRank, locationHaystack, normalizeExploreScope, normalizeExploreService, sortItems, sortOptions, termsMatch, writeExploreDates,
   type ExploreItem, type SortKey,
 } from '@/utils/explore';
+import { formatDate, todayIso } from '@/utils/format';
+import { addDaysIso } from '@/utils/pricing';
 import { cn } from '@/utils/cn';
 
 const groups: FilterGroup[] = [
@@ -89,17 +91,15 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, loading, error, reload } = useAsync(async () => {
-    const [l, b, bookings] = await Promise.all([getLocations(), getBusinesses(), getAvailability()]);
-    return {
-      locations: l,
-      items: buildExploreItems(l, [], b, bookings).filter((item) => item.type === 'business' || (item.type === 'service' && item.kind === 'vehicle')),
-    };
+    const [locations, businesses, bookings] = await Promise.all([getLocations(), getBusinesses(), getAvailability()]);
+    return { locations, businesses, bookings };
   });
 
   const qParam = params.get('q') ?? '';
   const scopeParam = params.get('scope') ?? '';
   const locationParam = params.get('location') ?? '';
   const serviceParam = normalizeExploreService(params.get('service'));
+  const { start: checkin, end: checkout } = exploreDatesFromSearch(params);
 
   useEffect(() => { setQuery(qParam); }, [qParam]);
   useEffect(() => {
@@ -126,17 +126,22 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const selectedPlace = data?.locations.find((location) => location.id === locationParam);
   const placeLabel = selectedPlace?.name ?? '';
   const locationDistrict = selectedPlace?.district ?? '';
+  const items = useMemo(() => {
+    if (!data) return [];
+    return buildExploreItems(data.locations, [], data.businesses, data.bookings, { start: checkin, end: checkout })
+      .filter((item) => item.type === 'business' || (item.type === 'service' && item.kind === 'vehicle'));
+  }, [data, checkin, checkout]);
 
   const results = useMemo(() => {
-    const sorted = sortItems(applyFilters(data?.items ?? [], query, filters, locationParam, locationDistrict, placeHits, serviceParam), sort);
+    const sorted = sortItems(applyFilters(items, query, filters, locationParam, locationDistrict, placeHits, serviceParam), sort);
     if (!featuredFirst || sort !== 'recommended') return sorted;
     return [...sorted].sort((a, b) => featuredRank(a) - featuredRank(b));
-  }, [data, query, filters, sort, featuredFirst, locationParam, locationDistrict, placeHits, serviceParam]);
+  }, [items, query, filters, sort, featuredFirst, locationParam, locationDistrict, placeHits, serviceParam]);
   const visible = results.slice(0, visibleCount);
   const hasMore = visibleCount < results.length;
   const activeCount = Object.values(filters).reduce((s, v) => s + v.length, 0);
 
-  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize, locationParam, serviceParam]);
+  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize, locationParam, serviceParam, checkin, checkout]);
 
   useEffect(() => {
     if (!hasMore) return;
@@ -178,6 +183,17 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
     next.delete('service');
     setParams(next, { replace: true });
   };
+
+  const setDates = (start: string, end: string) => {
+    const next = writeExploreDates(new URLSearchParams(params), start, end);
+    setParams(next, { replace: true });
+  };
+
+  const onCheckin = (iso: string) => {
+    setDates(iso, iso && (!checkout || checkout <= iso) ? addDaysIso(iso, 1) : checkout);
+  };
+
+  const clearDates = () => setDates('', '');
 
   return (
     <>
@@ -241,19 +257,29 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
               <button type="button" onClick={() => onQuery('')} className="font-semibold text-brand-600 hover:underline">Clear search</button>
             </p>
           )}
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:max-w-md">
+            <DatePicker compact label="From" placeholder="Start date" min={todayIso()} value={checkin} onChange={onCheckin} />
+            <DatePicker compact label="To" placeholder="End date" min={checkin || todayIso()} value={checkout} onChange={(iso) => setDates(checkin, iso)} />
+          </div>
+          {checkin && (
+            <p className="mb-3 text-sm text-slate-600">
+              Available {formatDate(checkin)}{checkout && checkout !== checkin ? ` – ${formatDate(checkout)}` : ''}.{' '}
+              <button type="button" onClick={clearDates} className="font-semibold text-brand-600 hover:underline">Clear dates</button>
+            </p>
+          )}
           {!loading && (
             <p className="mb-4 text-sm text-slate-600" aria-live="polite">
               {`${visible.length} of ${results.length} ${selectedScopes(filters)[0] === 'vehicles' && selectedScopes(filters).length === 1 ? (results.length === 1 ? 'vehicle' : 'vehicles') : (results.length === 1 ? 'listing' : 'listings')}`}
             </p>
           )}
           {loading ? <ExploreReveal /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
-            <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setCategories([]); onQuery(''); clearPlace(); clearService(); setFilters({}); }}>Clear search and filters</Button>} />
+            <EmptyState title={checkin ? 'Nothing is free for those dates' : 'No listings match'} message={checkin ? 'Try another date range, or clear the dates to see what is open today.' : 'Try a place or an offering, such as gorillas, coffee or Musanze.'} action={<Button variant="secondary" onClick={() => { setCategories([]); onQuery(''); clearPlace(); clearService(); clearDates(); setFilters({}); }}>Clear search and filters</Button>} />
           ) : (
             <>
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {visible.map((it) => (
-                  it.type === 'business' ? <BusinessCard key={it.key} business={it.node} />
-                    : it.type === 'service' ? <ServiceCard key={it.key} service={it.node} business={it.business} />
+                  it.type === 'business' ? <BusinessCard key={it.key} business={it.node} checkin={checkin} checkout={checkout} />
+                    : it.type === 'service' ? <ServiceCard key={it.key} service={it.node} business={it.business} checkin={checkin} checkout={checkout} />
                     : null
                 ))}
               </div>

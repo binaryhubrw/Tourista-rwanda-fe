@@ -161,7 +161,10 @@ export function AppRoutes() {
             <Route path="users/:id" element={<AdminUserDetailsPage />} />
             <Route path="locations" element={<AdminLocationsPage />} />
             <Route path="businesses" element={<AdminBusinessesPage />} />
+            <Route path="businesses/:id/branch" element={<OwnerListingDetailsPage variant="admin" />} />
             <Route path="businesses/:id" element={<AdminBusinessDetailsPage />} />
+            <Route path="vehicles" element={<VehiclesPage variant="admin" />} />
+            <Route path="vehicles/:businessId/:serviceId" element={<VehicleDetailsPage variant="admin" />} />
             <Route path="bookings" element={<AdminBookingsPage />} />
             <Route path="bookings/:id" element={<BookingDetailsPage />} />
             <Route path="payments" element={<PaymentsPage />} />

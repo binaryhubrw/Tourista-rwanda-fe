@@ -4,10 +4,12 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Container } from '@/components/ui';
 import { HomeHero } from '@/components/layout/HomeHero';
 import { ExploreBrowser } from '@/components/ExploreBrowser';
+import { exploreDatesFromSearch } from '@/utils/explore';
 
 export default function ExplorePage() {
   const [params] = useSearchParams();
   const location = useLocation();
+  const dates = exploreDatesFromSearch(params);
   useDocumentTitle();
 
   useEffect(() => {
@@ -20,7 +22,13 @@ export default function ExplorePage() {
 
   return (
     <>
-      <HomeHero initialQuery={params.get('q') ?? ''} />
+      <HomeHero
+        initialQuery={params.get('q') ?? ''}
+        initialStart={dates.start}
+        initialEnd={dates.end}
+        initialScope={params.get('scope') ?? ''}
+        initialService={params.get('service') ?? ''}
+      />
       <div id="explore-listings" className="scroll-mt-20 lg:scroll-mt-24">
         <Container className="py-12 sm:py-16">
           <ExploreBrowser showSearch={false} featuredFirst />

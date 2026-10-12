@@ -82,8 +82,14 @@ export default function BusinessDetailsPage() {
 
   const toggle = (serviceId: string) => setPicked((current) => (current.includes(serviceId) ? current.filter((item) => item !== serviceId) : [...current, serviceId]));
   const startBooking = () => {
-    const query = picked.length ? `?services=${picked.join(',')}` : '';
-    navigate(`/book/business/${b.id}${query}`);
+    const next = new URLSearchParams();
+    if (picked.length) next.set('services', picked.join(','));
+    const checkin = params.get('checkin');
+    const checkout = params.get('checkout');
+    if (checkin) next.set('checkin', checkin);
+    if (checkout) next.set('checkout', checkout);
+    const query = next.toString();
+    navigate(`/book/business/${b.id}${query ? `?${query}` : ''}`);
   };
 
   const offerRow = (service: Service) => {

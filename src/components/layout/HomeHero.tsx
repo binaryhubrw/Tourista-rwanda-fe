@@ -31,7 +31,7 @@ function HeroBackdrop({ index, reduceMotion }: { index: number; reduceMotion: bo
 const SLIDE_MS = 5000;
 
 /** Photo slideshow, headline and floating search — the public landing hero. */
-export function HomeHero({ initialQuery = '' }: { initialQuery?: string }) {
+export function HomeHero({ initialQuery = '', initialStart = '', initialEnd = '', initialScope = '', initialService = '' }: { initialQuery?: string; initialStart?: string; initialEnd?: string; initialScope?: string; initialService?: string }) {
   const [slide, setSlide] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [ready, setReady] = useState(false);
@@ -91,7 +91,7 @@ export function HomeHero({ initialQuery = '' }: { initialQuery?: string }) {
         <button
           type="button"
           onClick={scrollToListings}
-          className="hero-scroll-cue absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1 text-xs font-semibold uppercase tracking-widest text-white/90"
+          className="hero-scroll-cue absolute bottom-20 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1 text-xs font-semibold uppercase tracking-widest text-white/90 sm:flex"
         >
           Scroll down
           <ChevronDown className="h-4 w-4" aria-hidden />
@@ -99,9 +99,17 @@ export function HomeHero({ initialQuery = '' }: { initialQuery?: string }) {
       </section>
 
       <Container className="relative z-20 -mt-12 sm:-mt-10">
-        <div className="hero-rise mx-auto max-w-4xl" style={{ animationDelay: '0.42s' }}>
-          <SearchBar key={initialQuery} variant="hero" initialQuery={initialQuery} />
-          <p className="mt-3 text-center text-sm text-slate-500">Try “gorillas”, “coffee”, “Lake Kivu” or “women-led”</p>
+        <div className="hero-rise mx-auto max-w-6xl" style={{ animationDelay: '0.42s' }}>
+          <SearchBar
+            key={`${initialQuery}|${initialStart}|${initialEnd}|${initialScope}|${initialService}`}
+            variant="hero"
+            initialQuery={initialQuery}
+            initialStart={initialStart}
+            initialEnd={initialEnd}
+            initialScope={initialScope}
+            initialService={initialService}
+          />
+          <p className="mt-3 text-center text-sm text-slate-500">Set dates, choose hotels, food, cars or services, then search for what is still free</p>
         </div>
       </Container>
     </div>

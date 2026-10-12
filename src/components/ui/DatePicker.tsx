@@ -37,9 +37,14 @@ interface Props {
   error?: string;
   hint?: string;
   required?: boolean;
+  compact?: boolean;
+  placeholder?: string;
+  /** Sit inside a shared search bar without its own border. */
+  embedded?: boolean;
+  className?: string;
 }
 
-export function DatePicker({ label, value, onChange, min = todayIso(), max, isDisabled, error, hint, required }: Props) {
+export function DatePicker({ label, value, onChange, min = todayIso(), max, isDisabled, error, hint, required, compact, embedded, placeholder = 'Choose a date', className }: Props) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -62,8 +67,8 @@ export function DatePicker({ label, value, onChange, min = todayIso(), max, isDi
   };
 
   return (
-    <div ref={root} className="relative">
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
+    <div ref={root} className={cn('relative', embedded && 'w-[8.75rem] shrink-0', className)}>
+      <label htmlFor={id} className={compact ? cn('block text-[11px] font-bold uppercase tracking-wide text-slate-500', embedded ? 'mb-0 px-2 pt-1' : 'mb-1') : 'mb-1.5 block text-sm font-semibold text-ink'}>
         {label} {required && <span className="text-brand-600" aria-hidden>*</span>}
       </label>
       <button
@@ -73,15 +78,22 @@ export function DatePicker({ label, value, onChange, min = todayIso(), max, isDi
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={value ? `${label}: ${formatDate(value, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}` : `${label}, choose a date`}
-        className={cn('flex h-[46px] w-full items-center gap-2.5 rounded-xl border bg-white px-3.5 text-left text-[15px] focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100', error ? 'border-red-400' : 'border-slate-300', value ? 'text-ink' : 'text-slate-400')}
+        className={cn(
+          'flex w-full items-center gap-2.5 bg-white text-left focus:outline-none',
+          compact ? (embedded ? 'h-7 px-2 text-[15px] font-medium' : 'h-12 px-3 text-sm') : 'h-[46px] px-3.5 text-[15px]',
+          embedded ? 'rounded-none border-0 focus:ring-0' : 'border focus:border-brand-600 focus:ring-2 focus:ring-brand-100',
+          !embedded && (compact ? 'rounded-full' : 'rounded-xl'),
+          error ? 'border-red-400' : embedded ? '' : compact ? 'border-slate-200' : 'border-slate-300',
+          value ? 'text-ink' : 'text-slate-400',
+        )}
       >
         <CalendarDays className="h-4 w-4 shrink-0 text-brand-600" aria-hidden />
         <span className="min-w-0 flex-1 truncate font-medium tabular-nums">
-          {value ? formatDate(value, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : 'Choose a date'}
+          {value ? formatDate(value, compact ? { day: 'numeric', month: 'short' } : { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : placeholder}
         </span>
       </button>
       {open && (
-        <div role="dialog" aria-label={label} className="absolute z-30 mt-2 w-[min(100%,20rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+        <div role="dialog" aria-label={label} className="absolute z-50 mt-2 w-[min(100%,20rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
           <div className="mb-3 flex items-center justify-between">
             <button type="button" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-slate-100" onClick={() => setCursor(addMonths(cursor, -1))} aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>
             <p className="font-semibold text-ink">{monthLabel}</p>

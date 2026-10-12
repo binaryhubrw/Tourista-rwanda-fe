@@ -1,35 +1,40 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Phone, Mail, MapPin, BedDouble, Sparkles, UtensilsCrossed, Package, CalendarCheck, Wallet, Star } from 'lucide-react';
+import { ChevronLeft, Phone, Mail, MapPin, BedDouble, Sparkles, UtensilsCrossed, Package, CalendarCheck, Wallet, Star, Car } from 'lucide-react';
 import { getBookings, getBusinessById, getBusinessesByOwner, getReviews, getUserById } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Badge, ButtonLink, ErrorState, Loading, Rating, SmartImage, spanLabel } from '@/components/ui';
-import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
+import { DataTable, FilterTabs, PageHeader, StatCard, VehicleCategoryBadge, type Column } from '@/components/dashboard';
 import { BookingViewLink, ListingViewLink, bookingColumns, bookingSearchText, reviewColumns, reviewSearchText } from '../shared/tableColumns';
 import { formatRwf } from '@/utils/format';
 import { fromPrice, isRoom } from '@/utils/pricing';
-import { listingKindOf } from '@/utils/catalog';
+import { fleetCount, listingKindOf, vehicleCarry, vehicleLevelPhoto, vehicleUnits } from '@/utils/catalog';
+import { bookingsForListing, subscriptionsPaid } from '@/utils/lifecycle';
 import { roomStatus } from '@/utils/availability';
 import { cn } from '@/utils/cn';
 import type { Booking, Business, Service } from '@/types';
 
-type View = 'overview' | 'listings' | 'rooms' | 'services' | 'bookings' | 'reviews';
+type View = 'overview' | 'listings' | 'rooms' | 'services' | 'vehicles' | 'bookings' | 'reviews';
 type OfferRow = { listing: Business; service: Service };
+type VehicleRow = OfferRow & { plate: string; image: string; level: string };
 
 const offerName = (s: Service) => (s.category && s.category !== s.name ? `${s.category} · ${s.name}` : s.name);
 const rowId = (row: OfferRow) => `${row.listing.id}:${row.service.id}`;
 
-const listingColumns: Column<Business>[] = [
+const listingColumns = (bookings: Booking[]): Column<Business>[] => [
   { id: 'name', header: 'Branch', sortValue: (b) => b.name, cell: (b) => (
     <div className="min-w-0">
-      <Link to={`/admin/businesses/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link>
+      <Link to={`/admin/businesses/${b.id}/branch`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.name}</Link>
       <p className="text-xs text-slate-500">{b.district}</p>
     </div>
   ) },
   { id: 'kind', header: 'Kind', sortValue: (b) => listingKindOf(b), cell: (b) => <Badge tone="solid">{listingKindOf(b)}</Badge> },
   { id: 'rooms', header: 'Rooms', align: 'right', sortValue: (b) => b.services.filter(isRoom).length, cell: (b) => <span className="tabular-nums">{b.services.filter(isRoom).length}</span> },
-  { id: 'services', header: 'Services', align: 'right', sortValue: (b) => b.services.filter((s) => !isRoom(s)).length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => !isRoom(s)).length}</span> },
+  { id: 'services', header: 'Services', align: 'right', sortValue: (b) => b.services.filter((s) => !isRoom(s) && s.group !== 'vehicle').length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => !isRoom(s) && s.group !== 'vehicle').length}</span> },
+  { id: 'vehicles', header: 'Vehicles', align: 'right', sortValue: (b) => fleetCount(b.services), cell: (b) => <span className="tabular-nums">{fleetCount(b.services)}</span> },
+  { id: 'bookings', header: 'Bookings', align: 'right', sortValue: (b) => bookingsForListing(bookings, b.id).length, cell: (b) => <span className="tabular-nums">{bookingsForListing(bookings, b.id).length}</span> },
+  { id: 'fees', header: 'Subscriptions', align: 'right', sortValue: (b) => subscriptionsPaid(bookingsForListing(bookings, b.id)), cell: (b) => <span className="tabular-nums">{formatRwf(subscriptionsPaid(bookingsForListing(bookings, b.id)))}</span> },
   { id: 'from', header: 'From', align: 'right', sortValue: (b) => fromPrice(b)?.priceRwf ?? 0, cell: (b) => { const p = fromPrice(b); return p ? <span className="tabular-nums">{formatRwf(p.priceRwf)}</span> : '—'; } },
   { id: 'rating', header: 'Rating', align: 'right', sortValue: (b) => b.rating, cell: (b) => <span className="tabular-nums">{b.rating ? b.rating.toFixed(1) : 'New'}</span> },
 ];
@@ -76,6 +81,26 @@ const serviceColumns: Column<OfferRow>[] = [
   { id: 'available', header: 'Capacity', align: 'right', sortValue: (r) => r.service.available ?? 0, cell: (r) => <span className="tabular-nums">{r.service.available ?? '—'}</span> },
 ];
 
+const vehicleColumns: Column<VehicleRow>[] = [
+  { id: 'listing', header: 'Branch', sortValue: (r) => r.listing.name, cell: (r) => <Link to={`/admin/businesses/${r.listing.id}`} className="font-semibold hover:underline">{r.listing.name}</Link> },
+  {
+    id: 'name', header: 'Vehicle', sortValue: (r) => r.service.name,
+    cell: (r) => (
+      <div className="flex min-w-[240px] items-center gap-3">
+        <SmartImage src={r.image} alt="" className="h-14 w-20 shrink-0 rounded-xl" />
+        <div className="min-w-0">
+          <p className="font-semibold text-ink">{r.service.brand ? `${r.service.brand} · ${r.service.name}` : offerName(r.service)}</p>
+          <p className="line-clamp-1 text-xs text-slate-500">{vehicleCarry(r.service).label}</p>
+        </div>
+      </div>
+    ),
+  },
+  { id: 'category', header: 'Category', sortValue: (r) => r.level, cell: (r) => <VehicleCategoryBadge category={r.level} /> },
+  { id: 'plate', header: 'Plate', sortValue: (r) => r.plate, cell: (r) => <span className="whitespace-nowrap font-semibold tabular-nums tracking-wide">{r.plate || '—'}</span> },
+  { id: 'seats', header: 'Seats', align: 'right', sortValue: (r) => r.service.capacity ?? 0, cell: (r) => <span className="tabular-nums">{vehicleCarry(r.service).peopleLabel}</span> },
+  { id: 'price', header: 'Per day', align: 'right', sortValue: (r) => r.service.priceRwf, cell: (r) => <span className="tabular-nums">{formatRwf(r.service.priceRwf)}</span> },
+];
+
 export default function AdminBusinessDetailsPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -101,7 +126,22 @@ export default function AdminBusinessDetailsPage() {
   const { listing, listings, bookings, reviews, owner } = data;
   const kind = listingKindOf(listing);
   const rooms = listings.flatMap((item) => item.services.filter(isRoom).map((service) => ({ listing: item, service })));
-  const services = listings.flatMap((item) => item.services.filter((s) => !isRoom(s)).map((service) => ({ listing: item, service })));
+  const services = listings.flatMap((item) => item.services.filter((s) => !isRoom(s) && s.group !== 'vehicle').map((service) => ({ listing: item, service })));
+  const vehicleRows: VehicleRow[] = listings.flatMap((item) =>
+    item.services.filter((s) => s.group === 'vehicle').flatMap((service) => {
+      const units = vehicleUnits(service);
+      if (!units.length) {
+        return [{ listing: item, service, plate: '', image: vehicleLevelPhoto(service.category), level: service.category || 'Standard' }];
+      }
+      return units.map((unit) => ({
+        listing: item,
+        service,
+        plate: unit.plate,
+        image: unit.image || vehicleLevelPhoto(unit.level || service.category),
+        level: unit.level || service.category || 'Standard',
+      }));
+    }),
+  );
   const confirmed = bookings.filter((b) => b.status === 'Confirmed');
   const revenue = confirmed.reduce((sum, b) => sum + b.totalRwf, 0);
   const photos = [listing.image, ...(listing.gallery ?? [])].filter((src, i, all) => src && all.indexOf(src) === i);
@@ -110,21 +150,20 @@ export default function AdminBusinessDetailsPage() {
     <>
       <ButtonLink to="/admin/businesses" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />All businesses</ButtonLink>
       <PageHeader
-        title={listing.name}
-        intro={`Admin view · ${kind} in ${listing.district}. Everything this owner lists and every booking they receive.`}
+        title={owner?.businessName || listing.ownerName || listing.name}
+        intro={`${listings.length} branch${listings.length === 1 ? '' : 'es'} · currently ${listing.name} (${kind}) in ${listing.district}.`}
       />
 
-      <StatGrid className="grid-cols-2">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Branches" icon={Package} value={listings.length} hint={listings.map((item) => listingKindOf(item)).filter((item, i, all) => all.indexOf(item) === i).join(', ')} />
         <StatCard label="Rooms" icon={BedDouble} tone="teal" value={rooms.reduce((n, r) => n + (r.service.available ?? 1), 0)} />
         <StatCard label="Services" icon={Sparkles} tone="violet" value={services.length} />
         <StatCard label="Food & drink" icon={UtensilsCrossed} tone="amber" value={listings.reduce((n, item) => n + item.services.filter((s) => s.group === 'food').length, 0)} />
-      </StatGrid>
-      <StatGrid className="mt-4 grid-cols-2">
+        <StatCard label="Vehicles" icon={Car} tone="teal" value={vehicleRows.length} />
         <StatCard label="Bookings" icon={CalendarCheck} value={bookings.length} hint={`${confirmed.length} confirmed`} />
         <StatCard label="Revenue" icon={Wallet} tone="teal" value={formatRwf(revenue)} hint="Confirmed bookings" />
         <StatCard label="Reviews" icon={Star} tone="amber" value={reviews.length} hint={listing.rating ? `This branch ${listing.rating.toFixed(1)}` : 'No rating yet'} />
-      </StatGrid>
+      </div>
 
       <div className="mt-6">
         <FilterTabs
@@ -136,6 +175,7 @@ export default function AdminBusinessDetailsPage() {
             { value: 'listings', label: 'Branches', count: listings.length },
             { value: 'rooms', label: 'Rooms', count: rooms.length },
             { value: 'services', label: 'Services', count: services.length },
+            { value: 'vehicles', label: 'Vehicles', count: vehicleRows.length },
             { value: 'bookings', label: 'Bookings', count: bookings.length },
             { value: 'reviews', label: 'Reviews', count: reviews.length },
           ]}
@@ -183,11 +223,11 @@ export default function AdminBusinessDetailsPage() {
         {view === 'listings' && (
           <DataTable
             data={listings}
-            columns={listingColumns}
+            columns={listingColumns(bookings)}
             getRowId={(b) => b.id}
             searchText={(b) => `${b.name} ${listingKindOf(b)} ${b.district}`}
             searchPlaceholder="Search branches"
-            rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}`} name={b.name} />}
+            rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}/branch`} name={b.name} />}
             emptyTitle="No branches"
             emptyMessage="This owner has not published a branch."
           />
@@ -212,6 +252,18 @@ export default function AdminBusinessDetailsPage() {
             searchPlaceholder="Search services"
             emptyTitle="No services"
             emptyMessage="None of this owner's branches have extra services yet."
+          />
+        )}
+        {view === 'vehicles' && (
+          <DataTable
+            data={vehicleRows}
+            columns={vehicleColumns}
+            getRowId={(r) => `${r.listing.id}:${r.service.id}:${r.plate || r.service.id}`}
+            searchText={(r) => `${r.listing.name} ${r.service.name} ${r.service.brand ?? ''} ${r.level} ${r.plate} ${r.service.description}`}
+            searchPlaceholder="Search vehicles"
+            emptyTitle="No vehicles"
+            emptyMessage="None of this owner's branches have hire cars yet."
+            rowActions={(r) => <ListingViewLink to={`/admin/vehicles/${r.listing.id}/${r.service.id}`} name={r.plate || r.service.name} />}
           />
         )}
         {view === 'bookings' && (

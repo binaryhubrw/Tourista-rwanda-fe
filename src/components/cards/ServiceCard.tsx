@@ -5,9 +5,10 @@ import { Badge, SmartImage, buttonClass } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
 import { listingKindOf, vehicleCarry, vehiclePhoto, vehicleUnits } from '@/utils/catalog';
 import { VehicleCategoryBadge } from '@/components/dashboard';
+import { withExploreDates } from '@/utils/explore';
 
-export function ServiceCard({ service, business }: { service: Service; business: Business }) {
-  const href = `/businesses/${business.id}#offer-${service.id}`;
+export function ServiceCard({ service, business, checkin = '', checkout = '' }: { service: Service; business: Business; checkin?: string; checkout?: string }) {
+  const href = `${withExploreDates(`/businesses/${business.id}`, checkin, checkout)}#offer-${service.id}`;
   const isVehicle = service.group === 'vehicle';
   const level = isVehicle ? (vehicleUnits(service)[0]?.level || service.category) : undefined;
   const kind = isVehicle
@@ -36,7 +37,7 @@ export function ServiceCard({ service, business }: { service: Service; business:
         </p>
         <div className="mt-auto flex flex-wrap gap-2 pt-4">
           <Link to={href} className={buttonClass('secondary', 'sm')}>View listing</Link>
-          <Link to={`/book/business/${business.id}?services=${service.id}`} className={buttonClass('primary', 'sm')}>Book</Link>
+          <Link to={withExploreDates(`/book/business/${business.id}`, checkin, checkout, { services: service.id })} className={buttonClass('primary', 'sm')}>Book</Link>
         </div>
       </div>
     </article>

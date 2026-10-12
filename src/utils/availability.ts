@@ -121,13 +121,33 @@ export function openToday(service: Service, bookings: Booking[]) {
   return remaining(service, bookings, today, addDaysIso(today, 1)) > 0;
 }
 
-/** Services a traveller can still book today. Fully booked ones stay off the public lists. */
-export function availableServices(services: Service[], bookings: Booking[]) {
-  return services.filter((service) => openToday(service, bookings));
+/** Inclusive last day becomes the exclusive occupancy end used by remaining(). */
+export function inventoryWindow(service: Pick<Service, 'unit'>, start: string, end: string) {
+  const from = start;
+  if (pricingMode(service.unit) === 'stay') {
+    const checkout = !end || end <= start ? addDaysIso(start, 1) : end;
+    return { start: from, end: checkout };
+  }
+  const last = !end || end < start ? start : end;
+  return { start: from, end: addDaysIso(last, 1) };
 }
 
-export function hasAvailability(business: Pick<Business, 'services'>, bookings: Booking[]) {
-  return availableServices(business.services, bookings).length > 0;
+/** True when at least one unit is free on every day this offering occupies in the range. */
+export function isAvailableInRange(service: Service, bookings: Booking[], start?: string, end?: string) {
+  if (!start) return openToday(service, bookings);
+  const span = inventoryWindow(service, start, end ?? '');
+  if (span.end <= span.start) return false;
+  if (service.available == null) return true;
+  return eachIso(span.start, span.end).every((iso) => remaining(service, bookings, iso, addDaysIso(iso, 1)) > 0);
+}
+
+/** Services a traveller can still book. Without dates, that means today. */
+export function availableServices(services: Service[], bookings: Booking[], start?: string, end?: string) {
+  return services.filter((service) => isAvailableInRange(service, bookings, start, end));
+}
+
+export function hasAvailability(business: Pick<Business, 'services'>, bookings: Booking[], start?: string, end?: string) {
+  return availableServices(business.services, bookings, start, end).length > 0;
 }
 
 export function bookingsForService(serviceId: string, bookings: Booking[]) {

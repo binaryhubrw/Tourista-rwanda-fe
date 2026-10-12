@@ -76,6 +76,7 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Users', icon: Users, path: 'users', roles: ['admin'] },
       { label: 'Locations', icon: MapPin, path: 'locations', roles: ['admin'] },
       { label: 'Businesses', icon: Building2, path: 'businesses', roles: ['admin'] },
+      { label: 'Vehicles', icon: Car, path: 'vehicles', roles: ['admin'] },
       { label: 'Bookings', icon: CalendarCheck, path: 'bookings', roles: ['admin'] },
       { label: 'Payments', icon: CreditCard, path: 'payments', roles: ['admin'] },
       { label: 'Refunds', icon: RotateCcw, path: 'refunds', roles: ['admin'] },

@@ -5,10 +5,11 @@ import { Badge, Rating, SmartImage, buttonClass } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
 import { fromPrice } from '@/utils/pricing';
 import { listingKindOf } from '@/utils/catalog';
+import { withExploreDates } from '@/utils/explore';
 import { FavoriteButton } from './FavoriteButton';
 
-export function BusinessCard({ business, showActions = true }: { business: Business; showActions?: boolean }) {
-  const href = `/businesses/${business.id}`;
+export function BusinessCard({ business, showActions = true, checkin = '', checkout = '' }: { business: Business; showActions?: boolean; checkin?: string; checkout?: string }) {
+  const href = withExploreDates(`/businesses/${business.id}`, checkin, checkout);
   const from = fromPrice(business);
   const label = listingKindOf(business);
   const cars = business.services.filter((s) => s.group === 'vehicle');
