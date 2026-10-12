@@ -65,14 +65,14 @@ export default function LocationDetailsPage() {
         </div>
       </Container>
 
-      <Container className="mt-8 grid gap-10 pb-16 lg:grid-cols-[1fr_360px]">
+      <Container className="mt-8 grid min-w-0 gap-8 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-10">
         <div className="min-w-0 space-y-10">
           <header>
             <div className="flex flex-wrap gap-2">
               <Badge tone="solid">{location.category}</Badge>
               {location.interests.map((i) => <Badge key={i}>{i}</Badge>)}
             </div>
-            <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">{location.name}</h1>
+            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-5xl">{location.name}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-slate-600">
               <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-brand-600" aria-hidden />{location.district}, {location.province}</span>
               <a href="#reviews"><Rating value={location.rating} count={location.reviewCount} /></a>

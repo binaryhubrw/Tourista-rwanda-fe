@@ -5,10 +5,11 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    overflow-x: clip;
     scroll-padding-top: 88px;
   }
   body {
-    @apply bg-white font-sans text-[16px] text-ink antialiased;
+    @apply min-w-0 overflow-x-clip bg-white font-sans text-[16px] text-ink antialiased;
   }
   h1, h2, h3 {
     text-wrap: balance;

@@ -10,7 +10,7 @@ interface Props<T extends string> {
 /** Segmented filter (e.g. booking status) with optional counts. */
 export function FilterTabs<T extends string>({ value, options, onChange, label }: Props<T>) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex max-w-full gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
+    <div role="radiogroup" aria-label={label} className="-mx-1 flex max-w-full min-w-0 gap-1 overflow-x-auto overscroll-x-contain rounded-xl bg-slate-100 p-1">
       {options.map((o) => {
         const active = o.value === value;
         return (

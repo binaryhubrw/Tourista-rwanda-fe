@@ -76,7 +76,7 @@ export function DashboardLayout() {
         onMobileClose={closeMobile}
       />
 
-      <div className={cn('flex min-h-screen flex-col transition-[padding] duration-200 ease-out', collapsed ? 'lg:pl-[76px]' : 'lg:pl-[264px]')}>
+      <div className={cn('flex min-h-screen min-w-0 flex-col transition-[padding] duration-200 ease-out', collapsed ? 'lg:pl-[76px]' : 'lg:pl-[264px]')}>
         <DashboardHeader
           user={user!}
           basePath={basePath}
@@ -87,8 +87,8 @@ export function DashboardLayout() {
           onOpenMobile={() => setMobileOpen(true)}
           onLogout={handleLogout}
         />
-        <main id="dashboard-main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
-          <div className="mx-auto w-full max-w-[1440px]">
+        <main id="dashboard-main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
+          <div className="mx-auto w-full min-w-0 max-w-[1440px]">
             <Suspense fallback={<Loading />}>
               <Outlet />
             </Suspense>

@@ -62,12 +62,12 @@ export function HomeHero({ initialQuery = '', initialStart = '', initialEnd = ''
     <div className={cn(ready && 'hero-ready')}>
       <section className="relative isolate overflow-hidden bg-brand-600">
         <HeroBackdrop index={slide} reduceMotion={reduceMotion} />
-        <Container className="pb-28 pt-16 sm:pb-36 sm:pt-24 lg:min-h-[78vh] lg:pt-28">
+        <Container className="pb-32 pt-14 sm:pb-36 sm:pt-24 lg:min-h-[78vh] lg:pt-28">
           <div className="max-w-3xl text-white">
-            <h1 className="hero-wipe font-display text-[2.4rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
+            <h1 className="hero-wipe font-display text-[2rem] font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               Find a stay, a table, a car or a guide.
             </h1>
-            <p className="hero-rise mt-5 max-w-xl text-lg text-white sm:text-xl" style={{ animationDelay: '0.18s' }}>
+            <p className="hero-rise mt-4 max-w-xl text-base text-white sm:mt-5 sm:text-xl" style={{ animationDelay: '0.18s' }}>
               Search what you want. Open a listing. Pick rooms, meals, cars or services.
             </p>
             <div className="hero-rise mt-8 flex flex-wrap items-center gap-4" style={{ animationDelay: '0.32s' }}>
@@ -98,7 +98,7 @@ export function HomeHero({ initialQuery = '', initialStart = '', initialEnd = ''
         </button>
       </section>
 
-      <Container className="relative z-20 -mt-12 sm:-mt-10">
+      <Container className="relative z-20 -mt-16 sm:-mt-10">
         <div className="hero-rise mx-auto max-w-6xl" style={{ animationDelay: '0.42s' }}>
           <SearchBar
             key={`${initialQuery}|${initialStart}|${initialEnd}|${initialScope}|${initialService}`}

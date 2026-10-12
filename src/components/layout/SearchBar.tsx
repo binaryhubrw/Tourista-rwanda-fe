@@ -160,11 +160,11 @@ export function SearchBar({
         className={cn(
           'flex w-full items-stretch bg-white',
           hero
-            ? 'flex-col gap-2 rounded-[1.75rem] border border-slate-100 p-2 shadow-lift md:flex-row md:items-center md:gap-0 md:rounded-full md:p-1.5'
+            ? 'flex-col gap-1 rounded-[1.75rem] border border-slate-100 p-2 shadow-lift xl:flex-row xl:items-center xl:gap-0 xl:rounded-full xl:p-1.5'
             : 'rounded-full border border-slate-300 focus-within:border-brand-600',
         )}
       >
-        <label className={cn(hero ? 'flex min-w-0 flex-1 items-center gap-3 rounded-full px-4 py-1 hover:bg-slate-50 md:min-w-[16rem]' : 'flex flex-1 items-center gap-2 pl-3.5')}>
+        <label className={cn(hero ? 'flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-4 py-2 hover:bg-slate-50 xl:min-w-[16rem] xl:rounded-full xl:py-1' : 'flex flex-1 items-center gap-2 pl-3.5')}>
           <Search className={cn('shrink-0 text-brand-600', hero ? 'h-5 w-5' : 'h-4 w-4')} aria-hidden />
           <span className="flex min-w-0 flex-1 flex-col">
             {hero && <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Search</span>}
@@ -192,47 +192,51 @@ export function SearchBar({
         </label>
         {hero && (
           <>
-            <span className="hidden h-10 w-px shrink-0 bg-slate-200 md:block" aria-hidden />
-            <div className="rounded-full px-1 hover:bg-slate-50">
-              <DatePicker compact embedded label="From" placeholder="Add date" min={todayIso()} value={start} onChange={onStart} />
+            <span className="hidden h-10 w-px shrink-0 bg-slate-200 xl:block" aria-hidden />
+            <div className="grid grid-cols-2 gap-1 xl:contents">
+              <div className="min-w-0 rounded-2xl px-1 hover:bg-slate-50 xl:rounded-full">
+                <DatePicker compact embedded label="From" placeholder="Add date" min={todayIso()} value={start} onChange={onStart} />
+              </div>
+              <span className="hidden h-10 w-px shrink-0 bg-slate-200 xl:block" aria-hidden />
+              <div className="min-w-0 rounded-2xl px-1 hover:bg-slate-50 xl:rounded-full">
+                <DatePicker compact embedded label="To" placeholder="Add date" min={start || todayIso()} value={end} onChange={(iso) => { setOpen(false); setEnd(iso); }} />
+              </div>
             </div>
-            <span className="hidden h-10 w-px shrink-0 bg-slate-200 md:block" aria-hidden />
-            <div className="rounded-full px-1 hover:bg-slate-50">
-              <DatePicker compact embedded label="To" placeholder="Add date" min={start || todayIso()} value={end} onChange={(iso) => { setOpen(false); setEnd(iso); }} />
-            </div>
-            <span className="hidden h-10 w-px shrink-0 bg-slate-200 md:block" aria-hidden />
-            <label className="flex w-full min-w-0 shrink-0 flex-col rounded-full px-4 py-1 hover:bg-slate-50 md:w-[12rem]">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">What</span>
-              <select
-                id={`${listId}-scope`}
-                value={wanted}
-                onChange={(e) => setWanted(e.target.value)}
-                className="h-7 w-full truncate bg-transparent text-[15px] font-medium text-ink focus:outline-none"
-              >
-                <optgroup label="Browse">
-                  {typeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </optgroup>
-                {listedServices.length > 0 && (
-                  <optgroup label="Services">
-                    {listedServices.map((item) => (
-                      <option key={item.id} value={`${SVC}${item.id}`}>{item.label}</option>
-                    ))}
+            <span className="hidden h-10 w-px shrink-0 bg-slate-200 xl:block" aria-hidden />
+            <div className="flex min-w-0 items-stretch gap-1 xl:contents">
+              <label className="flex min-w-0 flex-1 flex-col rounded-2xl px-4 py-2 hover:bg-slate-50 xl:w-[12rem] xl:flex-none xl:rounded-full xl:py-1">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">What</span>
+                <select
+                  id={`${listId}-scope`}
+                  value={wanted}
+                  onChange={(e) => setWanted(e.target.value)}
+                  className="h-7 w-full truncate bg-transparent text-[15px] font-medium text-ink focus:outline-none"
+                >
+                  <optgroup label="Browse">
+                    {typeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </optgroup>
-                )}
-              </select>
-            </label>
-            {filtersSet && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mx-1 grid h-10 w-10 shrink-0 place-items-center self-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-ink"
-                aria-label="Clear dates and listing type"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-            <button type="submit" className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 md:h-14 md:px-8 md:text-base">
-              <Search className="h-4 w-4 md:h-5 md:w-5" aria-hidden />
+                  {listedServices.length > 0 && (
+                    <optgroup label="Services">
+                      {listedServices.map((item) => (
+                        <option key={item.id} value={`${SVC}${item.id}`}>{item.label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </label>
+              {filtersSet && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-ink xl:mx-1 xl:h-10 xl:w-10"
+                  aria-label="Clear dates and listing type"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <button type="submit" className="inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-brand-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 xl:h-14 xl:w-auto xl:px-8 xl:text-base">
+              <Search className="h-4 w-4 xl:h-5 xl:w-5" aria-hidden />
               Search
             </button>
           </>

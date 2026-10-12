@@ -222,14 +222,14 @@ export default function ItineraryBuilderPage() {
             )}
           </section>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
-            {!isNew && editing && <Button variant="ghost" onClick={cancelEdit}><X className="h-4 w-4" aria-hidden />Cancel changes</Button>}
-            {!isNew && existing.data && <Button variant="ghost" className="text-red-600 hover:bg-red-50" onClick={() => setConfirmDelete(existing.data!)}><Trash2 className="h-4 w-4" aria-hidden />Delete itinerary</Button>}
-            {isNew && draft.stops.length > 0 && <Button variant="ghost" onClick={() => { setDraft(emptyDraft); setErrors({}); }}>Start over</Button>}
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-6 sm:flex-row sm:flex-wrap sm:justify-end">
+            {!isNew && editing && <Button variant="ghost" className="w-full sm:w-auto" onClick={cancelEdit}><X className="h-4 w-4" aria-hidden />Cancel changes</Button>}
+            {!isNew && existing.data && <Button variant="ghost" className="w-full text-red-600 hover:bg-red-50 sm:w-auto" onClick={() => setConfirmDelete(existing.data!)}><Trash2 className="h-4 w-4" aria-hidden />Delete itinerary</Button>}
+            {isNew && draft.stops.length > 0 && <Button variant="ghost" className="w-full sm:w-auto" onClick={() => { setDraft(emptyDraft); setErrors({}); }}>Start over</Button>}
             {editing ? (
-              <Button onClick={save} loading={saving} size="lg"><Save className="h-5 w-5" aria-hidden />{isNew ? 'Save itinerary' : 'Save changes'}</Button>
+              <Button className="w-full sm:w-auto" onClick={save} loading={saving} size="lg"><Save className="h-5 w-5" aria-hidden />{isNew ? 'Save itinerary' : 'Save changes'}</Button>
             ) : (
-              <Button onClick={() => setMode('edit')} size="lg"><Pencil className="h-5 w-5" aria-hidden />Edit itinerary</Button>
+              <Button className="w-full sm:w-auto" onClick={() => setMode('edit')} size="lg"><Pencil className="h-5 w-5" aria-hidden />Edit itinerary</Button>
             )}
           </div>
         </div>

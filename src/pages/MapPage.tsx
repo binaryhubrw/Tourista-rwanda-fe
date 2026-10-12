@@ -187,10 +187,10 @@ export default function MapPage() {
       </aside>
 
       <section className={cn('relative flex-1 p-4 lg:p-6', mobileView === 'list' && 'hidden lg:block')} aria-label="Map">
-        <RwandaMap points={points} selectedId={selectedId} onSelect={select} userPosition={userPos} markers="names" className="aspect-[1000/884] w-full lg:aspect-auto lg:h-full" />
+        <RwandaMap points={points} selectedId={selectedId} onSelect={select} userPosition={userPos} markers="names" className="h-[min(62vh,28rem)] w-full sm:h-[min(70vh,36rem)] lg:h-full lg:min-h-0" />
 
         {selected && (
-          <div className="absolute inset-x-4 top-4 z-10 flex max-h-[min(70vh,42rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lift lg:inset-x-auto lg:left-9 lg:top-9 lg:w-[26rem]">
+          <div className="absolute inset-x-3 top-3 z-10 flex max-h-[min(68vh,38rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lift sm:inset-x-4 sm:top-4 lg:inset-x-auto lg:left-9 lg:top-9 lg:w-[26rem]">
             <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{selected.province || 'District'}</p>

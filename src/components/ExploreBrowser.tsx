@@ -205,11 +205,11 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
             <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search stays, food, cars, guides…" className={`${fieldClass} h-12 rounded-full pl-11`} />
           </label>
         )}
-        <div className={cn('flex gap-2', !showSearch && 'justify-end')}>
+        <div className={cn('flex min-w-0 flex-wrap gap-2', !showSearch && 'justify-end')}>
           <FilterButton count={activeCount} onClick={() => setSheetOpen(true)} />
-          <label className={cn(showSearch && 'flex-1 sm:flex-none')}>
+          <label className={cn('min-w-0', showSearch && 'flex-1 sm:flex-none')}>
             <span className="sr-only">Sort by</span>
-            <select value={sort} onChange={(e) => { setVisibleCount(pageSize); setSort(e.target.value as SortKey); }} className={`${fieldClass} h-11 rounded-full font-semibold sm:w-48`}>
+            <select value={sort} onChange={(e) => { setVisibleCount(pageSize); setSort(e.target.value as SortKey); }} className={`${fieldClass} h-11 min-w-0 rounded-full font-semibold sm:w-48`}>
               {sortOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>

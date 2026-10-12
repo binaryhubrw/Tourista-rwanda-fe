@@ -98,10 +98,10 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-      <Container className="relative flex h-16 items-center justify-between gap-3 lg:h-[72px]">
+      <Container className="relative flex h-16 min-w-0 items-center justify-between gap-2 sm:gap-3 lg:h-[72px]">
         <Logo />
 
-        <nav aria-label="Main" className="hidden min-w-0 flex-1 justify-center px-4 lg:flex">
+        <nav aria-label="Main" className="hidden min-w-0 flex-1 justify-center px-2 xl:flex">
           <div className="flex items-center gap-0.5">
             {catalogLinks.map((l) => {
               const active = exploreScope === l.scope;
@@ -180,11 +180,11 @@ export function Navbar() {
             <div className="hidden items-center gap-2 sm:flex">
               <Link to="/login" className={buttonClass('ghost', 'sm', 'whitespace-nowrap')}>Log in</Link>
               <Link to="/register" className={buttonClass('secondary', 'sm', 'whitespace-nowrap')}>Sign up</Link>
-              <Link to="/register/business" className={buttonClass('primary', 'sm', 'whitespace-nowrap')}>Register a business</Link>
+              <Link to="/register/business" className={buttonClass('primary', 'sm', 'hidden whitespace-nowrap xl:inline-flex')}>Register a business</Link>
             </div>
           )}
 
-          <button onClick={() => setMobileOpen(true)} className="grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-brand-50 lg:hidden" aria-label="Open menu" aria-expanded={mobileOpen}>
+          <button onClick={() => setMobileOpen(true)} className="grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-brand-50 xl:hidden" aria-label="Open menu" aria-expanded={mobileOpen}>
             <Menu className="h-6 w-6" />
           </button>
         </div>
@@ -200,7 +200,7 @@ export function Navbar() {
 
       {/* Mobile drawer */}
       {mobileOpen && createPortal(
-        <div className="fixed inset-0 z-[60] lg:hidden">
+        <div className="fixed inset-0 z-[60] xl:hidden">
           <div className="absolute inset-0 bg-brand-900/50" onClick={() => setMobileOpen(false)} aria-hidden />
           <div role="dialog" aria-modal="true" aria-label="Menu" className="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col bg-white shadow-lift">
             <div className="flex h-16 items-center justify-between border-b border-slate-100 px-4">

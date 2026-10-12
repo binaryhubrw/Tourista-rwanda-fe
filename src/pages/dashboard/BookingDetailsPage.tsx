@@ -73,8 +73,8 @@ export default function BookingDetailsPage() {
       <Link to={back} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All bookings</Link>
       <PageHeader title={booking.targetName} intro={`Reference ${booking.id.toUpperCase()}`} action={<BookingStatusBadge status={booking.status} />} />
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <section className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
           <h2 className="font-display text-xl font-bold text-ink">What was booked</h2>
           <ul className="mt-4 divide-y divide-slate-100">
             {lines.map((line) => (
@@ -102,7 +102,7 @@ export default function BookingDetailsPage() {
             <h2 className="font-display text-xl font-bold text-ink">Guest</h2>
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between gap-4"><dt className="text-slate-500">Name</dt><dd className="font-semibold text-ink">{user.role === 'admin' ? <Link to={`/admin/users/${booking.userId}`} className="text-brand-700 hover:underline">{booking.customerName}</Link> : booking.customerName}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-500">Email</dt><dd className="font-semibold text-ink">{booking.customerEmail}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">Email</dt><dd className="break-all text-right font-semibold text-ink">{booking.customerEmail}</dd></div>
               <div className="flex justify-between gap-4"><dt className="text-slate-500">Phone</dt><dd className="font-semibold text-ink">{booking.customerPhone || '—'}</dd></div>
               <div className="flex justify-between gap-4"><dt className="text-slate-500">Booked on</dt><dd className="font-semibold text-ink">{formatDate(booking.createdAt)}</dd></div>
             </dl>

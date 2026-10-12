@@ -418,11 +418,11 @@ export function RwandaMap({ points, selectedId, onSelect, userPosition, classNam
         )}
       </svg>
 
-      <div className="pointer-events-none absolute left-3 top-3 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 shadow-sm">
+      <div className="pointer-events-none absolute left-2 top-2 max-w-[calc(100%-4.5rem)] rounded-xl border border-slate-200 bg-white/90 px-2.5 py-1.5 shadow-sm sm:left-3 sm:top-3 sm:px-3 sm:py-2">
         <p className="font-display text-sm font-bold text-ink">Map of Rwanda</p>
         <p className="text-[11px] text-slate-500">1°00'S–2°54'S · 28°48'E–30°57'E</p>
       </div>
-      <ul className="pointer-events-none absolute bottom-3 left-3 max-h-[42%] max-w-[11.5rem] space-y-0.5 overflow-y-auto rounded-xl border border-slate-200 bg-white/90 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm">
+      <ul className="pointer-events-none absolute bottom-2 left-2 max-h-[38%] max-w-[min(11.5rem,calc(100%-6.5rem))] space-y-0.5 overflow-y-auto rounded-xl border border-slate-200 bg-white/90 px-2 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm sm:bottom-3 sm:left-3 sm:max-h-[42%] sm:px-2.5">
         <li className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Legend</li>
         {provinces.map((province) => (
           <li key={province.name} className="flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export function RwandaMap({ points, selectedId, onSelect, userPosition, classNam
         <li className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 shrink-0 bg-[#003B53]" style={{ clipPath: 'polygon(50% 0, 100% 70%, 70% 70%, 70% 100%, 30% 100%, 30% 70%, 0 70%)' }} />Businesses</li>
         {userPosition && <li className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 shrink-0 rounded-full border-2 border-[#00628B] bg-white" />Your location</li>}
       </ul>
-      <div className="pointer-events-none absolute bottom-3 right-3 flex items-end gap-3">
+      <div className="pointer-events-none absolute bottom-2 right-2 hidden items-end gap-3 sm:flex sm:bottom-3 sm:right-3">
         <div className="rounded-xl border border-slate-200 bg-white/90 px-2.5 py-2 shadow-sm" aria-hidden>
           <svg viewBox="0 0 32 40" className="mx-auto h-10 w-8">
             <polygon points="16,2 20,18 16,14 12,18" fill="#00628B" />

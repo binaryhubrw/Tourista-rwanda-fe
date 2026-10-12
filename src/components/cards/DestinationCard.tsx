@@ -23,8 +23,8 @@ export function DestinationCard({ location, compact }: { location: Location; com
         />
       </div>
       <div className="flex flex-1 flex-col p-5">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-lg font-bold leading-snug text-ink">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h3 className="min-w-0 font-display text-lg font-bold leading-snug text-ink">
             <Link to={href} className="hover:text-brand-700">{location.name}</Link>
           </h3>
           <Rating value={location.rating} className="shrink-0 text-sm" />

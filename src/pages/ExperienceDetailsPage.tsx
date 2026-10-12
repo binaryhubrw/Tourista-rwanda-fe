@@ -23,12 +23,12 @@ export default function ExperienceDetailsPage() {
       <Container className="pt-6">
         <Link to="/explore#explore-listings" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All listings</Link>
       </Container>
-      <Container className="mt-4 grid gap-10 pb-16 lg:grid-cols-[1fr_360px]">
+      <Container className="mt-4 grid min-w-0 gap-8 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-10">
         <div className="min-w-0 space-y-8">
           <SmartImage src={exp.image} alt={exp.title} className="aspect-[16/9] w-full rounded-3xl" />
           <header>
             <div className="flex flex-wrap gap-2"><Badge tone="solid">{exp.type}</Badge>{exp.communityLed && <Badge>Community-led</Badge>}</div>
-            <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight text-ink">{exp.title}</h1>
+            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{exp.title}</h1>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-slate-600">
               <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-brand-600" aria-hidden />{exp.locationName}</span>
               <Rating value={exp.rating} count={exp.reviewCount} />

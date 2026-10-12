@@ -9,7 +9,7 @@ export function SectionHeader({ title, intro, action, className }: { title: stri
   return (
     <div className={cn('mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="max-w-2xl">
-        <h2 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h2>
         {intro && <p className="mt-2 text-lg text-slate-600">{intro}</p>}
       </div>
       {action}
@@ -22,9 +22,9 @@ export function PageHeader({ title, intro, children }: { title: string; intro?: 
   return (
     <header className="relative overflow-hidden bg-brand-600 text-white">
       <HillLines className="absolute inset-x-0 bottom-0 h-full w-full text-white/15" />
-      <Container className="relative py-12 sm:py-16">
-        <h1 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">{title}</h1>
-        {intro && <p className="mt-3 max-w-2xl text-lg text-white">{intro}</p>}
+      <Container className="relative py-10 sm:py-16">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-5xl">{title}</h1>
+        {intro && <p className="mt-3 max-w-2xl text-base text-white sm:text-lg">{intro}</p>}
         {children && <div className="mt-6">{children}</div>}
       </Container>
     </header>

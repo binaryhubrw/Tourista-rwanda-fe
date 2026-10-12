@@ -26,8 +26,8 @@ export function BusinessCard({ business, showActions = true, checkin = '', check
         />
       </div>
       <div className="flex flex-1 flex-col p-5">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-lg font-bold leading-snug text-ink">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h3 className="min-w-0 font-display text-lg font-bold leading-snug text-ink">
             <Link to={href} className="hover:text-brand-600">{business.name}</Link>
           </h3>
           <Rating value={business.rating} className="shrink-0 text-sm" />

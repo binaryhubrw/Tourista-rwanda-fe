@@ -36,7 +36,7 @@ export default function EcoTourismPage() {
         <HillLines className="absolute inset-0 h-full w-full text-white/15" lines={12} />
         <Container className="relative py-16 sm:py-24">
           <Leaf className="h-10 w-10 text-white" aria-hidden />
-          <h1 className="mt-4 max-w-3xl font-display text-4xl font-extrabold tracking-tight sm:text-6xl">Travel lightly in the land of a thousand hills</h1>
+          <h1 className="mt-4 max-w-3xl font-display text-3xl font-extrabold tracking-tight sm:text-6xl">Travel lightly in the land of a thousand hills</h1>
           <p className="mt-4 max-w-2xl text-lg text-white">Rwanda has built its tourism around conservation and community. Here's how to make sure your trip adds to that rather than takes from it.</p>
         </Container>
       </header>

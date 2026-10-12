@@ -31,7 +31,7 @@ export interface Series {
 
 export function ChartCard({ title, description, action, children, className, footer }: { title: string; description?: string; action?: ReactNode; children: ReactNode; className?: string; footer?: ReactNode }) {
   return (
-    <section className={cn('flex flex-col rounded-2xl border border-slate-200 bg-white p-5', className)}>
+    <section className={cn('flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:p-5', className)}>
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-lg font-bold text-ink">{title}</h2>

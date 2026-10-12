@@ -80,7 +80,7 @@ export function FilterPanel({ groups, values, onChange, open, onClose, resultCou
               <button onClick={onClose} className="rounded-full p-1.5 hover:bg-slate-100" aria-label="Close filters"><X className="h-5 w-5" /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-5">{body}</div>
-            <div className="flex gap-2 border-t border-slate-100 p-4">
+            <div className="flex gap-2 border-t border-slate-100 p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
               <button onClick={() => onChange({})} className="h-11 flex-1 rounded-full border border-slate-300 font-semibold">Clear</button>
               <button onClick={onClose} className="h-11 flex-[2] rounded-full bg-brand-600 font-semibold text-white">{resultCount < 0 ? 'Show results' : `Show ${resultCount} result${resultCount === 1 ? '' : 's'}`}</button>
             </div>

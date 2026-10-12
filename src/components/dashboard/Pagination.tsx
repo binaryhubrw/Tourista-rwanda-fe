@@ -30,10 +30,10 @@ export function Pagination({ page, pageCount, pageSize, total, pageSizeOptions =
 
   return (
     <nav aria-label="Pagination" className={cn('flex flex-col gap-3 border-t border-slate-100 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between', className)}>
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
         {showPageSize && onPageSizeChange && (
           <label className="flex items-center gap-2">
-            <span className="whitespace-nowrap">Rows per page</span>
+            <span className="whitespace-nowrap"><span className="sm:hidden">Rows</span><span className="hidden sm:inline">Rows per page</span></span>
             <select value={pageSize} onChange={(e) => onPageSizeChange(Number(e.target.value))} className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm font-semibold text-ink focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100">
               {pageSizeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -42,7 +42,7 @@ export function Pagination({ page, pageCount, pageSize, total, pageSizeOptions =
         <p className="whitespace-nowrap" aria-live="polite"><span className="font-semibold text-ink">{from}–{to}</span> of {total}</p>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex max-w-full items-center gap-1 overflow-x-auto">
         <button className={cn(btn, 'text-slate-600 hover:bg-slate-100')} onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label="Previous page">
           <ChevronLeft className="h-4 w-4" />
         </button>

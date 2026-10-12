@@ -234,7 +234,7 @@ export default function BusinessDetailsPage() {
           </div>
         </aside>
       </Container>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto flex max-w-7xl items-center gap-3">
           <p className="min-w-0 flex-1 text-sm">
             {from ? <><span className="text-slate-500">From </span><span className="font-semibold text-ink">{formatRwf(from.priceRwf)}</span></> : 'Select what to book'}

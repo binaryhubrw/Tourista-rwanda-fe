@@ -302,7 +302,7 @@ export default function BookingPage() {
   return (
     <Container className="py-8 lg:py-12">
       <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />Back</button>
-      <h1 className="mt-3 font-display text-3xl font-bold text-ink sm:text-4xl">Book {item.name}</h1>
+      <h1 className="mt-3 font-display text-2xl font-bold text-ink sm:text-4xl">Book {item.name}</h1>
       <p className="mt-2 max-w-2xl text-slate-600">Pick your dates first. We then show what is free in that range. The host approves first. You pay at least 30% later from Bookings, using their published accounts.</p>
 
       <ol className="mt-6 grid grid-cols-3 gap-2" aria-label="Booking steps">
@@ -314,8 +314,8 @@ export default function BookingPage() {
         ))}
       </ol>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="min-w-0 rounded-3xl border border-slate-200 p-5 sm:p-7">
+      <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+        <div className="min-w-0 rounded-3xl border border-slate-200 p-4 sm:p-7">
           {step === 0 && (
             <div className="space-y-6">
               <p className="text-sm text-slate-600">Choose your date range first. Next you will only be able to book what is still free in those dates.</p>
@@ -438,8 +438,8 @@ export default function BookingPage() {
           )}
 
           <div className="mt-8 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-            {step > 0 ? <Button variant="ghost" onClick={() => setStep((s) => s - 1)}>Back</Button> : <span />}
-            {step < 2 ? <Button onClick={next}>Continue</Button> : <Button onClick={submitRequest} loading={submitting}>Send booking request</Button>}
+            {step > 0 ? <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setStep((s) => s - 1)}>Back</Button> : <span />}
+            {step < 2 ? <Button className="w-full sm:w-auto" onClick={next}>Continue</Button> : <Button className="w-full sm:w-auto" onClick={submitRequest} loading={submitting}>Send booking request</Button>}
           </div>
         </div>
 

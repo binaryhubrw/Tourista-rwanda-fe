@@ -178,8 +178,8 @@ export function DataTable<T>({
       )}
 
       {/* relative: keeps absolutely-positioned sr-only labels inside the scroll clip */}
-      <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
+      <div className="relative -mx-px overflow-x-auto overscroll-x-contain">
+        <table className="w-full min-w-[36rem] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               {selectable && (

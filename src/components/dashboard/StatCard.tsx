@@ -86,7 +86,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 export function StatCard({ label, value, icon: Icon, hint, trend, tone = 'brand', sparkline, to, loading, className }: StatCardProps) {
   const t = tones[tone];
   const body = (
-    <div className={cn('flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 transition-[border-color,box-shadow]', to && 'hover:border-brand-300 hover:shadow-[0_8px_24px_-16px_rgba(0,59,83,.35)]', className)}>
+    <div className={cn('flex h-full min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 transition-[border-color,box-shadow]', to && 'hover:border-brand-300 hover:shadow-[0_8px_24px_-16px_rgba(0,59,83,.35)]', className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-slate-500">{label}</p>
         <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-xl', t.chip)}><Icon className="h-5 w-5" aria-hidden /></span>
@@ -97,7 +97,7 @@ export function StatCard({ label, value, icon: Icon, hint, trend, tone = 'brand'
         </div>
       ) : (
         <>
-          <p className="-mt-1 font-display text-[28px] font-bold leading-tight tracking-tight text-ink">{value}</p>
+          <p className="-mt-1 min-w-0 break-words font-display text-xl font-bold leading-tight tracking-tight text-ink sm:text-[28px]">{value}</p>
           {sparkline && <div className="mt-2"><Sparkline values={sparkline} color={t.line} /></div>}
           <div className="mt-auto space-y-1 pt-2">
             {trend && <TrendBadge {...trend} />}
@@ -118,5 +118,5 @@ const cols = {
 };
 
 export function StatGrid({ children, columns = 4, className }: { children: ReactNode; columns?: keyof typeof cols; className?: string }) {
-  return <div className={cn('grid grid-cols-1 gap-4', cols[columns], className)}>{children}</div>;
+  return <div className={cn('grid min-w-0 grid-cols-1 gap-3 sm:gap-4', cols[columns], className)}>{children}</div>;
 }

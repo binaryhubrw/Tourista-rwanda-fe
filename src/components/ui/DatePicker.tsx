@@ -67,7 +67,7 @@ export function DatePicker({ label, value, onChange, min = todayIso(), max, isDi
   };
 
   return (
-    <div ref={root} className={cn('relative', embedded && 'w-[8.75rem] shrink-0', className)}>
+    <div ref={root} className={cn('relative', embedded && 'w-full min-w-0 xl:w-[8.75rem] xl:shrink-0', className)}>
       <label htmlFor={id} className={compact ? cn('block text-[11px] font-bold uppercase tracking-wide text-slate-500', embedded ? 'mb-0 px-2 pt-1' : 'mb-1') : 'mb-1.5 block text-sm font-semibold text-ink'}>
         {label} {required && <span className="text-brand-600" aria-hidden>*</span>}
       </label>
@@ -93,7 +93,7 @@ export function DatePicker({ label, value, onChange, min = todayIso(), max, isDi
         </span>
       </button>
       {open && (
-        <div role="dialog" aria-label={label} className="absolute z-50 mt-2 w-[min(100%,20rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+        <div role="dialog" aria-label={label} className="absolute left-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
           <div className="mb-3 flex items-center justify-between">
             <button type="button" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-slate-100" onClick={() => setCursor(addMonths(cursor, -1))} aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>
             <p className="font-semibold text-ink">{monthLabel}</p>

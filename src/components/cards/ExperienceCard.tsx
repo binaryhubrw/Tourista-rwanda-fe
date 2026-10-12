@@ -27,7 +27,7 @@ export function ExperienceCard({ experience }: { experience: Experience }) {
           <span className="inline-flex items-center gap-1"><Clock className="h-4 w-4 text-brand-600" aria-hidden />{experience.duration}</span>
           {experience.communityLed && <span className="inline-flex items-center gap-1"><Users className="h-4 w-4 text-brand-600" aria-hidden />Community-led</span>}
         </div>
-        <div className="mt-auto flex items-center justify-between pt-4">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
           <span className="font-semibold text-ink">{formatRwf(experience.priceRwf)}<span className="text-sm font-normal text-slate-500"> / person</span></span>
           <Rating value={experience.rating} className="text-sm" />
         </div>
