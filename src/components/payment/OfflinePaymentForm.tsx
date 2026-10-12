@@ -12,7 +12,7 @@ import {
   validateBankAccount,
   type PayoutTarget,
 } from '@/utils/payment';
-import { minDue } from '@/demo/store';
+import { minDue } from '@/utils/lifecycle';
 import { cn } from '@/utils/cn';
 
 const METHODS: { id: PaymentMethod; title: string; how: string; Logo: (p: { className?: string }) => JSX.Element }[] = [

@@ -1,20 +1,29 @@
 import { ArrowDownLeft, ArrowUpRight, CalendarCheck, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { SUBSCRIPTION_RATE, walletEntries } from '@/demo/store';
+import type { FeeWalletEntry } from '@/types';
+import { getFeeLedger } from '@/services';
+import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { DataTable, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
+import { ErrorState, Loading } from '@/components/ui';
 import { formatDate, formatRwf } from '@/utils/format';
+import { formatPayAccount } from '@/utils/payment';
 import { cn } from '@/utils/cn';
 
 export default function AdminFeesPage() {
   useDocumentTitle('Wallet');
-  const entries = walletEntries();
-  const incoming = entries.filter((e) => e.kind === 'in').reduce((s, e) => s + e.amount, 0);
-  const outgoing = entries.filter((e) => e.kind === 'out').reduce((s, e) => s + e.amount, 0);
-  const available = incoming - outgoing;
+  const { user } = useAuth();
+  const { data, loading, error, reload } = useAsync(getFeeLedger);
+  const cardNumber = user?.bankAccount ? formatPayAccount('card', user.bankAccount) : '';
+  const entries = data?.wallet ?? [];
+  const incoming = data?.totals.earnedRwf ?? 0;
+  const outgoing = data?.totals.reversedRwf ?? 0;
+  const available = data?.totals.balanceRwf ?? 0;
+  const rate = data?.rate ?? 0.1;
   const monthKey = new Date().toISOString().slice(0, 7);
   const thisMonth = entries.filter((e) => e.kind === 'in' && e.at.startsWith(monthKey)).reduce((s, e) => s + e.amount, 0);
-  const columns: Column<(typeof entries)[number]>[] = [
+  const columns: Column<FeeWalletEntry>[] = [
     {
       id: 'title', header: 'Activity', sortValue: (e) => e.title,
       cell: (e) => (
@@ -40,9 +49,12 @@ export default function AdminFeesPage() {
     },
   ];
 
+  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (loading) return <Loading />;
+
   return (
     <>
-      <PageHeader title="Wallet" intro={`${Math.round(SUBSCRIPTION_RATE * 100)}% of each confirmed booking is reserved for Tourista. Refunds reverse that fee.`} />
+      <PageHeader title="Wallet" intro={`${Math.round(rate * 100)}% of each confirmed booking is reserved for Tourista. Refunds reverse that fee.`} />
 
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 via-brand-600 to-[#0f766e] p-6 text-white shadow-lift sm:p-8">
         <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/10" aria-hidden />
@@ -58,15 +70,17 @@ export default function AdminFeesPage() {
             </div>
             <p className="mt-8 text-sm text-white/70">Available balance</p>
             <p className="mt-1 font-display text-4xl font-bold tabular-nums tracking-tight sm:text-5xl">{formatRwf(available)}</p>
+            <p className="mt-6 font-mono text-lg tracking-[0.18em] sm:text-xl">{cardNumber || 'No card on file'}</p>
+            {user?.name && <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">{user.name}</p>}
           </div>
           <div className="flex gap-8 text-sm">
             <div>
               <p className="text-white/60">Card</p>
-              <p className="font-mono tracking-widest">•••• 0010</p>
+              <p className="font-mono tracking-wide">{cardNumber || '—'}</p>
             </div>
             <div>
               <p className="text-white/60">Rate</p>
-              <p className="font-semibold">{Math.round(SUBSCRIPTION_RATE * 100)}% fee</p>
+              <p className="font-semibold">{Math.round(rate * 100)}% fee</p>
             </div>
           </div>
         </div>
@@ -76,7 +90,7 @@ export default function AdminFeesPage() {
         <StatCard label="Available" icon={Wallet} value={formatRwf(available)} hint="Fees in, minus refund reversals" />
         <StatCard label="Fees in" icon={ArrowDownLeft} tone="teal" value={formatRwf(incoming)} hint={`This month ${formatRwf(thisMonth)}`} />
         <StatCard label="Refund reversals" icon={ArrowUpRight} tone="amber" value={formatRwf(outgoing)} />
-        <StatCard label="Bookings contributing" icon={CalendarCheck} tone="violet" value={entries.filter((e) => e.kind === 'in').length} hint={`${Math.round(SUBSCRIPTION_RATE * 100)}% of each confirmed total`} />
+        <StatCard label="Bookings contributing" icon={CalendarCheck} tone="violet" value={entries.filter((e) => e.kind === 'in').length} hint={`${Math.round(rate * 100)}% of each confirmed total`} />
       </StatGrid>
 
       <DataTable

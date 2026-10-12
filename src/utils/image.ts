@@ -2,8 +2,7 @@ const MAX_BYTES = 15 * 1024 * 1024;
 
 /**
  * Reads an image file, scales it down to fit `maxDim` and re-encodes it as
- * JPEG. Keeps uploads small enough for the in-browser demo store; with a real
- * backend this is where the file would be uploaded instead.
+ * JPEG so listings can send a compact data URL that the API stores as a file.
  */
 export async function imageFileToDataUrl(file: File, maxDim = 1280, quality = 0.74): Promise<string> {
   if (!file.type.startsWith('image/')) throw { message: `“${file.name}” isn’t an image. Use JPG, PNG or WebP.` };

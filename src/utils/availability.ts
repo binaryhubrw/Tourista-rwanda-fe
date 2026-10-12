@@ -1,5 +1,5 @@
 import type { Booking, BookingLine, Business, Service } from '@/types';
-import { occupiesInventory } from '@/demo/store';
+import { occupiesInventory } from '@/utils/lifecycle';
 import { addDaysIso, nightsBetween, pricingMode } from '@/utils/pricing';
 import { todayIso } from '@/utils/format';
 import { vehiclePlates } from '@/utils/catalog';

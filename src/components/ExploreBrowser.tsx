@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { getAvailability, getBusinesses, getLocations } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
-import { BusinessCard } from '@/components/cards';
+import { BusinessCard, ServiceCard } from '@/components/cards';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
 import { Button, EmptyState, ErrorState, fieldClass } from '@/components/ui';
 import { ExploreReveal } from '@/components/ExploreReveal';
@@ -27,6 +27,10 @@ const groups: FilterGroup[] = [
   { id: 'sustainable', label: 'Sustainable tourism', type: 'checkbox', options: [{ value: 'yes', label: 'Eco-certified or community-led only' }] },
 ];
 
+function selectedScopes(f: FilterValues) {
+  return (f.category ?? []).map((value) => normalizeExploreScope(value)).filter(Boolean);
+}
+
 function applyFilters(
   items: ExploreItem[],
   q: string,
@@ -36,20 +40,28 @@ function applyFilters(
   placeHits: { id: string; district: string }[],
   service: string,
 ) {
+  const scopes = selectedScopes(f);
+  const wantVehicles = !scopes.length || scopes.includes('vehicles');
+  const wantBusinesses = !scopes.length || scopes.some((scope) => scope !== 'vehicles');
   return items.filter((it) => {
-    if (it.type !== 'business') return false;
-    if (locationId && it.node.locationId !== locationId && it.node.district !== locationDistrict) return false;
+    const listing = it.type === 'business' ? it.node : it.type === 'service' ? it.business : null;
+    if (!listing) return false;
+    if (it.type === 'service' && it.kind === 'vehicle') {
+      if (service || !wantVehicles) return false;
+    } else if (it.type === 'business') {
+      if (!wantBusinesses) return false;
+      if (service) {
+        if (!businessHasService(listing, service)) return false;
+      } else if (scopes.length && !scopes.some((scope) => businessMatchesScope(listing, scope))) return false;
+    } else {
+      return false;
+    }
+    if (locationId && listing.locationId !== locationId && listing.district !== locationDistrict) return false;
     if (q.trim()) {
       const textHit = termsMatch(it.text, q);
-      const placeHit = placeHits.some((place) => it.node.locationId === place.id || it.node.district === place.district);
+      const placeHit = placeHits.some((place) => listing.locationId === place.id || listing.district === place.district);
       if (!textHit && !placeHit) return false;
     }
-    if (service) {
-      if (!businessHasService(it.node, service)) return false;
-    } else if (f.category?.length && !f.category.some((value) => {
-      const scope = normalizeExploreScope(value);
-      return scope ? businessMatchesScope(it.node, scope) : it.kind === value;
-    })) return false;
     if (f.interest?.length && !f.interest.some((i) => it.interests.includes(i as never))) return false;
     if (f.province?.length && !f.province.some((p) => it.province.includes(p.replace(' Province', '')))) return false;
     if (f.price?.length && !f.price.includes(String(it.priceLevel))) return false;
@@ -80,7 +92,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
     const [l, b, bookings] = await Promise.all([getLocations(), getBusinesses(), getAvailability()]);
     return {
       locations: l,
-      items: buildExploreItems(l, [], b, bookings).filter((item) => item.type === 'business'),
+      items: buildExploreItems(l, [], b, bookings).filter((item) => item.type === 'business' || (item.type === 'service' && item.kind === 'vehicle')),
     };
   });
 
@@ -214,6 +226,9 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
               <button type="button" onClick={clearService} className="font-semibold text-brand-600 hover:underline">Show all services</button>
             </p>
           )}
+          {selectedScopes(filters).length === 1 && selectedScopes(filters)[0] === 'vehicles' && (
+            <p className="mb-3 text-sm text-slate-600">Every hire car with its daily price and the business that offers it. Choose the one you want.</p>
+          )}
           {locationParam && placeLabel && (
             <p className="mb-3 text-sm text-slate-600">
               Listings at {placeLabel}.{' '}
@@ -227,14 +242,20 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
             </p>
           )}
           {!loading && (
-            <p className="mb-4 text-sm text-slate-600" aria-live="polite">{`${visible.length} of ${results.length} listing${results.length === 1 ? '' : 's'}`}</p>
+            <p className="mb-4 text-sm text-slate-600" aria-live="polite">
+              {`${visible.length} of ${results.length} ${selectedScopes(filters)[0] === 'vehicles' && selectedScopes(filters).length === 1 ? (results.length === 1 ? 'vehicle' : 'vehicles') : (results.length === 1 ? 'listing' : 'listings')}`}
+            </p>
           )}
           {loading ? <ExploreReveal /> : error ? <ErrorState message={error} onRetry={reload} /> : results.length === 0 ? (
             <EmptyState title="No listings match" message="Try a place or an offering, such as gorillas, coffee or Musanze." action={<Button variant="secondary" onClick={() => { setCategories([]); onQuery(''); clearPlace(); clearService(); setFilters({}); }}>Clear search and filters</Button>} />
           ) : (
             <>
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {visible.map((it) => it.type === 'business' ? <BusinessCard key={it.key} business={it.node} /> : null)}
+                {visible.map((it) => (
+                  it.type === 'business' ? <BusinessCard key={it.key} business={it.node} />
+                    : it.type === 'service' ? <ServiceCard key={it.key} service={it.node} business={it.business} />
+                    : null
+                ))}
               </div>
               {hasMore && (
                 <div ref={sentinelRef} className="mt-8" aria-live="polite">

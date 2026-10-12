@@ -82,8 +82,8 @@ export default function BusinessDetailsPage() {
 
   const toggle = (serviceId: string) => setPicked((current) => (current.includes(serviceId) ? current.filter((item) => item !== serviceId) : [...current, serviceId]));
   const startBooking = () => {
-    if (!picked.length) return;
-    navigate(`/book/business/${b.id}?services=${picked.join(',')}`);
+    const query = picked.length ? `?services=${picked.join(',')}` : '';
+    navigate(`/book/business/${b.id}${query}`);
   };
 
   const offerRow = (service: Service) => {
@@ -207,8 +207,8 @@ export default function BusinessDetailsPage() {
                 <span className="text-sm text-slate-500"> {from.unit}</span>
               </p>
             )}
-            <h2 className="font-display text-lg font-bold">Book {picked.length ? `${picked.length} selected` : 'what you need'}</h2>
-            <p className="text-sm text-slate-600">{picked.length ? 'Continue to send a request. You pay after the host approves.' : 'Select rooms, services, meals or vehicles, then continue.'}</p>
+            <h2 className="font-display text-lg font-bold">Book {picked.length ? `${picked.length} selected` : 'this listing'}</h2>
+            <p className="text-sm text-slate-600">You will choose dates first. We then show what is still free in that range.</p>
             {picked.length > 0 && (
               <ul className="space-y-1 text-sm text-slate-700">
                 {picked.map((serviceId) => {
@@ -217,7 +217,7 @@ export default function BusinessDetailsPage() {
                 })}
               </ul>
             )}
-            <Button onClick={startBooking} disabled={!picked.length} className="w-full">Continue to booking</Button>
+            <Button onClick={startBooking} className="w-full">Continue to booking</Button>
             <h2 className="font-display text-lg font-bold">Contact {b.ownerName.split(' ')[0]}</h2>
             <a href={`tel:${b.phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-slate-700 hover:text-brand-600"><Phone className="h-4 w-4 text-brand-600" aria-hidden />{b.phone}</a>
             <a href={`mailto:${b.email}`} className="flex items-center gap-2 break-all text-slate-700 hover:text-brand-600"><Mail className="h-4 w-4 shrink-0 text-brand-600" aria-hidden />{b.email}</a>

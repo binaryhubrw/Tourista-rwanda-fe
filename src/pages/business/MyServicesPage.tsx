@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Package, Tag, TrendingUp, Wallet, BedDouble, Users, Car } from 'lucide-react';
 import type { Business, Service } from '@/types';
 import { updateBusiness } from '@/services';
-import { removeVehicle, saveVehicle } from '@/demo/store';
 import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/context/ToastContext';
@@ -222,15 +221,13 @@ export default function MyServicesPage() {
         plates: parsePlateList(form.plateNumber),
       }),
     };
-    if (vehicle) {
-      saveVehicle(business.id, svc);
-      setData((d) => d && { ...d, businesses: d.businesses.map((b) => b.id === business.id ? { ...b, services: b.services.some((s) => s.id === svc.id) ? b.services.map((s) => s.id === svc.id ? svc : s) : [...b.services, svc] } : b) });
-      toast.success(editing === 'new' ? 'Vehicle added. Travellers can book it on the branch.' : 'Vehicle updated.');
-      setEditing(null);
-      return;
-    }
     const services = editing === 'new' ? [...business.services, svc] : business.services.map((s) => (s.id === svc.id ? svc : s));
-    persist(new Map([[business.id, services]]), editing === 'new' ? (room ? 'Room added.' : 'Service added.') : (room ? 'Room updated.' : 'Service updated.'));
+    persist(
+      new Map([[business.id, services]]),
+      editing === 'new'
+        ? (room ? 'Room added.' : vehicle ? 'Vehicle added. Travellers can book it on the branch.' : 'Service added.')
+        : (room ? 'Room updated.' : vehicle ? 'Vehicle updated.' : 'Service updated.'),
+    );
   };
 
   const confirmRemove = () => {
@@ -244,31 +241,13 @@ export default function MyServicesPage() {
         if (row.plate) group.plates.add(row.plate);
         groups.set(key, group);
       });
-      const overlay = new Map<string, Service>();
-      const removed = new Set<string>();
+      const changes = new Map<string, Service[]>();
       groups.forEach(({ business, service, plates }) => {
-        const key = `${business.id}:${service.id}`;
+        const current = changes.get(business.id) ?? business.services;
         const next = plates.size ? withoutPlates(service, plates) : { ...service, units: [], plates: [], available: 0 };
-        if (!vehicleUnits(next).length) {
-          removeVehicle(business.id, service.id);
-          removed.add(key);
-          return;
-        }
-        saveVehicle(business.id, next);
-        overlay.set(key, next);
+        changes.set(business.id, vehicleUnits(next).length ? current.map((s) => (s.id === service.id ? next : s)) : current.filter((s) => s.id !== service.id));
       });
-      setData((d) => d && {
-        ...d,
-        businesses: d.businesses.map((b) => ({
-          ...b,
-          services: b.services
-            .filter((s) => !removed.has(`${b.id}:${s.id}`))
-            .map((s) => overlay.get(`${b.id}:${s.id}`) ?? s),
-        })),
-      });
-      toast.success(n > 1 ? `${n} vehicles deleted.` : 'Vehicle deleted.');
-      removing.done?.();
-      setRemoving(null);
+      persist(changes, n > 1 ? `${n} vehicles deleted.` : 'Vehicle deleted.');
       return;
     }
     const noun = roomsView ? (n > 1 ? 'rooms' : 'room') : (n > 1 ? 'services' : 'service');

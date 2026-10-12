@@ -24,9 +24,12 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [payoutErr, setPayoutErr] = useState<Partial<{ bankAccount: string; mtnNumber: string; airtelNumber: string }>>({});
+  const canEditPayout = user!.role === 'business_owner' || user!.role === 'admin';
   const ownerFields = user!.role === 'business_owner'
     ? [user!.name, user!.email, user!.phone, user!.country, user!.businessName, user!.bankAccount, user!.mtnNumber, user!.airtelNumber]
-    : [user!.name, user!.email, user!.phone, user!.country];
+    : user!.role === 'admin'
+      ? [user!.name, user!.email, user!.phone, user!.country, user!.bankAccount, user!.mtnNumber, user!.airtelNumber]
+      : [user!.name, user!.email, user!.phone, user!.country];
   const completeness = Math.round((ownerFields.filter(Boolean).length / ownerFields.length) * 100);
   const memberDays = Math.max(0, Math.floor((Date.now() - new Date(user!.joinedAt).getTime()) / 86_400_000));
   const listingCount = listings.data?.length ?? 0;
@@ -37,9 +40,9 @@ export default function ProfilePage() {
     e.preventDefault();
     if (form.name.trim().length < 2) return setError('Enter your full name.');
     if (user!.role === 'business_owner' && form.businessName.trim().length < 2) return setError('Enter your business name.');
-    const payErr = user!.role === 'business_owner' ? payoutErrors(form) : {};
+    const payErr = canEditPayout ? payoutErrors(form) : {};
     setPayoutErr(payErr);
-    if (Object.keys(payErr).length) return setError('Add a bank account, MTN number and Airtel number so guests can pay you.');
+    if (Object.keys(payErr).length) return setError(user!.role === 'admin' ? 'Add the platform bank account, MTN number and Airtel number.' : 'Add a bank account, MTN number and Airtel number so guests can pay you.');
     setError('');
     setSaving(true);
     try {
@@ -81,7 +84,7 @@ export default function ProfilePage() {
           )}
           <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+250 788 000 000" />
           <Input label="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Rwanda" />
-          {user!.role === 'business_owner' && (
+          {canEditPayout && (
             <PayoutFields values={form} onChange={(payout) => setForm({ ...form, ...payout })} errors={payoutErr} />
           )}
           <div className="sm:col-span-2"><Button type="submit" loading={saving}>Save profile</Button></div>

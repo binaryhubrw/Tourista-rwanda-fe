@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Clock, RotateCcw, ShieldCheck } from 'lucide-react';
-import { getBookingById, getBusinessesByOwner, getPayoutForBusiness } from '@/services';
-import { bookingBelongsToTourist } from '@/demo/activity';
+import { getBookingById, getPayoutForBusiness, getRefunds } from '@/services';
 import { confirmHostReceivedPayment, submitOfflinePayment } from '@/services/bookingService';
-import { demoRefunds, minDue } from '@/demo/store';
+import { minDue } from '@/utils/lifecycle';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -39,15 +38,11 @@ export default function PaymentDetailsPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const base = dashboardPathFor(user!.role);
-  const { data: booking, loading, error, reload, setData } = useAsync(async () => {
-    const booking = await getBookingById(id);
-    if (user!.role === 'tourist' && !bookingBelongsToTourist(booking, user!)) throw { message: 'Payment was not found.', status: 404 };
-    if (user!.role === 'business_owner' || user!.role === 'staff') {
-      const mine = await getBusinessesByOwner(user!.ownerId ?? user!.id);
-      if (!mine.some((b) => b.id === booking.businessId || b.id === booking.targetId)) throw { message: 'Payment was not found.', status: 404 };
-    }
-    return booking;
+  const { data, loading, error, reload } = useAsync(async () => {
+    const [booking, refunds] = await Promise.all([getBookingById(id), getRefunds()]);
+    return { booking, refunds };
   }, [id, user?.id, user?.role]);
+  const booking = data?.booking;
   const payout = useAsync(() => (booking?.businessId ? getPayoutForBusiness(booking.businessId) : Promise.resolve(null)), [booking?.businessId]);
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0);
@@ -62,7 +57,7 @@ export default function PaymentDetailsPage() {
   if (loading) return <Loading label="Loading payment" />;
   if (error || !booking || !user) return <ErrorState message={error ?? 'Payment was not found.'} onRetry={reload} />;
 
-  const refunds = demoRefunds();
+  const refunds = data?.refunds ?? [];
   const refund = refunds.find((r) => r.bookingId === booking.id && !refundIsClosed(r.status))
     ?? refunds.find((r) => r.bookingId === booking.id);
   const display = paymentDisplayStatus(booking, refunds);

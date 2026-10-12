@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, ShieldCheck } from 'lucide-react';
 import type { Booking, PaymentMethod, Refund } from '@/types';
-import { getBookings } from '@/services';
-import { demoRefunds, requestRefund } from '@/demo/store';
+import { getBookings, getRefunds, requestRefund } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -72,8 +71,12 @@ export default function RefundRequestPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const base = dashboardPathFor(user!.role);
-  const { data: bookings, loading, error, reload } = useAsync(() => getBookings({ userId: user!.id }), [user?.id]);
-  const refunds = demoRefunds();
+  const { data, loading, error, reload } = useAsync(async () => {
+    const [bookings, refunds] = await Promise.all([getBookings({ userId: user!.id }), getRefunds()]);
+    return { bookings, refunds };
+  }, [user?.id]);
+  const bookings = data?.bookings;
+  const refunds = data?.refunds ?? [];
 
   const confirmed = useMemo(
     () =>
@@ -129,11 +132,15 @@ export default function RefundRequestPage() {
     if (Object.keys(e).length || !booking || !method) return;
     setBusy(true);
     try {
-      const refund = requestRefund(
-        booking.id,
-        { reason, proof: proof[0], amountRwf: paid, receiveMethod: method, receiveAccount: account, receiveName },
-        { name: user!.name, role: user!.role },
-      );
+      const refund = await requestRefund({
+        bookingId: booking.id,
+        reason,
+        proof: proof[0],
+        amountRwf: paid,
+        receiveMethod: method,
+        receiveAccount: account,
+        receiveName,
+      });
       toast.success('Refund requested. Admin will process it.');
       navigate(`${base}/refunds/${refund.id}`);
     } catch (err) {

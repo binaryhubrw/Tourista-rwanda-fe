@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Car, Pencil, Plus, Tag, Trash2, TrendingUp, Wallet } from 'lucide-react';
 import type { Business, Service } from '@/types';
-import { saveVehicle } from '@/demo/store';
+import { updateBusiness } from '@/services';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/context/ToastContext';
+import { errorMessage } from '@/hooks/useAsync';
 import { Button, ButtonLink, ConfirmModal, EmptyState, ErrorState, Loading, SmartImage } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, VehicleCategoryBadge, type Column } from '@/components/dashboard';
 import { ListingViewLink } from '@/pages/shared/tableColumns';
@@ -68,7 +69,7 @@ export default function VehiclesPage() {
 
   const visible = level === 'All' ? rows : rows.filter((r) => r.level === level);
 
-  const persist = (changed: Row[]) => {
+  const persist = async (changed: Row[]) => {
     const groups = new Map<string, { business: Business; service: Service; plates: Set<string> }>();
     changed.forEach((row) => {
       const key = `${row.business.id}:${row.service.id}`;
@@ -76,27 +77,27 @@ export default function VehiclesPage() {
       group.plates.add(row.plate);
       groups.set(key, group);
     });
-    const overlay = new Map<string, Service>();
-    groups.forEach(({ business, service, plates }) => {
+    const updated = await Promise.all([...groups.values()].map(({ business, service, plates }) => {
       const next = withoutPlates(service, plates);
-      saveVehicle(business.id, next);
-      overlay.set(`${business.id}:${service.id}`, next);
-    });
-    setData((d) => d && {
-      ...d,
-      businesses: d.businesses.map((b) => ({
-        ...b,
-        services: b.services.map((s) => overlay.get(`${b.id}:${s.id}`) ?? s).filter((s) => s.group !== 'vehicle' || vehicleUnits(s).length > 0),
-      })),
-    });
+      const services = vehicleUnits(next).length
+        ? business.services.map((s) => (s.id === service.id ? next : s))
+        : business.services.filter((s) => s.id !== service.id);
+      return updateBusiness(business.id, { services });
+    }));
+    const byId = new Map(updated.map((b) => [b.id, b]));
+    setData((d) => d && { ...d, businesses: d.businesses.map((b) => byId.get(b.id) ?? b) });
   };
 
-  const confirmRemove = () => {
+  const confirmRemove = async () => {
     if (!removing) return;
-    persist(removing.rows);
-    toast.success(removing.rows.length > 1 ? `${removing.rows.length} cars deleted.` : `${removing.rows[0].plate} deleted.`);
-    removing.done?.();
-    setRemoving(null);
+    try {
+      await persist(removing.rows);
+      toast.success(removing.rows.length > 1 ? `${removing.rows.length} cars deleted.` : `${removing.rows[0].plate} deleted.`);
+      removing.done?.();
+      setRemoving(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
   };
 
   const columns = useMemo<Column<Row>[]>(() => {

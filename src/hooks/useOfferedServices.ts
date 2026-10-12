@@ -3,7 +3,7 @@ import { getBusinesses } from '@/services';
 import { CATALOG_EVENT, offeredServices } from '@/utils/explore';
 import { useAsync } from './useAsync';
 
-const EVENTS = ['tourista-demo', CATALOG_EVENT] as const;
+const EVENTS = [CATALOG_EVENT] as const;
 
 /** Live extras from every branch — refreshes when a listing is saved, the tab is focused, or the menu opens. */
 export function useOfferedServices() {

@@ -24,6 +24,10 @@ export interface User {
   ownerId?: string;
   /** Staff only: listing ids they may manage. */
   assignedListingIds?: string[];
+  /** Staff only. */
+  title?: string;
+  /** Staff only: when false they cannot log in. */
+  active?: boolean;
   preferences?: {
     bookingEmails?: boolean;
     reviewReplies?: boolean;
@@ -232,9 +236,8 @@ export interface Itinerary {
 }
 
 /**
- * Requested flow (demo): Pending → owner Declined | AwaitingPayment
- * → guest PaymentReview → owner Confirmed. Refunds and expiry sit alongside.
- * Admin does not approve payments.
+ * Pending → host Declined | AwaitingPayment → guest PaymentReview → host Confirmed.
+ * Refunds and expiry sit alongside. Admin does not approve payments.
  */
 export type BookingStatus =
   | 'Pending'
@@ -444,4 +447,45 @@ export interface AppNotification {
   href?: string;
   createdAt: string;
   readAt?: string;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'staff';
+  phone?: string;
+  title?: string;
+  ownerId: string;
+  assignedListingIds: string[];
+  active: boolean;
+  joinedAt: string;
+}
+
+export interface FeeWalletEntry {
+  id: string;
+  kind: 'in' | 'out';
+  title: string;
+  subtitle: string;
+  amount: number;
+  at: string;
+  bookingId: string;
+}
+
+export interface FeeLedger {
+  rate: number;
+  rows: {
+    id: string;
+    bookingId: string;
+    listing: string;
+    guest: string;
+    paidAt: string;
+    bookingTotal: number;
+    paid: number;
+    feeRwf: number;
+    method?: string;
+    refunded: boolean;
+  }[];
+  wallet: FeeWalletEntry[];
+  totals: { earnedRwf: number; reversedRwf: number; balanceRwf: number };
 }

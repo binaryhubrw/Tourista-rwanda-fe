@@ -50,7 +50,7 @@ interface Props {
 }
 
 /**
- * Lightweight SVG map of Rwanda for the demo.
+ * Lightweight SVG map of Rwanda.
  * To switch to Google Maps / Leaflet / Mapbox, keep this props contract (points, selectedId, onSelect)
  * and render the provider's map + markers inside a new component with the same signature.
  */

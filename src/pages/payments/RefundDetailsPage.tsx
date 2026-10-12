@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ChevronLeft, Clock, ShieldCheck } from 'lucide-react';
-import { getBookingById, getBusinessesByOwner } from '@/services';
-import { advanceRefund, cancelRefund, completeRefundByOwner, demoBooking, demoRefund } from '@/demo/store';
-import { bookingBelongsToTourist } from '@/demo/activity';
+import { approveRefund, cancelRefund, completeRefund, getBookingById, getRefundById, rejectRefund } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -55,15 +53,8 @@ export default function RefundDetailsPage() {
   const toast = useToast();
   const base = dashboardPathFor(user!.role);
   const { data, loading, error, reload } = useAsync(async () => {
-    const refund = demoRefund(id);
-    if (!refund) throw { message: 'Refund was not found.', status: 404 };
-    const booking = demoBooking(refund.bookingId) ?? await getBookingById(refund.bookingId).catch(() => null);
-    if (!booking) throw { message: 'Refund was not found.', status: 404 };
-    if (user!.role === 'tourist' && !bookingBelongsToTourist(booking, user!)) throw { message: 'Refund was not found.', status: 404 };
-    if (user!.role === 'business_owner' || user!.role === 'staff') {
-      const mine = await getBusinessesByOwner(user!.ownerId ?? user!.id);
-      if (!mine.some((b) => b.id === booking.businessId || b.id === booking.targetId)) throw { message: 'Refund was not found.', status: 404 };
-    }
+    const refund = await getRefundById(id);
+    const booking = await getBookingById(refund.bookingId);
     return { refund, booking };
   }, [id, user?.id, user?.role]);
   const [note, setNote] = useState('');
@@ -76,8 +67,7 @@ export default function RefundDetailsPage() {
   if (error || !data || !user) return <ErrorState message={error ?? 'Refund was not found.'} onRetry={reload} />;
 
   const { booking } = data;
-  const refund = demoRefund(id) ?? data.refund;
-  const actor = { name: user.name, role: user.role };
+  const refund = data.refund;
   const admin = user.role === 'admin';
   const tourist = user.role === 'tourist';
   const host = user.role === 'business_owner' || user.role === 'staff';
@@ -90,7 +80,8 @@ export default function RefundDetailsPage() {
   const decide = async (next: 'returning' | 'rejected') => {
     setBusy(true);
     try {
-      advanceRefund(refund.id, next, actor, note || undefined);
+      if (next === 'returning') await approveRefund(refund.id, note || undefined);
+      else await rejectRefund(refund.id, note || undefined);
       setRejecting(false);
       setNote('');
       await reload();
@@ -105,7 +96,7 @@ export default function RefundDetailsPage() {
   const confirmCancel = async () => {
     setBusy(true);
     try {
-      cancelRefund(refund.id, actor);
+      await cancelRefund(refund.id);
       setCancelling(false);
       await reload();
       toast.success('Refund canceled. Your booking stays confirmed.');
@@ -166,7 +157,7 @@ export default function RefundDetailsPage() {
                 receiveAccount={refund.receiveAccount!}
                 receiveMethod={refund.receiveMethod!}
                 onSubmit={async (input) => {
-                  completeRefundByOwner(refund.id, input, actor);
+                  await completeRefund(refund.id, input);
                   await reload();
                   toast.success('Refund marked completed.');
                 }}

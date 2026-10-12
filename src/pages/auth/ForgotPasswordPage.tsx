@@ -28,7 +28,6 @@ export default function ForgotPasswordPage() {
       <AuthShell title="Check your inbox" intro={`If ${email} has an account, we've sent a link to reset your password. It expires in one hour.`}>
         <MailCheck className="h-12 w-12 text-brand-600" aria-hidden />
         <div className="mt-6 flex flex-col gap-3">
-          <ButtonLink to="/reset-password?token=demo-token" variant="secondary">Open the reset link (demo)</ButtonLink>
           <ButtonLink to="/login" variant="ghost">Back to log in</ButtonLink>
         </div>
       </AuthShell>

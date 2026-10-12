@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Clock, CheckCircle2, RotateCcw } from 'lucide-react';
 import type { Booking, PaymentLedgerStatus } from '@/types';
-import { getBookings, getBusinessesByOwner } from '@/services';
+import { getBookings, getBusinessesByOwner, getRefunds } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { ErrorState, Loading } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, PaymentLedgerBadge, StatCard, StatGrid, type Column } from '@/components/dashboard';
 import { PaymentViewLink } from '@/pages/shared/tableColumns';
-import { demoRefunds } from '@/demo/store';
 import { formatDate, formatRwf, formatRwfShort } from '@/utils/format';
 import { paymentDisplayStatus, paymentMethodShort } from '@/utils/payment';
 
@@ -20,16 +19,19 @@ export default function PaymentsPage() {
   const { user } = useAuth();
   const base = dashboardPathFor(user!.role);
   const { data, loading, error, reload } = useAsync(async () => {
-    if (user!.role === 'tourist') return getBookings({ userId: user!.id });
-    if (user!.role === 'admin') return getBookings();
-    const listings = await getBusinessesByOwner(user!.ownerId ?? user!.id);
-    return getBookings({ businessIds: listings.map((b) => b.id) });
+    const bookings = user!.role === 'tourist'
+      ? await getBookings({ userId: user!.id })
+      : user!.role === 'admin'
+        ? await getBookings()
+        : await getBookings({ businessIds: (await getBusinessesByOwner(user!.ownerId ?? user!.id)).map((b) => b.id) });
+    const refunds = await getRefunds();
+    return { bookings, refunds };
   }, [user?.id, user?.role]);
   const [filter, setFilter] = useState<Filter>('all');
-  const refunds = demoRefunds();
+  const refunds = data?.refunds ?? [];
   const statusOf = (b: Booking) => paymentDisplayStatus(b, refunds);
 
-  const rows = (data ?? []).filter((b) => statusOf(b));
+  const rows = (data?.bookings ?? []).filter((b) => statusOf(b));
   const list = useMemo(() => rows.filter((b) => filter === 'all' || statusOf(b) === filter), [rows, filter]);
 
   const columns: Column<Booking>[] = [

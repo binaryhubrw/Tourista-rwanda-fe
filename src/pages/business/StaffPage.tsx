@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Briefcase, Pencil, Plus, Trash2, UserPlus, Users } from 'lucide-react';
-import type { Business } from '@/types';
-import { getBusinessesByOwner } from '@/services';
-import { ensureDemoStaff, listStaff, managerForListing, removeStaff, setStaffActive, upsertStaff, type StaffAccount } from '@/demo/store';
+import type { Business, StaffMember } from '@/types';
+import { createStaff, deleteStaff, getBusinessesByOwner, getStaff, managerForListing, updateStaff } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +13,7 @@ import { formatDate } from '@/utils/format';
 
 const blank = { name: '', email: '', password: '', phone: '', listings: [] as string[] };
 
-function listingNames(s: StaffAccount, businesses: Business[]) {
+function listingNames(s: StaffMember, businesses: Business[]) {
   return businesses.filter((b) => s.assignedListingIds.includes(b.id));
 }
 
@@ -23,26 +22,19 @@ export default function StaffPage() {
   const { user } = useAuth();
   const toast = useToast();
   const listings = useAsync(() => getBusinessesByOwner(user!.id), [user?.id]);
-  const [tick, setTick] = useState(0);
-  const [editing, setEditing] = useState<StaffAccount | 'new' | null>(null);
-  const [removing, setRemoving] = useState<{ rows: StaffAccount[]; done?: () => void } | null>(null);
+  const team = useAsync(() => getStaff(), [user?.id]);
+  const [editing, setEditing] = useState<StaffMember | 'new' | null>(null);
+  const [removing, setRemoving] = useState<{ rows: StaffMember[]; done?: () => void } | null>(null);
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const businesses = listings.data ?? [];
-  const listingIds = businesses.map((b) => b.id).join(',');
-  useEffect(() => {
-    if (!user || listings.loading || listings.error) return;
-    const before = listStaff(user.id).length;
-    ensureDemoStaff(user.id, listingIds ? listingIds.split(',') : []);
-    if (listStaff(user.id).length !== before) setTick((n) => n + 1);
-  }, [user?.id, listings.loading, listings.error, listingIds]);
-
-  const staff = useMemo(() => listStaff(user!.id), [user?.id, tick]);
+  const staff = team.data ?? [];
   const activeCount = staff.filter((s) => s.active).length;
   const covered = new Set(staff.flatMap((s) => s.assignedListingIds.filter((id) => businesses.some((b) => b.id === id)))).size;
 
-  const columns = useMemo<Column<StaffAccount>[]>(() => [
+  const columns = useMemo<Column<StaffMember>[]>(() => [
     {
       id: 'name', header: 'Staff', sortValue: (s) => s.name,
       cell: (s) => (
@@ -73,20 +65,20 @@ export default function StaffPage() {
   ], [businesses]);
 
   const editingId = editing && editing !== 'new' ? editing.id : undefined;
-  const takenManager = (listingId: string) => managerForListing(user!.id, listingId, editingId);
+  const takenManager = (listingId: string) => managerForListing(staff, listingId, editingId);
 
-  const open = (row: StaffAccount | 'new') => {
+  const open = (row: StaffMember | 'new') => {
     setEditing(row);
     setErrors({});
     const listings = row === 'new'
-      ? businesses.filter((b) => !managerForListing(user!.id, b.id)).slice(0, 1).map((b) => b.id)
+      ? businesses.filter((b) => !managerForListing(staff, b.id)).slice(0, 1).map((b) => b.id)
       : row.assignedListingIds;
     setForm(row === 'new'
       ? { ...blank, listings }
       : { name: row.name, email: row.email, password: '', phone: row.phone ?? '', listings });
   };
 
-  const save = () => {
+  const save = async () => {
     if (!user || !editing) return;
     const e: Record<string, string> = {};
     if (form.name.trim().length < 2) e.name = 'Enter their name.';
@@ -100,38 +92,60 @@ export default function StaffPage() {
       : 'Assign at least one branch.';
     setErrors(e);
     if (Object.keys(e).length) return;
+    setSaving(true);
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      password: form.password,
+      phone: form.phone.trim() || undefined,
+      assignedListingIds: form.listings,
+    };
     try {
-      upsertStaff({
-        id: editing === 'new' ? undefined : editing.id,
-        name: form.name, email: form.email, password: form.password, phone: form.phone, title: 'Manager',
-        ownerId: user.id, assignedListingIds: form.listings,
-      });
+      if (editing === 'new') await createStaff(payload);
+      else await updateStaff(editing.id, payload);
       toast.success(editing === 'new' ? `${form.name.trim()} can now log in and manage the assigned branches.` : 'Staff details saved.');
       setEditing(null);
-      setTick((n) => n + 1);
+      await team.reload();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmRemove = async () => {
+    if (!removing) return;
+    try {
+      await Promise.all(removing.rows.map((row) => deleteStaff(row.id)));
+      toast.success(removing.rows.length > 1 ? `${removing.rows.length} staff accounts removed.` : `${removing.rows[0].name} can no longer log in.`);
+      removing.done?.();
+      setRemoving(null);
+      await team.reload();
     } catch (err) {
       toast.error(errorMessage(err));
     }
   };
 
-  const confirmRemove = () => {
-    if (!removing) return;
-    removing.rows.forEach((row) => removeStaff(row.id));
-    toast.success(removing.rows.length > 1 ? `${removing.rows.length} staff accounts removed.` : `${removing.rows[0].name} can no longer log in.`);
-    removing.done?.();
-    setRemoving(null);
-    setTick((n) => n + 1);
-  };
-
-  const toggleActive = (row: StaffAccount) => {
-    setStaffActive(row.id, !row.active);
-    toast.success(row.active ? `${row.name} is deactivated.` : `${row.name} can log in again.`);
-    setTick((n) => n + 1);
+  const toggleActive = async (row: StaffMember) => {
+    try {
+      await updateStaff(row.id, {
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        assignedListingIds: row.assignedListingIds,
+        active: !row.active,
+      });
+      toast.success(row.active ? `${row.name} is deactivated.` : `${row.name} can log in again.`);
+      await team.reload();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
   };
 
   if (user?.role !== 'business_owner') return <Navigate to="/business-dashboard" replace />;
   if (listings.error) return <ErrorState message={listings.error} onRetry={listings.reload} />;
-  if (listings.loading) return <Loading />;
+  if (team.error) return <ErrorState message={team.error} onRetry={team.reload} />;
+  if (listings.loading || team.loading) return <Loading />;
 
   return (
     <>
@@ -174,7 +188,7 @@ export default function StaffPage() {
         open={!!editing}
         onClose={() => setEditing(null)}
         title={editing === 'new' ? 'Add staff' : `Edit ${form.name || 'staff'}`}
-        footer={<><Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={save}>{editing === 'new' ? 'Save' : 'Save changes'}</Button></>}
+        footer={<><Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={save} loading={saving}>{editing === 'new' ? 'Save' : 'Save changes'}</Button></>}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><Input label="Full name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} /></div>

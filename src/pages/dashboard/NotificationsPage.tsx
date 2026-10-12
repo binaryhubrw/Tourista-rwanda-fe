@@ -5,7 +5,7 @@ import type { AppNotification, NotificationKind } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNotifications } from '@/hooks/useNotifications';
-import { markAllNotificationsRead, markNotificationRead } from '@/demo/store';
+import { markAllNotificationsRead, markNotificationRead } from '@/services';
 import { Badge, Button, EmptyState } from '@/components/ui';
 import { FilterTabs, PageHeader, StatCard, StatGrid } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
@@ -25,7 +25,7 @@ const kindMeta: Record<NotificationKind, { label: string; icon: typeof Bell; ton
 export default function NotificationsPage() {
   useDocumentTitle('Notifications');
   const { user } = useAuth();
-  const items = useNotifications(user!);
+  const { items } = useNotifications(user!);
   const [view, setView] = useState<View>('all');
   const unread = items.filter((n) => !n.readAt).length;
   const visible = view === 'unread' ? items.filter((n) => !n.readAt) : view === 'read' ? items.filter((n) => n.readAt) : items;
@@ -35,7 +35,7 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notifications"
         intro="Updates on bookings, payments, refunds and reviews."
-        action={unread ? <Button variant="secondary" size="sm" onClick={() => markAllNotificationsRead(user!.id)}><CheckCheck className="h-4 w-4" aria-hidden />Mark all read</Button> : undefined}
+        action={unread ? <Button variant="secondary" size="sm" onClick={() => markAllNotificationsRead()}><CheckCheck className="h-4 w-4" aria-hidden />Mark all read</Button> : undefined}
       />
       <StatGrid columns={3} className="mb-6">
         <StatCard label="All" icon={Bell} value={items.length} />

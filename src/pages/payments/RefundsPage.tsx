@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import { RotateCcw, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import type { Refund, RefundStage } from '@/types';
 import { DataTable, FilterTabs, PageHeader, RefundStageBadge, StatCard, StatGrid, type Column } from '@/components/dashboard';
-import { getBookings, getBusinessesByOwner } from '@/services';
-import { demoBookings, demoRefunds } from '@/demo/store';
-import { isDemoTouristBooking } from '@/demo/activity';
+import { getBookings, getBusinessesByOwner, getRefunds } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
@@ -21,23 +19,17 @@ export default function RefundsPage() {
   const { user } = useAuth();
   const base = dashboardPathFor(user!.role);
   const { data, loading, error, reload } = useAsync(async () => {
-    const refunds = demoRefunds();
     if (user!.role === 'admin') {
-      const bookings = await getBookings();
+      const [refunds, bookings] = await Promise.all([getRefunds(), getBookings()]);
       return { refunds, bookings };
     }
     if (user!.role === 'tourist') {
-      const mine = await getBookings({ userId: user!.id });
-      const byId = new Map(mine.map((b) => [b.id, b]));
-      demoBookings().filter(isDemoTouristBooking).forEach((b) => { if (!byId.has(b.id)) byId.set(b.id, b); });
-      const bookings = [...byId.values()];
-      const ids = new Set(bookings.map((b) => b.id));
-      return { refunds: refunds.filter((r) => ids.has(r.bookingId)), bookings };
+      const [refunds, bookings] = await Promise.all([getRefunds(), getBookings({ userId: user!.id })]);
+      return { refunds, bookings };
     }
     const listings = await getBusinessesByOwner(user!.ownerId ?? user!.id);
-    const bookings = await getBookings({ businessIds: listings.map((b) => b.id) });
-    const ids = new Set(bookings.map((b) => b.id));
-    return { refunds: refunds.filter((r) => ids.has(r.bookingId)), bookings };
+    const [refunds, bookings] = await Promise.all([getRefunds(), getBookings({ businessIds: listings.map((b) => b.id) })]);
+    return { refunds, bookings };
   }, [user?.id, user?.role]);
   const [filter, setFilter] = useState<Filter>('all');
 

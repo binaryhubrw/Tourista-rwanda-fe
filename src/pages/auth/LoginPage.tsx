@@ -7,7 +7,6 @@ import { errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Button, Input, LoadingOverlay, buttonClass } from '@/components/ui';
 import { AuthShell } from './AuthShell';
-import { DEMO_STAFF_LOGIN } from '@/demo/staff';
 
 export default function LoginPage() {
   useDocumentTitle('Log in');
@@ -60,17 +59,6 @@ export default function LoginPage() {
         <Button ref={submitRef} type="submit" loading={loading} className="w-full">Log in</Button>
         <Link to="/register" state={from ? { from } : undefined} className={buttonClass('secondary', 'md', 'w-full')}>Create account</Link>
         <p className="text-center text-sm text-slate-600">Have a tourism business? <Link to="/register/business" className="font-semibold text-brand-600 hover:underline">Register a business</Link></p>
-        <div className="border-t border-slate-100 pt-3">
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">Demo account</p>
-          <button
-            type="button"
-            onClick={() => { setEmail(DEMO_STAFF_LOGIN.email); setPassword(DEMO_STAFF_LOGIN.password); setError(''); }}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:border-brand-200 hover:bg-brand-50"
-          >
-            <span className="block text-xs font-bold text-ink">{DEMO_STAFF_LOGIN.label}</span>
-            <span className="block truncate text-[11px] text-slate-500">{DEMO_STAFF_LOGIN.email}</span>
-          </button>
-        </div>
       </form>
     </AuthShell>
   );

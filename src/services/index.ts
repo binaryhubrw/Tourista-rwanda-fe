@@ -8,4 +8,8 @@ export * from './favoriteService';
 export * from './statisticsService';
 export * from './searchService';
 export * from './userService';
+export * from './staffService';
+export * from './notificationService';
+export * from './refundService';
+export * from './feeService';
 export * as authService from './authService';

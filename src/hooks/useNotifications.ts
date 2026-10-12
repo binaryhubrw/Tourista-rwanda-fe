@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { User } from '@/types';
-import { notificationsFor, unreadNotificationCount } from '@/demo/store';
+import { NOTIFY_EVENT, getNotifications, getUnreadNotificationCount } from '@/services';
+import { useAsync } from './useAsync';
 
 export function useNotifications(user: User) {
-  const [items, setItems] = useState(() => notificationsFor(user));
+  const list = useAsync(getNotifications, [user.id]);
+
   useEffect(() => {
-    const sync = () => setItems(notificationsFor(user));
-    sync();
-    window.addEventListener('tourista-demo', sync);
-    return () => window.removeEventListener('tourista-demo', sync);
-  }, [user.id]);
-  return items;
+    const sync = () => list.reload();
+    window.addEventListener(NOTIFY_EVENT, sync);
+    return () => window.removeEventListener(NOTIFY_EVENT, sync);
+  }, [list.reload]);
+
+  return { items: list.data ?? [], reload: list.reload, loading: list.loading, error: list.error };
 }
 
 export function useUnreadNotificationCount(user: User) {
-  const [count, setCount] = useState(() => unreadNotificationCount(user));
+  const count = useAsync(getUnreadNotificationCount, [user.id]);
+
   useEffect(() => {
-    const sync = () => setCount(unreadNotificationCount(user));
-    sync();
-    window.addEventListener('tourista-demo', sync);
-    return () => window.removeEventListener('tourista-demo', sync);
-  }, [user.id]);
-  return count;
+    const sync = () => count.reload();
+    window.addEventListener(NOTIFY_EVENT, sync);
+    const timer = window.setInterval(sync, 30_000);
+    return () => {
+      window.removeEventListener(NOTIFY_EVENT, sync);
+      window.clearInterval(timer);
+    };
+  }, [count.reload]);
+
+  return count.data ?? 0;
 }

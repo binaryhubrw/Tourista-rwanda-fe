@@ -157,7 +157,7 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel, pa
           <p className="mt-3 text-sm text-slate-500">No prompt? Dial {method === 'mtn' ? '*182*7*1#' : '*182*6#'} to see pending approvals. Request expires in <span className="font-semibold tabular-nums text-ink">{countdown}s</span>.</p>
           <Button variant="ghost" size="sm" className="mt-3" onClick={() => setPhase('form')}>Change number or method</Button>
         </div>
-        {/* Simulated handset, so the flow can be completed in the demo. */}
+        {/* Simulated handset for the mobile-money PIN prompt. */}
         <div className="mx-auto w-full max-w-[240px] rounded-[28px] border-[6px] border-ink bg-white p-4 shadow-lift" aria-label="Simulated phone">
           <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">Simulated phone</p>
           <div className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-ink">
@@ -227,7 +227,7 @@ export function PaymentForm({ amountRwf, defaultPhone = '', onPaid, payLabel, pa
           <Input label="Expiry" inputMode="numeric" autoComplete="cc-exp" placeholder="MM/YY" value={card.expiry} onChange={(e) => setCard({ ...card, expiry: e.target.value.replace(/[^\d/]/g, '').replace(/^(\d{2})(\d)/, '$1/$2').slice(0, 5) })} error={errors.expiry} />
           <Input label="CVC" inputMode="numeric" autoComplete="cc-csc" placeholder="123" value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })} error={errors.cvc} />
           <p className="text-xs text-slate-500 sm:col-span-2">
-            Demo: use <button type="button" className="font-mono font-semibold text-brand-600 underline" onClick={() => setCard({ number: TEST_CARD, name: card.name || 'Test Traveller', expiry: card.expiry || '12/30', cvc: card.cvc || '123' })}>{TEST_CARD}</button> to succeed, or <span className="font-mono">{DECLINED_CARD}</span> to see a decline.
+            Test card: use <button type="button" className="font-mono font-semibold text-brand-600 underline" onClick={() => setCard({ number: TEST_CARD, name: card.name || 'Test Traveller', expiry: card.expiry || '12/30', cvc: card.cvc || '123' })}>{TEST_CARD}</button> to succeed, or <span className="font-mono">{DECLINED_CARD}</span> to see a decline.
           </p>
         </div>
       ) : (

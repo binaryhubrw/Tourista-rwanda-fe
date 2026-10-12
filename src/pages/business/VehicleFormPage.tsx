@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import type { Service } from '@/types';
-import { saveVehicle } from '@/demo/store';
+import { updateBusiness } from '@/services';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { errorMessage } from '@/hooks/useAsync';
 import { useToast } from '@/context/ToastContext';
 import { Button, ButtonLink, ErrorState, Loading, Select } from '@/components/ui';
 import { PageHeader } from '@/components/dashboard';
@@ -93,7 +94,7 @@ export default function VehicleFormPage() {
     );
   }, [selectedListing, creating, serviceId]);
 
-  const save = () => {
+  const save = async () => {
     const er: Record<string, string> = {};
     if (!listingId) er.listing = 'Choose a branch.';
     const seen = new Set<string>();
@@ -118,12 +119,20 @@ export default function VehicleFormPage() {
     });
     const entries = [...groups.values()];
     setSaving(true);
-    entries.forEach((group, index) => {
-      const id = !creating && index === 0 ? serviceId : makeId('veh');
-      saveVehicle(selectedListing.id, toService(id, group));
-    });
-    toast.success(creating ? (cars.length > 1 ? `${cars.length} cars added.` : 'Vehicle added.') : 'Vehicle updated.');
-    navigate(backTo);
+    try {
+      let services = [...selectedListing.services];
+      entries.forEach((group, index) => {
+        const id = !creating && index === 0 ? serviceId : makeId('veh');
+        const next = toService(id, group);
+        services = services.some((s) => s.id === next.id) ? services.map((s) => (s.id === next.id ? next : s)) : [...services, next];
+      });
+      await updateBusiness(selectedListing.id, { services });
+      toast.success(creating ? (cars.length > 1 ? `${cars.length} cars added.` : 'Vehicle added.') : 'Vehicle updated.');
+      navigate(backTo);
+    } catch (e) {
+      toast.error(errorMessage(e));
+      setSaving(false);
+    }
   };
 
   if (biz.loading || !hydrated) return <Loading />;

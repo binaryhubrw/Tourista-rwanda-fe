@@ -151,8 +151,8 @@ const businessInterests = (b: Business): Interest[] =>
 export function buildExploreItems(locations: Location[], experiences: Experience[], businesses: Business[], bookings: Booking[] = []): ExploreItem[] {
   const provinceOf = (locationId: string) => locations.find((l) => l.id === locationId)?.province ?? 'Rwanda';
   const openBusinesses = businesses.filter((business) => hasAvailability(business, bookings));
-  const vehicleItems = openBusinesses.flatMap((business) =>
-    availableServices(business.services, bookings)
+  const vehicleItems = businesses.flatMap((business) =>
+    business.services
       .filter((service) => service.group === 'vehicle')
       .map<ExploreItem>((service) => ({
         key: `v-${service.id}`, type: 'service', node: service, business, kind: 'vehicle',
@@ -197,17 +197,16 @@ export const sortOptions: { value: SortKey; label: string }[] = [
 ];
 
 /** Home page order when the sort is Recommended. Later kinds keep the normal ranking. */
-const FEATURED_KINDS = ['House', 'Hotel', 'Lodge', 'Guesthouse', 'Restaurant', 'Bar', 'Massage'];
+const FEATURED_KINDS = ['Vehicle', 'House', 'Hotel', 'Lodge', 'Guesthouse', 'Restaurant', 'Bar', 'Massage'];
 
 export function featuredRank(item: ExploreItem): number {
   const last = FEATURED_KINDS.length;
   if (item.type === 'business') {
-    if (item.node.id === 'demo-kigali-car-hire') return 0;
     const index = FEATURED_KINDS.indexOf(item.node.listingKind ?? '');
     return index >= 0 ? index : last;
   }
   if (item.type === 'service') {
-    if (item.kind === 'vehicle') return 0;
+    if (item.kind === 'vehicle') return FEATURED_KINDS.indexOf('Vehicle');
     if (item.node.category === 'Bar') return FEATURED_KINDS.indexOf('Bar');
     if (item.node.category === 'Massage') return FEATURED_KINDS.indexOf('Massage');
   }
