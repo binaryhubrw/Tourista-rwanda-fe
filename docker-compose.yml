@@ -1,0 +1,8 @@
+# Server stack: the frontend image published by CI (nginx serving the built SPA).
+# Build from source instead: docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  web:
+    image: ghcr.io/binaryhubrw/tourista-rwanda-fe:${IMAGE_TAG:-production}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3020}:80"
