@@ -119,6 +119,9 @@ export type SustainabilityBadge = 'Eco-certified' | 'Community-owned' | 'Women-l
 
 export type PropertyType = 'Hotel' | 'Lodge' | 'Guesthouse' | 'House' | 'Apartment';
 
+/** Owner-created listings wait for admin review. Missing status counts as approved. */
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 /** How an offering is grouped on a listing. Every listing uses the same groups. */
 export type OfferingGroup = 'room' | 'wellness' | 'food' | 'activity' | 'vehicle';
 
@@ -185,6 +188,11 @@ export interface Business {
   propertyType?: PropertyType;
   /** Extra photos; `image` is the cover. */
   gallery?: string[];
+  approvalStatus?: ApprovalStatus;
+  rejectionReason?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
 }
 
 export interface Accommodation extends Business {
@@ -395,6 +403,8 @@ export interface Favorite {
 }
 
 export interface TourismStatistics {
+  /** Listings waiting for admin review (pending + rejected). */
+  pendingBusinesses?: number;
   totals: {
     tourists: number;
     locations: number;

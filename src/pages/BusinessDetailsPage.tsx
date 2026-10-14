@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MapPin, Phone, Mail, Leaf, ChevronLeft, User, Users, BedDouble, DoorOpen, Check, Search } from 'lucide-react';
 import { getAvailability, getBusinessById } from '@/services';
+import { useAuth } from '@/context/AuthContext';
+import { isListingLive } from '@/utils/approval';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FavoriteButton } from '@/components/cards';
@@ -27,6 +29,7 @@ export default function BusinessDetailsPage() {
   const { id = '' } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => {
     const [b, bookings] = await Promise.all([getBusinessById(id), getAvailability({ businessId: id })]);
     return { b, bookings: bookings.filter((item) => item.businessId === id || item.targetId === id) };
@@ -66,6 +69,7 @@ export default function BusinessDetailsPage() {
   if (loading) return <Loading label="Loading business" />;
   if (error?.includes('not found')) return <NotFoundPage what="business" />;
   if (error || !b || !data) return <Container className="py-16"><ErrorState message={error ?? undefined} onRetry={reload} /></Container>;
+  if (!isListingLive(b) && user?.role !== 'admin' && user?.id !== b.ownerId) return <NotFoundPage what="business" />;
 
   const acc = b.category === 'Accommodation' ? (b as Accommodation) : null;
   const rest = b.category === 'Restaurants' ? (b as Restaurant) : null;

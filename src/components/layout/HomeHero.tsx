@@ -109,7 +109,7 @@ export function HomeHero({ initialQuery = '', initialStart = '', initialEnd = ''
             initialScope={initialScope}
             initialService={initialService}
           />
-          <p className="mt-3 text-center text-sm text-slate-500">Set dates, choose hotels, food, cars or services, then search for what is still free</p>
+          <p className="mt-3 text-center text-sm text-slate-500">Set dates, tick the services you want, then search for what is still free</p>
         </div>
       </Container>
     </div>

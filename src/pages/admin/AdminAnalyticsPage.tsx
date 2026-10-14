@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Users, Home, Plane, TrendingUp, Building2, Leaf, CalendarCheck, Wallet } from 'lucide-react';
+import { Users, Home, Plane, TrendingUp, Building2, Leaf, CalendarCheck, Wallet, Clock } from 'lucide-react';
+import { listingApproval } from '@/utils/approval';
 import type { Location, PaymentMethod } from '@/types';
 import { getBookings, getBusinesses, getLocations, getTourismStatistics } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
@@ -125,7 +126,8 @@ export default function AdminAnalyticsPage() {
       {view === 'businesses' && (
         <>
           <StatGrid>
-            <StatCard label="Businesses" icon={Building2} value={businesses.length} hint={`${businesses.filter((b) => b.category === 'Accommodation').length} places to stay`} />
+            <StatCard label="Live listings" icon={Building2} value={data.stats.totals.businesses} hint={`${businesses.filter((b) => listingApproval(b) === 'approved').length} approved in this view`} to="/admin/businesses" />
+            <StatCard label="Awaiting review" icon={Clock} tone="amber" value={data.stats.pendingBusinesses ?? businesses.filter((b) => listingApproval(b) !== 'approved').length} hint="Pending and sent-back listings" to="/admin/businesses?review=pending" />
             <StatCard label="Kinds" icon={Home} tone="teal" value={byKind.length} hint="Houses, hotels, restaurants and the rest" />
             <StatCard label="Eco-certified" icon={Leaf} tone="violet" value={businesses.filter((b) => b.badges.includes('Eco-certified')).length} />
             <StatCard label="Average rating" icon={TrendingUp} tone="amber" value={rated.length ? average(rated.map((b) => b.rating)).toFixed(2) : '—'} />

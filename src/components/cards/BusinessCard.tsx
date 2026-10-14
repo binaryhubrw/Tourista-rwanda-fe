@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Leaf, Phone } from 'lucide-react';
+import { MapPin, Leaf } from 'lucide-react';
 import type { Business } from '@/types';
 import { Badge, Rating, SmartImage, buttonClass } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
@@ -54,9 +54,6 @@ export function BusinessCard({ business, showActions = true, checkin = '', check
           <div className="mt-auto flex flex-wrap gap-2 pt-4">
             <Link to={href} className={buttonClass('secondary', 'sm')}>View details</Link>
             <Link to={href} className={buttonClass('primary', 'sm')}>Book</Link>
-            <a href={`tel:${business.phone.replace(/\s/g, '')}`} className={buttonClass('ghost', 'sm')} aria-label={`Call ${business.name}`}>
-              <Phone className="h-4 w-4" aria-hidden /> Contact
-            </a>
           </div>
         )}
       </div>

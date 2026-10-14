@@ -121,33 +121,53 @@ export function openToday(service: Service, bookings: Booking[]) {
   return remaining(service, bookings, today, addDaysIso(today, 1)) > 0;
 }
 
-/** Inclusive last day becomes the exclusive occupancy end used by remaining(). */
-export function inventoryWindow(service: Pick<Service, 'unit'>, start: string, end: string) {
-  const from = start;
-  if (pricingMode(service.unit) === 'stay') {
-    const checkout = !end || end <= start ? addDaysIso(start, 1) : end;
-    return { start: from, end: checkout };
-  }
-  const last = !end || end < start ? start : end;
-  return { start: from, end: addDaysIso(last, 1) };
+function bookingsForListingId(bookings: Booking[], listingId?: string) {
+  if (!listingId) return bookings;
+  return bookings.filter((booking) => booking.businessId === listingId || booking.targetId === listingId);
 }
 
-/** True when at least one unit is free on every day this offering occupies in the range. */
-export function isAvailableInRange(service: Service, bookings: Booking[], start?: string, end?: string) {
-  if (!start) return openToday(service, bookings);
+/** Check-in / check-out window. Checkout morning is free, same as a hotel stay. */
+export function inventoryWindow(_service: Pick<Service, 'unit'> | undefined, start: string, end: string) {
+  const checkout = !end || end <= start ? addDaysIso(start, 1) : end;
+  return { start, end: checkout };
+}
+
+function freeOnDay(service: Service, bookings: Booking[], iso: string) {
+  const dayEnd = addDaysIso(iso, 1);
+  if (service.available != null && remaining(service, bookings, iso, dayEnd) <= 0) return false;
+  if (service.group !== 'vehicle') return true;
+  const fleet = vehiclePlates(service);
+  if (!fleet.length) return true;
+  return assignVehiclePlates(service, 1, bookings, iso, dayEnd).length > 0;
+}
+
+/** True when a traveller can still book this offering for the trip. Rooms and cars need every night; meals and extras need any day in the stay. */
+export function isAvailableInRange(service: Service, bookings: Booking[], start?: string, end?: string, listingId?: string) {
+  const mine = bookingsForListingId(bookings, listingId);
+  if (!start) return openToday(service, mine);
   const span = inventoryWindow(service, start, end ?? '');
   if (span.end <= span.start) return false;
+  const days = eachIso(span.start, span.end);
+  if (!days.length) return false;
+  const mode = pricingMode(service.unit);
+  if (mode === 'stay' || mode === 'rental' || service.group === 'vehicle') {
+    if (!days.every((iso) => freeOnDay(service, mine, iso))) return false;
+    if (service.group === 'vehicle' && vehiclePlates(service).length) {
+      return assignVehiclePlates(service, 1, mine, span.start, span.end).length > 0;
+    }
+    return true;
+  }
   if (service.available == null) return true;
-  return eachIso(span.start, span.end).every((iso) => remaining(service, bookings, iso, addDaysIso(iso, 1)) > 0);
+  return days.some((iso) => freeOnDay(service, mine, iso));
 }
 
 /** Services a traveller can still book. Without dates, that means today. */
-export function availableServices(services: Service[], bookings: Booking[], start?: string, end?: string) {
-  return services.filter((service) => isAvailableInRange(service, bookings, start, end));
+export function availableServices(services: Service[], bookings: Booking[], start?: string, end?: string, listingId?: string) {
+  return services.filter((service) => isAvailableInRange(service, bookings, start, end, listingId));
 }
 
-export function hasAvailability(business: Pick<Business, 'services'>, bookings: Booking[], start?: string, end?: string) {
-  return availableServices(business.services, bookings, start, end).length > 0;
+export function hasAvailability(business: Pick<Business, 'id' | 'services'>, bookings: Booking[], start?: string, end?: string) {
+  return availableServices(business.services, bookings, start, end, business.id).length > 0;
 }
 
 export function bookingsForService(serviceId: string, bookings: Booking[]) {

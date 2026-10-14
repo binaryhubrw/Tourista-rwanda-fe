@@ -1,5 +1,5 @@
 import type { Booking, BookingStatus, Payment, PaymentMethod, User } from '@/types';
-import { api } from './apiClient';
+import { api, apiBlob } from './apiClient';
 
 export async function getBookingById(id: string): Promise<Booking> {
   return api.get<Booking>(`/bookings/${id}/`);
@@ -70,4 +70,12 @@ export async function submitOfflinePayment(
 
 export function bookingBelongsToUser(booking: Pick<Booking, 'userId' | 'customerEmail'>, user: Pick<User, 'id' | 'email'>) {
   return booking.userId === user.id || booking.customerEmail.toLowerCase() === user.email.toLowerCase();
+}
+
+export async function downloadBookingInvoice(id: string) {
+  return apiBlob(`/bookings/${id}/invoice/`);
+}
+
+export async function emailBookingInvoice(id: string) {
+  return api.post<{ sentTo: string }>(`/bookings/${id}/invoice/send/`, {});
 }

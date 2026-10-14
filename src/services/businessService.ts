@@ -1,4 +1,4 @@
-import type { Business, User } from '@/types';
+import type { ApprovalStatus, Business, User } from '@/types';
 import { api } from './apiClient';
 import { getStoredUser } from './authService';
 import type { PayoutTarget } from '@/utils/payment';
@@ -10,8 +10,9 @@ function scoped(list: Business[], user: User | null) {
   return list.filter((b) => allowed.has(b.id));
 }
 
-export async function getBusinesses(): Promise<Business[]> {
-  return api.get<Business[]>('/businesses/');
+export async function getBusinesses(filter: { approvalStatus?: ApprovalStatus } = {}): Promise<Business[]> {
+  const qs = filter.approvalStatus ? `?approvalStatus=${filter.approvalStatus}` : '';
+  return api.get<Business[]>(`/businesses/${qs}`);
 }
 
 export async function getBusinessById(id: string): Promise<Business> {
@@ -29,7 +30,19 @@ export async function getPayoutForBusiness(businessId: string): Promise<PayoutTa
   return api.get<PayoutTarget>(`/businesses/${businessId}/payout/`);
 }
 
-export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'createdAt'>;
+export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'createdAt' | 'approvalStatus' | 'rejectionReason' | 'submittedAt' | 'reviewedAt' | 'reviewedBy'>;
+
+export async function approveBusiness(id: string): Promise<Business> {
+  const updated = await api.post<Business>(`/businesses/${id}/approve/`, {});
+  announceCatalog();
+  return updated;
+}
+
+export async function rejectBusiness(id: string, reason: string): Promise<Business> {
+  const updated = await api.post<Business>(`/businesses/${id}/reject/`, { reason });
+  announceCatalog();
+  return updated;
+}
 
 export async function createBusiness(input: BusinessInput): Promise<Business> {
   const created = await api.post<Business>('/businesses/', input);

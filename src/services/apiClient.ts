@@ -42,8 +42,31 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 
 export const api = {
   get: <T>(p: string) => apiRequest<T>(p),
-  post: <T>(p: string, body: unknown) => apiRequest<T>(p, { method: 'POST', body: JSON.stringify(body) }),
+  post: <T>(p: string, body?: unknown) => apiRequest<T>(p, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
   put: <T>(p: string, body: unknown) => apiRequest<T>(p, { method: 'PUT', body: JSON.stringify(body) }),
   patch: <T>(p: string, body: unknown) => apiRequest<T>(p, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(p: string) => apiRequest<T>(p, { method: 'DELETE' }),
 };
+
+/** PDF and other non-JSON downloads. Sends the same auth header as `apiRequest`. */
+export async function apiBlob(path: string): Promise<{ blob: Blob; filename: string }> {
+  const raw = localStorage.getItem(TOKEN_KEY);
+  const token = raw && !raw.startsWith('mock.') && !raw.startsWith('demo.') ? raw : null;
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    if (res.status === 401 && token) expireSession();
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      message = body.detail ?? body.message ?? message;
+    } catch { /* non-JSON error body */ }
+    const err: ApiError = { message, status: res.status };
+    throw err;
+  }
+  const blob = await res.blob();
+  const match = /filename\*?=(?:UTF-8''|")?([^\";]+)/i.exec(res.headers.get('Content-Disposition') ?? '');
+  const filename = match ? decodeURIComponent(match[1].replace(/["']/g, '')) : 'download.pdf';
+  return { blob, filename };
+}

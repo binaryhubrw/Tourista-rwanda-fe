@@ -7,9 +7,10 @@ import { BusinessCard, ServiceCard } from '@/components/cards';
 import { FilterButton, FilterPanel, type FilterGroup, type FilterValues } from '@/components/FilterPanel';
 import { Button, DatePicker, EmptyState, ErrorState, fieldClass } from '@/components/ui';
 import { ExploreReveal } from '@/components/ExploreReveal';
+import type { Booking } from '@/types';
 import {
-  EXPLORE_SCOPES, buildExploreItems, businessHasService, businessMatchesScope, exploreDatesFromSearch, featuredRank, locationHaystack, normalizeExploreScope, normalizeExploreService, sortItems, sortOptions, termsMatch, writeExploreDates,
-  type ExploreItem, type SortKey,
+  EXPLORE_SCOPES, buildExploreItems, businessHasAvailableServices, businessMatchesScope, exploreDatesFromSearch, featuredRank, locationHaystack, normalizeExploreScope, parseExploreServices, scopeHasAvailability, sortItems, sortOptions, termsMatch, writeExploreDates,
+  type ExploreItem, type ExploreScope, type SortKey,
 } from '@/utils/explore';
 import { formatDate, todayIso } from '@/utils/format';
 import { addDaysIso } from '@/utils/pricing';
@@ -29,8 +30,8 @@ const groups: FilterGroup[] = [
   { id: 'sustainable', label: 'Sustainable tourism', type: 'checkbox', options: [{ value: 'yes', label: 'Eco-certified or community-led only' }] },
 ];
 
-function selectedScopes(f: FilterValues) {
-  return (f.category ?? []).map((value) => normalizeExploreScope(value)).filter(Boolean);
+function selectedScopes(f: FilterValues): ExploreScope[] {
+  return (f.category ?? []).map((value) => normalizeExploreScope(value)).filter((scope): scope is ExploreScope => Boolean(scope));
 }
 
 function applyFilters(
@@ -40,21 +41,25 @@ function applyFilters(
   locationId: string,
   locationDistrict: string,
   placeHits: { id: string; district: string }[],
-  service: string,
+  services: string[],
+  bookings: Booking[],
+  start?: string,
+  end?: string,
 ) {
   const scopes = selectedScopes(f);
   const wantVehicles = !scopes.length || scopes.includes('vehicles');
   const wantBusinesses = !scopes.length || scopes.some((scope) => scope !== 'vehicles');
+  const extras = services.filter(Boolean);
   return items.filter((it) => {
     const listing = it.type === 'business' ? it.node : it.type === 'service' ? it.business : null;
     if (!listing) return false;
     if (it.type === 'service' && it.kind === 'vehicle') {
-      if (service || !wantVehicles) return false;
+      if (extras.length || !wantVehicles) return false;
     } else if (it.type === 'business') {
       if (!wantBusinesses) return false;
-      if (service) {
-        if (!businessHasService(listing, service)) return false;
-      } else if (scopes.length && !scopes.some((scope) => businessMatchesScope(listing, scope))) return false;
+      if (extras.length && !businessHasAvailableServices(listing, extras, bookings, start, end)) return false;
+      const scopesToMatch = extras.length ? scopes.filter((scope) => scope !== 'services') : scopes;
+      if (scopesToMatch.length && !scopesToMatch.some((scope) => businessMatchesScope(listing, scope) && scopeHasAvailability(listing, scope, bookings, start, end))) return false;
     } else {
       return false;
     }
@@ -98,7 +103,8 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const qParam = params.get('q') ?? '';
   const scopeParam = params.get('scope') ?? '';
   const locationParam = params.get('location') ?? '';
-  const serviceParam = normalizeExploreService(params.get('service'));
+  const serviceParam = parseExploreServices(params.get('service'));
+  const serviceKey = serviceParam.join(',');
   const { start: checkin, end: checkout } = exploreDatesFromSearch(params);
 
   useEffect(() => { setQuery(qParam); }, [qParam]);
@@ -133,15 +139,15 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   }, [data, checkin, checkout]);
 
   const results = useMemo(() => {
-    const sorted = sortItems(applyFilters(items, query, filters, locationParam, locationDistrict, placeHits, serviceParam), sort);
+    const sorted = sortItems(applyFilters(items, query, filters, locationParam, locationDistrict, placeHits, serviceParam, data?.bookings ?? [], checkin, checkout), sort);
     if (!featuredFirst || sort !== 'recommended') return sorted;
     return [...sorted].sort((a, b) => featuredRank(a) - featuredRank(b));
-  }, [items, query, filters, sort, featuredFirst, locationParam, locationDistrict, placeHits, serviceParam]);
+  }, [items, query, filters, sort, featuredFirst, locationParam, locationDistrict, placeHits, serviceKey, data?.bookings, checkin, checkout]);
   const visible = results.slice(0, visibleCount);
   const hasMore = visibleCount < results.length;
   const activeCount = Object.values(filters).reduce((s, v) => s + v.length, 0);
 
-  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize, locationParam, serviceParam, checkin, checkout]);
+  useEffect(() => { setVisibleCount(pageSize); }, [query, filters, sort, pageSize, locationParam, serviceKey, checkin, checkout]);
 
   useEffect(() => {
     if (!hasMore) return;
@@ -174,7 +180,6 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
     const next = new URLSearchParams(params);
     const scope = category.length === 1 ? normalizeExploreScope(category[0]) : '';
     if (scope) next.set('scope', scope); else next.delete('scope');
-    next.delete('service');
     setParams(next, { replace: true });
   };
 
@@ -223,7 +228,6 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
           const nextParams = new URLSearchParams(params);
           const scope = (next.category ?? []).length === 1 ? normalizeExploreScope(next.category![0]) : '';
           if (scope) nextParams.set('scope', scope); else nextParams.delete('scope');
-          nextParams.delete('service');
           setParams(nextParams, { replace: true });
         }} open={sheetOpen} onClose={() => setSheetOpen(false)} resultCount={loading ? -1 : results.length} />
         <div>
@@ -236,9 +240,9 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
               );
             })}
           </div>
-          {serviceParam && (
+          {serviceParam.length > 0 && (
             <p className="mb-3 text-sm text-slate-600">
-              Businesses offering {serviceParam}.{' '}
+              Businesses offering {serviceParam.join(', ')}.{' '}
               <button type="button" onClick={clearService} className="font-semibold text-brand-600 hover:underline">Show all services</button>
             </p>
           )}
@@ -259,7 +263,11 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
           )}
           <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:max-w-md">
             <DatePicker compact label="From" placeholder="Start date" min={todayIso()} value={checkin} onChange={onCheckin} />
-            <DatePicker compact label="To" placeholder="End date" min={checkin || todayIso()} value={checkout} onChange={(iso) => setDates(checkin, iso)} />
+            <DatePicker compact label="To" placeholder="End date" min={checkin || todayIso()} value={checkout} onChange={(iso) => {
+              if (!iso) { setDates(checkin, ''); return; }
+              if (!checkin) setDates(iso, addDaysIso(iso, 1));
+              else setDates(checkin, iso <= checkin ? addDaysIso(checkin, 1) : iso);
+            }} />
           </div>
           {checkin && (
             <p className="mb-3 text-sm text-slate-600">

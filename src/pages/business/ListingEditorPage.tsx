@@ -11,6 +11,7 @@ import { ButtonLink, ErrorState, Loading } from '@/components/ui';
 import { BusinessForm } from './BusinessForm';
 import { useOwnerBusinesses } from './useOwnerBusinesses';
 import type { BusinessInput } from '@/services/businessService';
+import { listingApproval } from '@/utils/approval';
 
 export default function ListingEditorPage() {
   const { id } = useParams();
@@ -31,10 +32,10 @@ export default function ListingEditorPage() {
     try {
       if (creating) {
         const created = await createBusiness(input);
-        toast.success(`${created.name} is now a branch.`);
+        toast.success(listingApproval(created) === 'pending' ? `${created.name} was sent for review. Travellers will see it once an admin approves it.` : `${created.name} is now a branch.`);
       } else if (listing) {
-        await updateBusiness(listing.id, input);
-        toast.success('Branch updated.');
+        const updated = await updateBusiness(listing.id, input);
+        toast.success(listingApproval(listing) === 'rejected' || listingApproval(updated) === 'pending' ? 'Changes sent for review.' : 'Branch updated.');
       }
       back();
     } catch (e) {
@@ -62,7 +63,11 @@ export default function ListingEditorPage() {
       <ButtonLink to="/business-dashboard/business" variant="ghost" className="mb-3 -ml-2 w-fit"><ChevronLeft className="h-4 w-4" aria-hidden />Back to branches</ButtonLink>
       <PageHeader
         title={creating ? 'Add a branch' : `Edit ${listing!.name}`}
-        intro={creating ? 'Choose the kind of branch first. The questions below follow what you choose.' : 'Change what travellers see, then save.'}
+        intro={creating
+          ? 'Choose the kind of branch first. The questions below follow what you choose. New branches wait for admin approval before travellers can see them.'
+          : listingApproval(listing!) === 'rejected'
+            ? `This branch was sent back${listing!.rejectionReason ? `: ${listing!.rejectionReason}` : '.'} Save your changes to send it for review again.`
+            : 'Change what travellers see, then save.'}
       />
       <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-7">
         <BusinessForm
@@ -74,7 +79,7 @@ export default function ListingEditorPage() {
           onSubmit={submit}
           onCancel={back}
           cancelLabel="Back to branches"
-          submitLabel={creating ? 'Publish branch' : 'Save changes'}
+          submitLabel={creating ? 'Submit for review' : listingApproval(listing!) === 'rejected' ? 'Resubmit for review' : 'Save changes'}
         />
       </div>
     </>

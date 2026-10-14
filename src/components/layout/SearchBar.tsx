@@ -1,27 +1,21 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, Store, X } from 'lucide-react';
+import { ChevronDown, Search, Store, X } from 'lucide-react';
 import { search, type SearchScope } from '@/services/searchService';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DatePicker } from '@/components/ui';
 import { todayIso } from '@/utils/format';
 import { addDaysIso } from '@/utils/pricing';
-import { EXPLORE_SCOPES, normalizeExploreScope, normalizeExploreService, writeExploreDates } from '@/utils/explore';
+import { EXPLORE_SCOPES, normalizeExploreScope, parseExploreServices, writeExploreDates, writeExploreServices } from '@/utils/explore';
 import { useOfferedServices } from '@/hooks/useOfferedServices';
 import { cn } from '@/utils/cn';
 import type { SearchResult } from '@/types';
 
-const SVC = 'svc:';
 const typeOptions = [
   { value: 'all', label: 'All listings' },
   ...EXPLORE_SCOPES.map((item) => ({ value: item.id, label: item.label })),
 ];
-
-function wantedFrom(scope: string, service: string) {
-  const extra = normalizeExploreService(service);
-  if (extra) return `${SVC}${extra}`;
-  return normalizeExploreScope(scope) || 'all';
-}
 
 function searchScopeOf(wanted: string): SearchScope {
   if (wanted === 'hotels') return 'accommodations';
@@ -59,10 +53,15 @@ export function SearchBar({
   const [query, setQuery] = useState(initialQuery);
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
-  const [wanted, setWanted] = useState(() => wantedFrom(initialScope, initialService));
+  const [wanted, setWanted] = useState(() => normalizeExploreScope(initialScope) || (parseExploreServices(initialService).length ? 'services' : 'all'));
+  const [pickedServices, setPickedServices] = useState(() => parseExploreServices(initialService));
   const [open, setOpen] = useState(false);
+  const [whatOpen, setWhatOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const whatBtnRef = useRef<HTMLButtonElement>(null);
+  const whatPanelRef = useRef<HTMLDivElement>(null);
+  const [whatPos, setWhatPos] = useState({ top: 0, left: 0, width: 320 });
   const listId = useId();
   const debounced = useDebounce(query, 150);
   const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
@@ -75,19 +74,42 @@ export function SearchBar({
       return;
     }
     let cancelled = false;
-    search(q, searchScopeOf(wanted))
+    search(q, pickedServices.length ? 'businesses' : searchScopeOf(wanted))
       .then((rows) => { if (!cancelled) setSuggestions(rows.slice(0, 6)); })
       .catch(() => { if (!cancelled) setSuggestions([]); });
     return () => { cancelled = true; };
-  }, [debounced, wanted]);
+  }, [debounced, wanted, pickedServices]);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => !wrapRef.current?.contains(e.target as Node) && setOpen(false);
+    const close = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target) || whatPanelRef.current?.contains(target)) return;
+      setOpen(false);
+      setWhatOpen(false);
+    };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
   useEffect(() => setActive(-1), [suggestions]);
+
+  useEffect(() => {
+    if (!whatOpen) return;
+    const place = () => {
+      const r = whatBtnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const width = Math.max(r.width, 320);
+      const left = Math.min(r.left, Math.max(8, window.innerWidth - width - 8));
+      setWhatPos({ top: r.bottom + 8, left, width });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [whatOpen]);
 
   const withDates = (href: string) => {
     if (!start && !end) return href;
@@ -100,6 +122,7 @@ export function SearchBar({
 
   const go = (href: string) => {
     setOpen(false);
+    setWhatOpen(false);
     onNavigate?.();
     navigate(withDates(href));
   };
@@ -107,12 +130,9 @@ export function SearchBar({
   const exploreHref = (q: string) => {
     const next = new URLSearchParams();
     if (q) next.set('q', q);
-    if (wanted.startsWith(SVC)) {
-      next.set('scope', 'services');
-      next.set('service', wanted.slice(SVC.length));
-    } else if (wanted !== 'all') {
-      next.set('scope', wanted);
-    }
+    if (wanted !== 'all') next.set('scope', wanted);
+    else if (pickedServices.length) next.set('scope', 'services');
+    writeExploreServices(next, pickedServices);
     writeExploreDates(next, start, end);
     const queryString = next.toString();
     return queryString ? `/explore?${queryString}#explore-listings` : '/explore#explore-listings';
@@ -129,23 +149,33 @@ export function SearchBar({
     if (iso && (!end || end <= iso)) setEnd(addDaysIso(iso, 1));
   };
 
-  const selectedService = wanted.startsWith(SVC) ? wanted.slice(SVC.length) : '';
-  const listedServices = selectedService && !serviceOptions.some((item) => item.id === selectedService)
-    ? [{ id: selectedService, label: selectedService }, ...serviceOptions]
-    : serviceOptions;
-  const filtersSet = Boolean(start || end || wanted !== 'all');
+  const listedServices = useMemo(() => {
+    const extra = pickedServices.filter((id) => !serviceOptions.some((item) => item.id === id));
+    return [...extra.map((id) => ({ id, label: id })), ...serviceOptions];
+  }, [pickedServices, serviceOptions]);
+  const filtersSet = Boolean(start || end || wanted !== 'all' || pickedServices.length);
+  const whatLabel = pickedServices.length
+    ? (wanted !== 'all' && wanted !== 'services'
+      ? `${typeOptions.find((o) => o.value === wanted)?.label ?? wanted} · ${pickedServices.length === 1 ? pickedServices[0] : `${pickedServices.length} services`}`
+      : pickedServices.length === 1 ? pickedServices[0] : `${pickedServices.length} services`)
+    : (typeOptions.find((o) => o.value === wanted)?.label ?? 'All listings');
+  const toggleService = (id: string) => {
+    setPickedServices((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  };
   const clearFilters = () => {
     setOpen(false);
+    setWhatOpen(false);
     setStart('');
     setEnd('');
     setWanted('all');
+    setPickedServices([]);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!suggestions.length) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive((a) => (a + 1) % suggestions.length); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a <= 0 ? suggestions.length - 1 : a - 1)); }
-    if (e.key === 'Escape') setOpen(false);
+    if (e.key === 'Escape') { setOpen(false); setWhatOpen(false); }
     if (e.key === 'Enter' && active >= 0 && suggestions[active]) {
       e.preventDefault();
       go(suggestions[active].href);
@@ -153,7 +183,7 @@ export function SearchBar({
   };
 
   return (
-    <div ref={wrapRef} className="relative w-full">
+    <div ref={wrapRef} className="relative z-40 w-full">
       <form
         role="search"
         onSubmit={submit}
@@ -204,26 +234,55 @@ export function SearchBar({
             </div>
             <span className="hidden h-10 w-px shrink-0 bg-slate-200 xl:block" aria-hidden />
             <div className="flex min-w-0 items-stretch gap-1 xl:contents">
-              <label className="flex min-w-0 flex-1 flex-col rounded-2xl px-4 py-2 hover:bg-slate-50 xl:w-[12rem] xl:flex-none xl:rounded-full xl:py-1">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">What</span>
-                <select
+              <div className="relative min-w-0 flex-1 xl:w-[13.5rem] xl:flex-none">
+                <button
+                  ref={whatBtnRef}
+                  type="button"
                   id={`${listId}-scope`}
-                  value={wanted}
-                  onChange={(e) => setWanted(e.target.value)}
-                  className="h-7 w-full truncate bg-transparent text-[15px] font-medium text-ink focus:outline-none"
+                  aria-haspopup="listbox"
+                  aria-expanded={whatOpen}
+                  onClick={() => { setWhatOpen((openNow) => !openNow); setOpen(false); }}
+                  className="flex w-full min-w-0 flex-col rounded-2xl px-4 py-2 text-left hover:bg-slate-50 xl:rounded-full xl:py-1"
                 >
-                  <optgroup label="Browse">
-                    {typeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </optgroup>
-                  {listedServices.length > 0 && (
-                    <optgroup label="Services">
-                      {listedServices.map((item) => (
-                        <option key={item.id} value={`${SVC}${item.id}`}>{item.label}</option>
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">What</span>
+                  <span className="flex h-7 items-center gap-1">
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">{whatLabel}</span>
+                    <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-400 transition', whatOpen && 'rotate-180')} aria-hidden />
+                  </span>
+                </button>
+                {whatOpen && createPortal(
+                  <div
+                    ref={whatPanelRef}
+                    style={{ top: whatPos.top, left: whatPos.left, width: whatPos.width }}
+                    className="fixed z-[95] max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-lift"
+                  >
+                    <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">Browse</p>
+                    <div className="mt-1" role="radiogroup" aria-label="Listing type">
+                      {typeOptions.map((o) => (
+                        <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-medium text-ink hover:bg-slate-50">
+                          <input type="radio" name={`${listId}-browse`} checked={wanted === o.value} onChange={() => setWanted(o.value)} className="accent-brand-600" />
+                          {o.label}
+                        </label>
                       ))}
-                    </optgroup>
-                  )}
-                </select>
-              </label>
+                    </div>
+                    {listedServices.length > 0 && (
+                      <>
+                        <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">Services</p>
+                        <p className="px-1 text-xs text-slate-500">Tick every extra you want on the same listing.</p>
+                        <div className="mt-1" role="group" aria-label="Services">
+                          {listedServices.map((item) => (
+                            <label key={item.id} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-medium text-ink hover:bg-slate-50">
+                              <input type="checkbox" checked={pickedServices.includes(item.id)} onChange={() => toggleService(item.id)} className="accent-brand-600" />
+                              {item.label}
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>,
+                  document.body,
+                )}
+              </div>
               {filtersSet && (
                 <button
                   type="button"

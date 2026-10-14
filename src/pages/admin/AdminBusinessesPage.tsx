@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Building2, Leaf, HeartHandshake, Star, Plus, Upload } from 'lucide-react';
-import type { Booking, Business, BusinessCategory, PriceLevel, SustainabilityBadge, User } from '@/types';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Building2, Clock, Leaf, Star, Plus, Upload } from 'lucide-react';
+import type { ApprovalStatus, Booking, Business, BusinessCategory, PriceLevel, SustainabilityBadge, User } from '@/types';
 import { createBusiness, createBusinesses, getBookings, getBusinesses, getLocations, getUsers } from '@/services';
 import type { BusinessInput } from '@/services/businessService';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
@@ -10,11 +10,13 @@ import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button, ErrorState, Loading, Modal, Select } from '@/components/ui';
-import { BulkImportModal, DataTable, PageHeader, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
+import { BulkImportModal, DataTable, FilterTabs, ListingApprovalBadge, PageHeader, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
+import { ListingReviewActions } from '@/components/business/ListingReviewActions';
+import { listingApproval } from '@/utils/approval';
 import { BADGE_OPTIONS, BUSINESS_CATEGORIES, BusinessForm, PROPERTY_TYPES } from '../business/BusinessForm';
 import { images } from '@/data/images';
 import { average } from '@/utils/analytics';
-import { formatRwf } from '@/utils/format';
+import { formatDate, formatRwf } from '@/utils/format';
 import { listingKindOf, fleetCount } from '@/utils/catalog';
 import { bookingsForListing, subscriptionsPaid } from '@/utils/lifecycle';
 import { ListingViewLink } from '../shared/tableColumns';
@@ -32,6 +34,7 @@ interface CompanyRow {
   bookingCount: number;
   subscriptionRwf: number;
   rating: number;
+  pendingCount: number;
   search: string;
 }
 
@@ -64,13 +67,19 @@ function companyRows(listings: Business[], owners: User[], bookings: Booking[]):
       bookingCount: mine.length,
       subscriptionRwf: subscriptionsPaid(mine),
       rating: rated.length ? average(rated.map((branch) => branch.rating)) : 0,
+      pendingCount: branches.filter((branch) => listingApproval(branch) !== 'approved').length,
       search: `${name} ${owner?.name ?? ''} ${branches.map((branch) => `${branch.name} ${branch.district} ${listingKindOf(branch)}`).join(' ')}`,
     };
   });
 }
 
 const columns: Column<CompanyRow>[] = [
-  { id: 'name', header: 'Business', sortValue: (row) => row.name, cell: (row) => <Link to={row.href} className="font-semibold text-ink hover:text-brand-600 hover:underline">{row.name}</Link> },
+  { id: 'name', header: 'Business', sortValue: (row) => row.name, cell: (row) => (
+    <div className="min-w-0">
+      <Link to={row.href} className="font-semibold text-ink hover:text-brand-600 hover:underline">{row.name}</Link>
+      {row.pendingCount > 0 && <p className="text-xs font-semibold text-amber-700">{row.pendingCount} awaiting review</p>}
+    </div>
+  ) },
   { id: 'owner', header: 'Owner', sortValue: (row) => row.ownerName, cell: (row) => row.ownerName },
   { id: 'kind', header: 'Kind', sortValue: (row) => row.kinds, cell: (row) => <span className="whitespace-nowrap">{row.kinds}</span> },
   { id: 'districts', header: 'Districts', sortValue: (row) => row.districts, cell: (row) => row.districts },
@@ -79,6 +88,19 @@ const columns: Column<CompanyRow>[] = [
   { id: 'bookings', header: 'Bookings', align: 'right', sortValue: (row) => row.bookingCount, cell: (row) => <span className="tabular-nums">{row.bookingCount}</span> },
   { id: 'fees', header: 'Subscriptions paid', align: 'right', sortValue: (row) => row.subscriptionRwf, cell: (row) => <span className="whitespace-nowrap tabular-nums">{formatRwf(row.subscriptionRwf)}</span> },
   { id: 'rating', header: 'Rating', align: 'right', sortValue: (row) => row.rating, cell: (row) => <span className="tabular-nums">{row.rating ? row.rating.toFixed(1) : 'New'}</span> },
+];
+
+const reviewColumns = (owners: User[]): Column<Business>[] => [
+  { id: 'name', header: 'Branch', sortValue: (b) => b.name, cell: (b) => (
+    <div className="min-w-0">
+      <Link to={`/admin/businesses/${b.id}/branch`} className="font-semibold text-ink hover:text-brand-600 hover:underline">{b.name}</Link>
+      <p className="text-xs text-slate-500">{listingKindOf(b)} · {b.district}</p>
+    </div>
+  ) },
+  { id: 'owner', header: 'Owner', sortValue: (b) => b.ownerName, cell: (b) => owners.find((o) => o.id === b.ownerId)?.name || b.ownerName },
+  { id: 'status', header: 'Status', sortValue: (b) => listingApproval(b), cell: (b) => <ListingApprovalBadge status={listingApproval(b)} /> },
+  { id: 'submitted', header: 'Submitted', sortValue: (b) => b.submittedAt ?? b.createdAt, cell: (b) => <span className="whitespace-nowrap text-slate-500">{formatDate(b.submittedAt ?? b.createdAt)}</span> },
+  { id: 'reason', header: 'Notes', cell: (b) => b.rejectionReason ? <span className="line-clamp-2 max-w-xs text-sm text-slate-600">{b.rejectionReason}</span> : '—' },
 ];
 
 const PRICE_OPTIONS = ['budget', 'mid-range', 'premium'];
@@ -103,6 +125,8 @@ export default function AdminBusinessesPage() {
     const [businesses, locations, users, bookings] = await Promise.all([getBusinesses(), getLocations(), getUsers(), getBookings()]);
     return { businesses, locations, owners: users.filter((u) => u.role === 'business_owner'), bookings };
   });
+  const [params, setParams] = useSearchParams();
+  const review = (['pending', 'approved', 'rejected'].includes(params.get('review') ?? '') ? params.get('review') : 'all') as ApprovalStatus | 'all';
   const [category, setCategory] = useState<'all' | BusinessCategory>('all');
   const [adding, setAdding] = useQueryFlag('new');
   const [importing, setImporting] = useQueryFlag('import');
@@ -207,12 +231,22 @@ export default function AdminBusinessesPage() {
 
   const has = (badge: SustainabilityBadge) => all.filter((b) => b.badges.includes(badge)).length;
   const rated = companies.filter((row) => row.rating > 0);
+  const pending = all.filter((b) => listingApproval(b) === 'pending');
+  const rejected = all.filter((b) => listingApproval(b) === 'rejected');
+  const reviewList = review === 'all' ? all : all.filter((b) => listingApproval(b) === review);
+  const setReview = (value: ApprovalStatus | 'all') => {
+    const next = new URLSearchParams(params);
+    if (value === 'all') next.delete('review');
+    else next.set('review', value);
+    setParams(next, { replace: true });
+  };
+  const patchListing = (next: Business) => setData((d) => d && { ...d, businesses: d.businesses.map((item) => (item.id === next.id ? next : item)) });
 
   return (
     <>
       <PageHeader
         title="Businesses"
-        intro="Each row is one company. Open it to see branches, vehicles, bookings, and fees."
+        intro="Each row is one company. Open it to see branches, vehicles, bookings, and fees. New owner listings wait here until you approve them."
         action={<>
           <Button variant="secondary" onClick={() => setImporting(true)} disabled={loading}><Upload className="h-4 w-4" aria-hidden />Bulk import</Button>
           <Button onClick={() => setAdding(true)} disabled={loading}><Plus className="h-4 w-4" aria-hidden />Add business</Button>
@@ -221,28 +255,62 @@ export default function AdminBusinessesPage() {
 
       <StatGrid>
         <StatCard label="Businesses" icon={Building2} value={companies.length} hint={`${all.length} branch${all.length === 1 ? '' : 'es'}`} />
+        <StatCard label="Awaiting review" icon={Clock} tone="amber" value={pending.length} hint={rejected.length ? `${rejected.length} sent back` : 'Owner listings not yet live'} to="/admin/businesses?review=pending" />
         <StatCard label="Eco-certified" icon={Leaf} tone="teal" value={has('Eco-certified')} hint={companies.length ? `${Math.round((has('Eco-certified') / Math.max(all.length, 1)) * 100)}% of branches` : undefined} />
-        <StatCard label="Women-led" icon={HeartHandshake} tone="violet" value={has('Women-led')} hint={`${has('Community-owned')} community-owned`} />
-        <StatCard label="Average rating" icon={Star} tone="amber" value={rated.length ? average(rated.map((row) => row.rating)).toFixed(2) : '—'} />
+        <StatCard label="Average rating" icon={Star} tone="violet" value={rated.length ? average(rated.map((row) => row.rating)).toFixed(2) : '—'} hint={`${has('Women-led')} women-led`} />
       </StatGrid>
 
-      <DataTable
-        className="mt-6"
-        data={list}
-        columns={columns}
-        getRowId={(b) => b.id}
-        initialSort={{ id: 'rating', desc: true }}
-        searchText={(row) => row.search}
-        searchPlaceholder="Search businesses"
-        filters={
-          <div className="w-52">
-            <Select aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value as typeof category)} options={[{ value: 'all', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} className="h-10 py-0 text-sm" />
-          </div>
-        }
-        exportFileName="businesses"
-        emptyTitle="No businesses"
-        rowActions={(row) => <ListingViewLink to={row.href} name={row.name} />}
-      />
+      <div className="mt-6">
+        <FilterTabs
+          label="Listing review"
+          value={review}
+          onChange={setReview}
+          options={[
+            { value: 'all', label: 'Companies' },
+            { value: 'pending', label: 'Awaiting review', count: pending.length },
+            { value: 'rejected', label: 'Needs changes', count: rejected.length },
+            { value: 'approved', label: 'Live', count: all.filter((b) => listingApproval(b) === 'approved').length },
+          ]}
+        />
+      </div>
+
+      {review === 'all' ? (
+        <DataTable
+          className="mt-4"
+          data={list}
+          columns={columns}
+          getRowId={(b) => b.id}
+          initialSort={{ id: 'rating', desc: true }}
+          searchText={(row) => row.search}
+          searchPlaceholder="Search businesses"
+          filters={
+            <div className="w-52">
+              <Select aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value as typeof category)} options={[{ value: 'all', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} className="h-10 py-0 text-sm" />
+            </div>
+          }
+          exportFileName="businesses"
+          emptyTitle="No businesses"
+          rowActions={(row) => <ListingViewLink to={row.href} name={row.name} />}
+        />
+      ) : (
+        <DataTable
+          className="mt-4"
+          data={reviewList}
+          columns={reviewColumns(data?.owners ?? [])}
+          getRowId={(b) => b.id}
+          initialSort={{ id: 'submitted', desc: true }}
+          searchText={(b) => `${b.name} ${b.ownerName} ${b.district} ${listingKindOf(b)} ${b.rejectionReason ?? ''}`}
+          searchPlaceholder="Search listings"
+          exportFileName={`listings-${review}`}
+          emptyTitle={review === 'pending' ? 'Nothing waiting' : review === 'rejected' ? 'No listings sent back' : 'No live listings'}
+          rowActions={(b) => (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <ListingViewLink to={`/admin/businesses/${b.id}/branch`} name={b.name} />
+              <ListingReviewActions listing={b} onUpdated={patchListing} />
+            </div>
+          )}
+        />
+      )}
 
       <Modal open={adding && !!data} onClose={() => setAdding(false)} title="Add a business" size="lg">
         {data && <BusinessForm locations={data.locations} ownerId={user!.id} ownerName={user!.name} owners={ownerOptions} submitting={saving} onSubmit={add} onCancel={() => setAdding(false)} />}

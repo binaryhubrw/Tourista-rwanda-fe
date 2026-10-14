@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, MapPin, Store, CalendarCheck, AlertTriangle, ArrowRight, Wallet, Briefcase, HeartHandshake, Sprout } from 'lucide-react';
+import { Users, MapPin, Store, CalendarCheck, AlertTriangle, ArrowRight, Wallet, Briefcase, HeartHandshake, Sprout, Clock } from 'lucide-react';
 import { getBookings, getTourismStatistics, getUsers } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -41,6 +41,7 @@ export default function AdminDashboardPage() {
         <StatCard label="Visitors this month" icon={Users} value={formatCompact(lastMonth)} sparkline={visitors} trend={{ value: percentChange(lastMonth, prevMonth), label: 'vs last month' }} hint={t && `${formatCompact(t.tourists)} registered tourists`} />
         <StatCard label="Bookings (30 days)" icon={CalendarCheck} tone="teal" value={bookingTrend.current} sparkline={monthlyBookings.map((m) => m.bookings)} trend={{ value: bookingTrend.change, label: 'vs previous 30 days' }} to="/admin/bookings" />
         <StatCard label="Listed businesses" icon={Store} tone="violet" value={t?.businesses} hint={impact && `${impact.womenLedBusinesses} women-led nationwide`} to="/admin/businesses" />
+        <StatCard label="Awaiting review" icon={Clock} tone="amber" value={stats.pendingBusinesses ?? 0} hint="Pending and sent-back listings" to="/admin/businesses?review=pending" />
         <StatCard label="Destinations" icon={MapPin} tone="amber" value={t?.locations} hint={t && `${formatCompact(t.reviews)} reviews written`} to="/admin/locations" />
       </StatGrid>
 

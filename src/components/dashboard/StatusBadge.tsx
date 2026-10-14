@@ -1,5 +1,6 @@
 import { CheckCircle2, Clock, RotateCcw, Wallet, XCircle } from 'lucide-react';
-import type { BookingStatus, PaymentLedgerStatus, RefundStage } from '@/types';
+import type { ApprovalStatus, BookingStatus, PaymentLedgerStatus, RefundStage } from '@/types';
+import { approvalLabel } from '@/utils/approval';
 import { Badge } from '@/components/ui';
 import { refundStageLabel } from '@/utils/refund';
 import { STATUS_COLORS } from './charts';
@@ -80,6 +81,16 @@ const vehicleCategoryTone: Record<string, 'success' | 'neutral' | 'brand' | 'vio
 export function VehicleCategoryBadge({ category }: { category?: string | null }) {
   const label = category?.trim() || 'Standard';
   return <Badge tone={vehicleCategoryTone[label] ?? 'neutral'}>{label}</Badge>;
+}
+
+const approvalTone: Record<ApprovalStatus, 'success' | 'warning' | 'danger'> = {
+  approved: 'success',
+  pending: 'warning',
+  rejected: 'danger',
+};
+
+export function ListingApprovalBadge({ status }: { status: ApprovalStatus }) {
+  return <Badge tone={approvalTone[status]}>{approvalLabel[status]}</Badge>;
 }
 
 export const BOOKING_STATUSES: BookingStatus[] = [

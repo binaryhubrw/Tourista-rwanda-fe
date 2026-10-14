@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Plus, Pencil, Store, Package, Star, Leaf, BedDouble, UtensilsCrossed, Sparkles, CalendarCheck } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { DataTable, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
+import { DataTable, ListingApprovalBadge, PageHeader, StatCard, StatGrid, type Column } from '@/components/dashboard';
+import { listingApproval } from '@/utils/approval';
 import { Badge, ButtonLink, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { formatRwf } from '@/utils/format';
 import { fromPrice, isRoom } from '@/utils/pricing';
@@ -21,6 +22,7 @@ const columns = (bookings: Booking[]): Column<Business>[] => [
     </div>
   ) },
   { id: 'kind', header: 'Kind', sortValue: (b) => listingKindOf(b), cell: (b) => <Badge tone="solid">{listingKindOf(b)}</Badge> },
+  { id: 'review', header: 'Status', sortValue: (b) => listingApproval(b), cell: (b) => <ListingApprovalBadge status={listingApproval(b)} /> },
   { id: 'rooms', header: 'Rooms', align: 'right', sortValue: (b) => b.services.filter(isRoom).reduce((n, r) => n + (r.available ?? 1), 0), cell: (b) => <span className="tabular-nums">{b.services.filter(isRoom).reduce((n, r) => n + (r.available ?? 1), 0)}</span> },
   { id: 'wellness', header: 'Services', align: 'right', sortValue: (b) => b.services.filter((s) => s.group === 'wellness').length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => s.group === 'wellness').length}</span> },
   { id: 'food', header: 'Food', align: 'right', sortValue: (b) => b.services.filter((s) => s.group === 'food').length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => s.group === 'food').length}</span> },

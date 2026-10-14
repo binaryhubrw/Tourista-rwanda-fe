@@ -12,4 +12,5 @@ export * from './staffService';
 export * from './notificationService';
 export * from './refundService';
 export * from './feeService';
+export * from './mailService';
 export * as authService from './authService';

@@ -5,7 +5,9 @@ import { getBookings, getBusinessById, getBusinessesByOwner, getReviews, getUser
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Badge, ButtonLink, ErrorState, Loading, Rating, SmartImage, spanLabel } from '@/components/ui';
-import { DataTable, FilterTabs, PageHeader, StatCard, VehicleCategoryBadge, type Column } from '@/components/dashboard';
+import { DataTable, FilterTabs, ListingApprovalBadge, PageHeader, StatCard, VehicleCategoryBadge, type Column } from '@/components/dashboard';
+import { ListingReviewActions } from '@/components/business/ListingReviewActions';
+import { listingApproval } from '@/utils/approval';
 import { BookingViewLink, ListingViewLink, bookingColumns, bookingSearchText, reviewColumns, reviewSearchText } from '../shared/tableColumns';
 import { formatRwf } from '@/utils/format';
 import { fromPrice, isRoom } from '@/utils/pricing';
@@ -30,6 +32,7 @@ const listingColumns = (bookings: Booking[]): Column<Business>[] => [
     </div>
   ) },
   { id: 'kind', header: 'Kind', sortValue: (b) => listingKindOf(b), cell: (b) => <Badge tone="solid">{listingKindOf(b)}</Badge> },
+  { id: 'review', header: 'Review', sortValue: (b) => listingApproval(b), cell: (b) => <ListingApprovalBadge status={listingApproval(b)} /> },
   { id: 'rooms', header: 'Rooms', align: 'right', sortValue: (b) => b.services.filter(isRoom).length, cell: (b) => <span className="tabular-nums">{b.services.filter(isRoom).length}</span> },
   { id: 'services', header: 'Services', align: 'right', sortValue: (b) => b.services.filter((s) => !isRoom(s) && s.group !== 'vehicle').length, cell: (b) => <span className="tabular-nums">{b.services.filter((s) => !isRoom(s) && s.group !== 'vehicle').length}</span> },
   { id: 'vehicles', header: 'Vehicles', align: 'right', sortValue: (b) => fleetCount(b.services), cell: (b) => <span className="tabular-nums">{fleetCount(b.services)}</span> },
@@ -106,7 +109,7 @@ export default function AdminBusinessDetailsPage() {
   const navigate = useNavigate();
   const [view, setView] = useState<View>('overview');
   const [photo, setPhoto] = useState(0);
-  const { data, loading, error, reload } = useAsync(async () => {
+  const { data, loading, error, reload, setData } = useAsync(async () => {
     const listing = await getBusinessById(id);
     const listings = listing.ownerId ? await getBusinessesByOwner(listing.ownerId) : [listing];
     const ids = listings.map((item) => item.id);
@@ -152,6 +155,7 @@ export default function AdminBusinessDetailsPage() {
       <PageHeader
         title={owner?.businessName || listing.ownerName || listing.name}
         intro={`${listings.length} branch${listings.length === 1 ? '' : 'es'} · currently ${listing.name} (${kind}) in ${listing.district}.`}
+        action={<ListingReviewActions listing={listing} onUpdated={(next) => setData((d) => d && { ...d, listing: next, listings: d.listings.map((item) => item.id === next.id ? next : item) })} />}
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -202,6 +206,7 @@ export default function AdminBusinessDetailsPage() {
             <section className="rounded-3xl border border-slate-200 bg-white p-5">
               <div className="flex flex-wrap gap-1.5">
                 <Badge tone="solid">{kind}</Badge>
+                <ListingApprovalBadge status={listingApproval(listing)} />
                 {listing.badges.map((badge) => <Badge key={badge}>{badge}</Badge>)}
               </div>
               <Rating value={listing.rating} count={listing.reviewCount} className="mt-3" />
@@ -227,7 +232,16 @@ export default function AdminBusinessDetailsPage() {
             getRowId={(b) => b.id}
             searchText={(b) => `${b.name} ${listingKindOf(b)} ${b.district}`}
             searchPlaceholder="Search branches"
-            rowActions={(b) => <ListingViewLink to={`/admin/businesses/${b.id}/branch`} name={b.name} />}
+            rowActions={(b) => (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <ListingViewLink to={`/admin/businesses/${b.id}/branch`} name={b.name} />
+                <ListingReviewActions listing={b} onUpdated={(next) => setData((d) => d && {
+                  ...d,
+                  listing: d.listing.id === next.id ? next : d.listing,
+                  listings: d.listings.map((item) => item.id === next.id ? next : item),
+                })} />
+              </div>
+            )}
             emptyTitle="No branches"
             emptyMessage="This owner has not published a branch."
           />

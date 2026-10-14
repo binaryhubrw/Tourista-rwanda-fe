@@ -1,5 +1,6 @@
 import type { Booking, Business, Experience, Interest, Location, PriceLevel, Service } from '@/types';
-import { availableServices, hasAvailability } from '@/utils/availability';
+import { availableServices, hasAvailability, isAvailableInRange } from '@/utils/availability';
+import { pricingMode } from '@/utils/pricing';
 
 export type ExploreKind = 'destination' | 'experience' | 'accommodation' | 'restaurant' | 'guide' | 'business' | 'service' | 'vehicle';
 
@@ -90,6 +91,28 @@ export function normalizeExploreService(raw: string | null | undefined): string 
   }
 }
 
+/** Comma-separated `service` query values from the landing search. */
+export function parseExploreServices(raw: string | null | undefined): string[] {
+  const seen = new Set<string>();
+  const list: string[] = [];
+  (raw ?? '').split(',').forEach((part) => {
+    const id = normalizeExploreService(part);
+    if (!id) return;
+    const key = id.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    list.push(id);
+  });
+  return list;
+}
+
+export function writeExploreServices(next: URLSearchParams, services: string[]) {
+  const list = parseExploreServices(services.join(','));
+  if (list.length) next.set('service', list.join(','));
+  else next.delete('service');
+  return next;
+}
+
 export function exploreServiceHref(service?: string) {
   const id = normalizeExploreService(service ?? '');
   if (!id) return exploreScopeHref('services');
@@ -129,6 +152,46 @@ export function businessHasService(business: Business, service: string): boolean
     if (!isExploreService(item)) return false;
     return item.name.toLowerCase() === needle || item.category?.toLowerCase() === needle;
   });
+}
+
+/** True when the branch sells every selected extra. */
+export function businessHasServices(business: Business, services: string[]): boolean {
+  const list = parseExploreServices(services.join(','));
+  return list.length > 0 && list.every((item) => businessHasService(business, item));
+}
+
+function extrasNamed(business: Business, name: string) {
+  const needle = normalizeExploreService(name).toLowerCase();
+  if (!needle) return [];
+  return business.services.filter((item) => {
+    if (!isExploreService(item)) return false;
+    return item.name.toLowerCase() === needle || item.category?.toLowerCase() === needle;
+  });
+}
+
+/** True when each chosen extra can still be booked for this trip. */
+export function businessHasAvailableServices(
+  business: Business,
+  services: string[],
+  bookings: Booking[],
+  start?: string,
+  end?: string,
+) {
+  const list = parseExploreServices(services.join(','));
+  return list.length > 0 && list.every((name) => extrasNamed(business, name).some((item) => isAvailableInRange(item, bookings, start, end, business.id)));
+}
+
+export function servicesForScope(business: Business, scope: ExploreScope) {
+  if (scope === 'hotels') return business.services.filter((service) => service.group === 'room' || pricingMode(service.unit) === 'stay');
+  if (scope === 'food') return business.services.filter((service) => service.group === 'food');
+  if (scope === 'vehicles') return business.services.filter((service) => service.group === 'vehicle');
+  return business.services.filter(isExploreService);
+}
+
+export function scopeHasAvailability(business: Business, scope: ExploreScope, bookings: Booking[], start?: string, end?: string) {
+  const pool = servicesForScope(business, scope);
+  if (!pool.length) return false;
+  return pool.some((service) => isAvailableInRange(service, bookings, start, end, business.id));
 }
 
 /** Whether a business actually offers this catalog slice (rooms, meals, cars or extra services). */
@@ -190,7 +253,7 @@ export function buildExploreItems(
   const provinceOf = (locationId: string) => locations.find((l) => l.id === locationId)?.province ?? 'Rwanda';
   const openBusinesses = businesses.filter((business) => hasAvailability(business, bookings, start, end));
   const vehicleItems = businesses.flatMap((business) =>
-    availableServices(business.services, bookings, start, end)
+    availableServices(business.services, bookings, start, end, business.id)
       .filter((service) => service.group === 'vehicle')
       .map<ExploreItem>((service) => ({
         key: `v-${service.id}`, type: 'service', node: service, business, kind: 'vehicle',
@@ -213,10 +276,9 @@ export function buildExploreItems(
     })),
     ...openBusinesses.map<ExploreItem>((b) => {
       const place = locations.find((location) => location.id === b.locationId);
-      const services = availableServices(b.services, bookings, start, end);
       return {
-        key: `b-${b.id}`, type: 'business', node: { ...b, services }, kind: businessKind(b), title: b.name,
-        text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${services.map((service) => `${service.name} ${service.brand ?? ''} ${service.category ?? ''} ${service.description} ${service.group ?? ''}`).join(' ')} ${b.badges.join(' ')} ${place ? locationHaystack(place) : ''}`,
+        key: `b-${b.id}`, type: 'business', node: b, kind: businessKind(b), title: b.name,
+        text: `${b.name} ${b.listingKind ?? b.category} ${b.district} ${b.description} ${b.services.map((service) => `${service.name} ${service.brand ?? ''} ${service.category ?? ''} ${service.description} ${service.group ?? ''}`).join(' ')} ${b.badges.join(' ')} ${place ? locationHaystack(place) : ''}`,
         rating: b.rating, reviewCount: b.reviewCount, province: provinceOf(b.locationId), priceLevel: b.priceLevel, interests: businessInterests(b),
         sustainable: b.badges.length > 0, createdAt: b.createdAt, popularity: b.reviewCount * 40,
       };

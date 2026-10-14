@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { errorMessage } from '@/hooks/useAsync';
+import { errorMessage, useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { Bell, Coins, Languages } from 'lucide-react';
+import { getMailStatus, sendTestMail } from '@/services';
+import { Bell, Coins, Languages, Mail } from 'lucide-react';
 import { PageHeader, StatCard, StatGrid } from '@/components/dashboard';
-import { Button, Select } from '@/components/ui';
+import { Button, Input, Select } from '@/components/ui';
 
 const languages = [{ value: 'en', label: 'English' }, { value: 'rw', label: 'Kinyarwanda' }, { value: 'fr', label: 'Français' }, { value: 'sw', label: 'Kiswahili' }];
 const currencies = [{ value: 'RWF', label: 'Rwandan franc (RWF)' }, { value: 'USD', label: 'US dollar (USD)' }, { value: 'EUR', label: 'Euro (EUR)' }];
@@ -19,6 +20,9 @@ export default function SettingsPage() {
     ...user?.preferences,
   });
   const [saving, setSaving] = useState(false);
+  const [testTo, setTestTo] = useState(user?.email ?? '');
+  const [sending, setSending] = useState(false);
+  const mail = useAsync(async () => (user?.role === 'admin' ? getMailStatus() : null), [user?.role]);
 
   const toggles: { key: 'bookingEmails' | 'reviewReplies' | 'newsletter'; label: string; text: string }[] = [
     { key: 'bookingEmails', label: 'Booking updates', text: 'Email me when a booking is confirmed or canceled.' },
@@ -69,6 +73,40 @@ export default function SettingsPage() {
             }}>Save settings</Button>
           </div>
         </section>
+        {user?.role === 'admin' && (
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7">
+            <h2 className="font-display text-lg font-bold text-ink">Platform mail</h2>
+            <p className="mt-1 text-sm text-slate-600">Check whether booking invoices and admin notices can leave the server, then send a test message.</p>
+            {mail.loading && <p className="mt-3 text-sm text-slate-500">Checking mail…</p>}
+            {mail.error && <p className="mt-3 text-sm text-red-600">{mail.error}</p>}
+            {mail.data && (
+              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                <div><dt className="text-slate-500">Transport</dt><dd className="font-semibold text-ink">{mail.data.transport} ({mail.data.mode})</dd></div>
+                <div><dt className="text-slate-500">From</dt><dd className="break-all font-semibold text-ink">{mail.data.from}</dd></div>
+                <div><dt className="text-slate-500">Verified</dt><dd className="font-semibold text-ink">{mail.data.verified == null ? 'Not checked' : mail.data.verified ? 'Yes' : 'No'}</dd></div>
+                <div><dt className="text-slate-500">Sent / failed</dt><dd className="font-semibold text-ink">{mail.data.sent} sent · {mail.data.failed} failed · {mail.data.queued} queued</dd></div>
+                {mail.data.lastError && <div className="sm:col-span-2"><dt className="text-slate-500">Last error</dt><dd className="text-rose-700">{mail.data.lastError}</dd></div>}
+              </dl>
+            )}
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <Input type="email" label="Send a test to" value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="you@example.com" />
+              </div>
+              <Button loading={sending} onClick={async () => {
+                setSending(true);
+                try {
+                  const result = await sendTestMail(testTo.trim() || undefined);
+                  toast.success(`Test mail sent to ${result.to}.`);
+                  mail.reload();
+                } catch (err) {
+                  toast.error(errorMessage(err));
+                } finally {
+                  setSending(false);
+                }
+              }}><Mail className="h-4 w-4" aria-hidden />Send test</Button>
+            </div>
+          </section>
+        )}
       </div>
     </>
   );

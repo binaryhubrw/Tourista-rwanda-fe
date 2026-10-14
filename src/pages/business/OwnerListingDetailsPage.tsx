@@ -6,7 +6,9 @@ import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Badge, ButtonLink, ErrorState, Loading, Rating, SmartImage, spanLabel } from '@/components/ui';
-import { DataTable, FilterTabs, PageHeader, StatCard, StatGrid, VehicleCategoryBadge, type Column } from '@/components/dashboard';
+import { DataTable, FilterTabs, ListingApprovalBadge, PageHeader, StatCard, StatGrid, VehicleCategoryBadge, type Column } from '@/components/dashboard';
+import { ListingReviewActions } from '@/components/business/ListingReviewActions';
+import { listingApproval } from '@/utils/approval';
 import { cn } from '@/utils/cn';
 import { BookingViewLink, ListingViewLink, bookingColumns, bookingSearchText } from '../shared/tableColumns';
 import { formatRwf } from '@/utils/format';
@@ -133,8 +135,21 @@ export default function OwnerListingDetailsPage({ variant = 'owner' }: { variant
       <PageHeader
         title={listing.name}
         intro={`${kind} in ${listing.district}. ${admin ? 'Admin view of this branch.' : 'This is your branch, not the public page.'}`}
-        action={admin ? undefined : <ButtonLink to={`/business-dashboard/business/${listing.id}/edit`}><Pencil className="h-4 w-4" aria-hidden />Edit branch</ButtonLink>}
+        action={admin
+          ? <ListingReviewActions listing={listing} onUpdated={(next) => biz.setData((list) => list?.map((item) => item.id === next.id ? next : item))} />
+          : <ButtonLink to={`/business-dashboard/business/${listing.id}/edit`}><Pencil className="h-4 w-4" aria-hidden />Edit branch</ButtonLink>}
       />
+
+      {listingApproval(listing) !== 'approved' && (
+        <p role="status" className={`mb-6 rounded-2xl border px-5 py-3 text-sm ${listingApproval(listing) === 'rejected' ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
+          <ListingApprovalBadge status={listingApproval(listing)} />
+          <span className="ml-2">
+            {listingApproval(listing) === 'pending'
+              ? 'Travellers cannot see this branch until an admin approves it.'
+              : `This branch was sent back. ${listing.rejectionReason ?? 'Edit it and save to send it for review again.'}`}
+          </span>
+        </p>
+      )}
 
       <StatGrid className="grid-cols-2">
         <StatCard label="Rooms" icon={BedDouble} value={rooms.reduce((n, r) => n + (r.available ?? 1), 0)} />
@@ -178,6 +193,7 @@ export default function OwnerListingDetailsPage({ variant = 'owner' }: { variant
             <section className="rounded-3xl border border-slate-200 bg-white p-5">
               <div className="flex flex-wrap gap-1.5">
                 <Badge tone="solid">{kind}</Badge>
+                <ListingApprovalBadge status={listingApproval(listing)} />
                 {listing.badges.map((badge) => <Badge key={badge}>{badge}</Badge>)}
               </div>
               <Rating value={listing.rating} count={listing.reviewCount} className="mt-3" />
