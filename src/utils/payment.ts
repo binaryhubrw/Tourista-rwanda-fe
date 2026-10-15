@@ -159,11 +159,21 @@ export function validateBankAccount(value: string) {
   return digits.length >= 10 && digits.length <= 20;
 }
 
-export function payoutErrors(payout: { bankAccount: string; mtnNumber: string; airtelNumber: string }) {
-  const errors: Partial<Record<'bankAccount' | 'mtnNumber' | 'airtelNumber', string>> = {};
-  if (!validateBankAccount(payout.bankAccount)) errors.bankAccount = 'Enter a bank account of 10 to 20 digits.';
-  if (mobileNetwork(payout.mtnNumber) !== 'mtn') errors.mtnNumber = 'Enter an MTN number starting with 078 or 079.';
-  if (mobileNetwork(payout.airtelNumber) !== 'airtel') errors.airtelNumber = 'Enter an Airtel number starting with 072 or 073.';
+export function payoutErrors(
+  payout: { bankAccount: string; mtnNumber: string; airtelNumber: string },
+  mode: 'all' | 'one' = 'all',
+) {
+  const errors: Partial<Record<'bankAccount' | 'mtnNumber' | 'airtelNumber' | 'accounts', string>> = {};
+  const bank = payout.bankAccount.trim();
+  const mtn = payout.mtnNumber.trim();
+  const airtel = payout.airtelNumber.trim();
+  if (mode === 'one' && !bank && !mtn && !airtel) {
+    errors.accounts = 'Add at least one account. The other methods are optional.';
+    return errors;
+  }
+  if ((mode === 'all' || bank) && !validateBankAccount(bank)) errors.bankAccount = 'Enter a bank account of 10 to 20 digits.';
+  if ((mode === 'all' || mtn) && mobileNetwork(mtn) !== 'mtn') errors.mtnNumber = 'Enter an MTN number starting with 078 or 079.';
+  if ((mode === 'all' || airtel) && mobileNetwork(airtel) !== 'airtel') errors.airtelNumber = 'Enter an Airtel number starting with 072 or 073.';
   return errors;
 }
 

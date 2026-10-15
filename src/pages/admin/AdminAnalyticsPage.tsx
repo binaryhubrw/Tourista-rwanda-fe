@@ -36,8 +36,8 @@ export default function AdminAnalyticsPage() {
   });
 
   const months = Number(range);
-  const trend = useMemo(() => data?.stats.monthlyTrend.slice(-months) ?? [], [data, months]);
-  const previous = useMemo(() => data?.stats.monthlyTrend.slice(-months * 2, -months) ?? [], [data, months]);
+  const trend = useMemo(() => data?.stats.monthlyTrend?.slice(-months) ?? [], [data, months]);
+  const previous = useMemo(() => data?.stats.monthlyTrend?.slice(-months * 2, -months) ?? [], [data, months]);
   const byProvince = useMemo(() => {
     const map = new Map<string, number>();
     data?.locations.forEach((l) => l.province.split(' & ').forEach((p) => {
@@ -105,7 +105,7 @@ export default function AdminAnalyticsPage() {
                   <BarsChart data={byProvince} xKey="name" layout="vertical" series={[{ key: 'visits', label: 'Visits' }]} axisFormatter={formatCompact} height={260} categoryWidth={90} />
                 </ChartCard>
                 <ChartCard title="What travellers are looking for" description="Main interest stated by users">
-                  <DonutChart data={data.stats.userInterests.map((i) => ({ name: i.name as string, value: i.value }))} valueFormatter={(v) => `${v}%`} height={220} />
+                  <DonutChart data={(data.stats.userInterests ?? []).map((i) => ({ name: i.name as string, value: i.value }))} valueFormatter={(v) => `${v}%`} height={220} />
                 </ChartCard>
               </div>
           <DataTable

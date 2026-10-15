@@ -1,7 +1,10 @@
 // Small helpers that turn lists of records into chart- and stat-card-ready numbers.
 
 const DAY = 86_400_000;
-const toTime = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).getTime();
+const toTime = (iso: string | undefined) => {
+  if (!iso) return Number.NaN;
+  return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).getTime();
+};
 
 /** The last `n` calendar months, oldest first, e.g. [{ key: '2026-05', label: 'May' }, …]. */
 export function lastMonths(n: number, end = new Date()) {
@@ -18,7 +21,9 @@ export function byMonth<T, K extends string>(items: T[], getDate: (item: T) => s
   const buckets = lastMonths(months).map(({ key, label }) => ({ key, month: label, ...(Object.fromEntries(keys.map((k) => [k, 0])) as Record<K, number>) }));
   const index = new Map(buckets.map((b, i) => [b.key, i]));
   items.forEach((item) => {
-    const i = index.get(getDate(item).slice(0, 7));
+    const raw = getDate(item);
+    if (!raw) return;
+    const i = index.get(raw.slice(0, 7));
     if (i === undefined) return;
     keys.forEach((k) => { (buckets[i] as Record<K, number>)[k] += series[k](item); });
   });

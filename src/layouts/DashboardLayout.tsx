@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { Loading } from '@/components/ui';
+import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { DashboardHeader, Sidebar, activeLink, hostRoleCaption, navigationFor, roleLabel } from '@/components/dashboard';
 import { cn } from '@/utils/cn';
 
@@ -89,9 +90,11 @@ export function DashboardLayout() {
         />
         <main id="dashboard-main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
           <div className="mx-auto w-full min-w-0 max-w-[1440px]">
-            <Suspense fallback={<Loading />}>
-              <Outlet />
-            </Suspense>
+            <PageErrorBoundary resetKey={pathname}>
+              <Suspense fallback={<Loading />}>
+                <Outlet />
+              </Suspense>
+            </PageErrorBoundary>
           </div>
         </main>
       </div>

@@ -5,6 +5,7 @@ export const formatCompact = (n: number) =>
   new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
 export const formatDate = (iso: string, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }) => {
+  if (!iso) return '—';
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', opts);
 };

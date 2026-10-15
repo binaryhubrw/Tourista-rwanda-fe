@@ -87,11 +87,13 @@ const colorOf = (s: Series, i: number) => s.color ?? SERIES[i];
 
 export function TrendChart<T extends object>({ data, xKey, series, height = 280, valueFormatter = plain, axisFormatter }: { data: T[]; xKey: keyof T & string; series: Series[]; height?: number; valueFormatter?: Formatter; axisFormatter?: Formatter }) {
   const uid = useId().replace(/:/g, '');
+  const rows = data ?? [];
+  if (!rows.length) return <p className="grid place-items-center text-sm text-slate-500" style={{ height }}>No data yet</p>;
   return (
     <div>
       {series.length > 1 && <div className="mb-3"><Legend items={series.map((s, i) => ({ label: s.label, color: colorOf(s, i) }))} /></div>}
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+        <AreaChart data={rows} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
           <defs>
             {series.map((s, i) => (
               <linearGradient key={s.key} id={`${uid}-${s.key}`} x1="0" x2="0" y1="0" y2="1">
@@ -119,11 +121,13 @@ export function BarsChart<T extends object>({ data, xKey, series, height = 280, 
   data: T[]; xKey: keyof T & string; series: Series[]; height?: number; layout?: 'horizontal' | 'vertical'; stacked?: boolean; valueFormatter?: Formatter; axisFormatter?: Formatter; categoryWidth?: number;
 }) {
   const vertical = layout === 'vertical';
+  const rows = data ?? [];
+  if (!rows.length) return <p className="grid place-items-center text-sm text-slate-500" style={{ height }}>No data yet</p>;
   return (
     <div>
       {series.length > 1 && <div className="mb-3"><Legend items={series.map((s, i) => ({ label: s.label, color: colorOf(s, i) }))} /></div>}
       <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} layout={vertical ? 'vertical' : 'horizontal'} margin={{ left: 0, right: 12, top: 8, bottom: 0 }} barGap={2} barCategoryGap={vertical ? '28%' : '24%'}>
+        <BarChart data={rows} layout={vertical ? 'vertical' : 'horizontal'} margin={{ left: 0, right: 12, top: 8, bottom: 0 }} barGap={2} barCategoryGap={vertical ? '28%' : '24%'}>
           <CartesianGrid stroke={GRID} horizontal={!vertical} vertical={vertical} />
           {vertical ? (
             <>
@@ -153,11 +157,12 @@ export function BarsChart<T extends object>({ data, xKey, series, height = 280, 
 export interface Slice { name: string; value: number; color?: string }
 
 export function DonutChart({ data, height = 220, valueFormatter = plain, centerLabel, centerValue }: { data: Slice[]; height?: number; valueFormatter?: Formatter; centerLabel?: string; centerValue?: string }) {
-  const total = data.reduce((s, d) => s + d.value, 0);
+  const rows = data ?? [];
+  const total = rows.reduce((s, d) => s + (d.value || 0), 0);
   // Colours are never cycled: past the palette, the tail folds into a neutral "Other".
-  const folded = data.length > SERIES.length
-    ? [...data.slice(0, SERIES.length - 1), { name: 'Other', value: data.slice(SERIES.length - 1).reduce((s, d) => s + d.value, 0), color: STATUS_COLORS.neutral }]
-    : data;
+  const folded = rows.length > SERIES.length
+    ? [...rows.slice(0, SERIES.length - 1), { name: 'Other', value: rows.slice(SERIES.length - 1).reduce((s, d) => s + d.value, 0), color: STATUS_COLORS.neutral }]
+    : rows;
   const slices = folded.map((d, i) => ({ ...d, fill: d.color ?? SERIES[i] }));
   if (!total) return <p className="grid place-items-center text-sm text-slate-500" style={{ height }}>No data yet</p>;
   return (

@@ -22,16 +22,23 @@ export default function AdminDashboardPage() {
   const stats = data.stats;
   const t = stats?.totals;
   const trend = stats?.monthlyTrend ?? [];
-  const visitors = trend.map((m) => m.domestic + m.international);
+  const visitors = trend.map((m) => (m.domestic ?? 0) + (m.international ?? 0));
   const lastMonth = visitors.at(-1) ?? 0;
   const prevMonth = visitors.at(-2) ?? 0;
-  const bookings = data?.bookings ?? [];
+  const bookings = Array.isArray(data?.bookings) ? data.bookings : [];
   const bookingTrend = periodTrend(bookings, (b) => b.createdAt, () => 1, 30);
   const monthlyBookings = byMonth(bookings, (b) => b.createdAt, { bookings: () => 1 });
-  const signups = periodTrend(data?.users ?? [], (u) => u.joinedAt, () => 1, 90);
-  const busiest = stats?.highTrafficLocations.reduce((a, b) => (b.visitsPerDay / b.capacity > a.visitsPerDay / a.capacity ? b : a));
+  const users = Array.isArray(data?.users) ? data.users : [];
+  const signups = periodTrend(users, (u) => u.joinedAt, () => 1, 90);
+  const hotspots = stats?.highTrafficLocations ?? [];
+  const busiest = hotspots.reduce<(typeof hotspots)[number] | undefined>((best, spot) => {
+    const load = spot.capacity > 0 ? spot.visitsPerDay / spot.capacity : 0;
+    const bestLoad = best && best.capacity > 0 ? best.visitsPerDay / best.capacity : 0;
+    return !best || load > bestLoad ? spot : best;
+  }, undefined);
   const impact = stats?.economicImpact;
   const interestSlices = (stats?.userInterests ?? []).map((i) => ({ name: i.name as string, value: i.value }));
+  const popular = stats?.popularLocations ?? [];
 
   return (
     <>
@@ -63,10 +70,10 @@ export default function AdminDashboardPage() {
 
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
             <ChartCard title="Most visited destinations" description="Visits recorded last year">
-              <BarsChart data={stats.popularLocations} xKey="name" layout="vertical" series={[{ key: 'visits', label: 'Visits' }]} axisFormatter={formatCompact} height={300} categoryWidth={140} />
+              <BarsChart data={popular} xKey="name" layout="vertical" series={[{ key: 'visits', label: 'Visits' }]} axisFormatter={formatCompact} height={300} categoryWidth={140} />
             </ChartCard>
             <ChartCard title="Crowding at hotspots" description="Average daily visitors against comfortable capacity">
-              <BarsChart data={stats.highTrafficLocations} xKey="name" layout="vertical" series={[{ key: 'visitsPerDay', label: 'Visitors per day' }, { key: 'capacity', label: 'Comfortable capacity', color: '#CCE4EE' }]} height={300} categoryWidth={140} />
+              <BarsChart data={hotspots} xKey="name" layout="vertical" series={[{ key: 'visitsPerDay', label: 'Visitors per day' }, { key: 'capacity', label: 'Comfortable capacity', color: '#CCE4EE' }]} height={300} categoryWidth={140} />
             </ChartCard>
           </div>
 
@@ -75,10 +82,10 @@ export default function AdminDashboardPage() {
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
                 <dl className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'Revenue to local businesses', value: formatRwfShort(impact!.localRevenueRwf), icon: Wallet },
-                    { label: 'Jobs supported', value: impact!.jobsSupported.toLocaleString(), icon: Briefcase },
-                    { label: 'Women-led businesses', value: impact!.womenLedBusinesses.toLocaleString(), icon: HeartHandshake },
-                    { label: 'Community projects', value: impact!.communityProjects.toLocaleString(), icon: Sprout },
+                    { label: 'Revenue to local businesses', value: formatRwfShort(impact?.localRevenueRwf ?? 0), icon: Wallet },
+                    { label: 'Jobs supported', value: (impact?.jobsSupported ?? 0).toLocaleString(), icon: Briefcase },
+                    { label: 'Women-led businesses', value: (impact?.womenLedBusinesses ?? 0).toLocaleString(), icon: HeartHandshake },
+                    { label: 'Community projects', value: (impact?.communityProjects ?? 0).toLocaleString(), icon: Sprout },
                   ].map(({ label, value, icon: Icon }) => (
                     <div key={label} className="rounded-xl bg-slate-50 p-4">
                       <Icon className="h-4 w-4 text-brand-600" aria-hidden />
@@ -87,7 +94,7 @@ export default function AdminDashboardPage() {
                     </div>
                   ))}
                 </dl>
-                <RankedList data={impact!.revenueByCategory.map((c) => ({ name: c.category, value: c.revenueRwf }))} valueFormatter={formatRwfShort} max={7} />
+                <RankedList data={(impact?.revenueByCategory ?? []).map((c) => ({ name: c.category, value: c.revenueRwf }))} valueFormatter={formatRwfShort} max={7} />
               </div>
             </ChartCard>
 
@@ -95,7 +102,7 @@ export default function AdminDashboardPage() {
               <SectionTitle title="New members" action={<Link to="/admin/users" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">All users<ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
               <p className="-mt-2 mb-3 text-sm text-slate-500">{signups.current} joined in the last 90 days</p>
               <ul className="divide-y divide-slate-100">
-                {(data?.users ?? []).slice(0, 6).map((u) => (
+                {users.slice(0, 6).map((u) => (
                   <li key={u.id} className="flex items-center gap-3 py-2.5">
                     <Avatar name={u.name} size={34} />
                     <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-ink">{u.name}</p><p className="text-xs text-slate-500">{roleLabel[u.role]} · {u.country ?? '—'}</p></div>
