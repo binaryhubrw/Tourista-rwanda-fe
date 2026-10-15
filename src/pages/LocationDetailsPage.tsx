@@ -37,7 +37,8 @@ export default function LocationDetailsPage() {
   if (error || !location) return <Container className="py-16"><ErrorState message={error ?? undefined} onRetry={reload} /></Container>;
 
   const href = `/destinations/${location.id}`;
-  const gallery = location.gallery.length ? location.gallery : [location.image];
+  const gallery = (location.gallery?.length ? location.gallery : [location.image]).filter(Boolean);
+  const photos = gallery.length ? gallery : [''];
   const experiencesHere = related.data?.experiences.filter((e) => e.locationId === location.id) ?? [];
   const businessesHere = related.data?.businesses.filter((b) => b.locationId === location.id || distanceKm(b.coordinates, location.coordinates) < 15) ?? [];
   const mapPoints = [
@@ -54,9 +55,9 @@ export default function LocationDetailsPage() {
       {/* Gallery */}
       <Container className="mt-4">
         <div className="grid gap-3 lg:grid-cols-[1fr_200px]">
-          <SmartImage src={gallery[activeImg]} alt={`${location.name}, photo ${activeImg + 1}`} className="aspect-[16/10] w-full rounded-3xl lg:aspect-[21/10]" />
+          <SmartImage src={photos[activeImg]} alt={`${location.name}, photo ${activeImg + 1}`} className="aspect-[16/10] w-full rounded-3xl lg:aspect-[21/10]" />
           <div className="flex gap-3 overflow-x-auto lg:flex-col">
-            {gallery.map((src, i) => (
+            {photos.map((src, i) => (
               <button key={i} onClick={() => setActiveImg(i)} aria-label={`Show photo ${i + 1}`} aria-pressed={i === activeImg} className={cn('shrink-0 overflow-hidden rounded-2xl ring-offset-2', i === activeImg && 'ring-2 ring-brand-600')}>
                 <SmartImage src={src} alt="" className="h-20 w-28 lg:h-[88px] lg:w-full" />
               </button>
@@ -70,7 +71,7 @@ export default function LocationDetailsPage() {
           <header>
             <div className="flex flex-wrap gap-2">
               <Badge tone="solid">{location.category}</Badge>
-              {location.interests.map((i) => <Badge key={i}>{i}</Badge>)}
+              {(location.interests ?? []).map((i) => <Badge key={i}>{i}</Badge>)}
             </div>
             <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-5xl">{location.name}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-slate-600">
@@ -80,26 +81,32 @@ export default function LocationDetailsPage() {
             </div>
           </header>
 
-          <section aria-labelledby="about">
-            <h2 id="about" className="font-display text-2xl font-bold text-ink">About {location.name}</h2>
-            <p className="mt-3 max-w-prose text-lg leading-relaxed text-slate-700">{location.description}</p>
-          </section>
+          {location.description ? (
+            <section aria-labelledby="about">
+              <h2 id="about" className="font-display text-2xl font-bold text-ink">About {location.name}</h2>
+              <p className="mt-3 max-w-prose text-lg leading-relaxed text-slate-700">{location.description}</p>
+            </section>
+          ) : null}
 
-          <section aria-labelledby="todo">
-            <h2 id="todo" className="font-display text-2xl font-bold text-ink">Things to do</h2>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {location.thingsToDo.map((t) => (
-                <li key={t} className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4"><Check className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden /><span className="text-slate-700">{t}</span></li>
-              ))}
-            </ul>
-          </section>
+          {location.thingsToDo?.length ? (
+            <section aria-labelledby="todo">
+              <h2 id="todo" className="font-display text-2xl font-bold text-ink">Things to do</h2>
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                {location.thingsToDo.map((t) => (
+                  <li key={t} className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4"><Check className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden /><span className="text-slate-700">{t}</span></li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-          <section aria-labelledby="sustain" className="rounded-3xl bg-brand-50 p-6">
-            <h2 id="sustain" className="flex items-center gap-2 font-display text-2xl font-bold text-ink"><Leaf className="h-6 w-6 text-brand-600" aria-hidden />Visiting sustainably</h2>
-            <ul className="mt-4 space-y-2">
-              {location.sustainability.map((s) => <li key={s} className="flex gap-2 text-slate-700"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" aria-hidden />{s}</li>)}
-            </ul>
-          </section>
+          {location.sustainability?.length ? (
+            <section aria-labelledby="sustain" className="rounded-3xl bg-brand-50 p-6">
+              <h2 id="sustain" className="flex items-center gap-2 font-display text-2xl font-bold text-ink"><Leaf className="h-6 w-6 text-brand-600" aria-hidden />Visiting sustainably</h2>
+              <ul className="mt-4 space-y-2">
+                {location.sustainability.map((s) => <li key={s} className="flex gap-2 text-slate-700"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" aria-hidden />{s}</li>)}
+              </ul>
+            </section>
+          ) : null}
 
           {experiencesHere.length > 0 && (
             <section aria-labelledby="exp-here">

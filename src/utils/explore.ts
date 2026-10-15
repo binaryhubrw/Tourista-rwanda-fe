@@ -25,7 +25,7 @@ export type ExploreItem = {
 );
 
 export function locationHaystack(location: Location) {
-  return `${location.name} ${location.district} ${location.province} ${location.shortDescription} ${location.description} ${location.category} ${location.thingsToDo.join(' ')}`;
+  return `${location.name} ${location.district} ${location.province} ${location.shortDescription} ${location.description} ${location.category} ${(location.thingsToDo ?? []).join(' ')}`;
 }
 
 export function termsMatch(haystack: string, query: string) {
@@ -265,7 +265,7 @@ export function buildExploreItems(
   );
   return [
     ...locations.map<ExploreItem>((l) => ({
-      key: `l-${l.id}`, type: 'location', node: l, kind: 'destination', title: l.name, text: `${l.name} ${l.district} ${l.shortDescription} ${l.description} ${l.category} ${l.thingsToDo.join(' ')}`,
+      key: `l-${l.id}`, type: 'location', node: l, kind: 'destination', title: l.name, text: `${l.name} ${l.district} ${l.shortDescription} ${l.description} ${l.category} ${(l.thingsToDo ?? []).join(' ')}`,
       rating: l.rating, reviewCount: l.reviewCount, province: l.province, priceLevel: l.priceLevel, interests: l.interests,
       sustainable: l.sustainability.length > 0 && (l.isHiddenGem || l.category === 'National Park'), createdAt: l.createdAt, popularity: l.visitsLastYear,
     })),

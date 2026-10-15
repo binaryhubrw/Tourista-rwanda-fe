@@ -40,6 +40,7 @@ export default function ListingEditorPage() {
       back();
     } catch (e) {
       toast.error(errorMessage(e));
+      throw e;
     } finally {
       setSaving(false);
     }
@@ -54,8 +55,8 @@ export default function ListingEditorPage() {
     );
   }
 
-  if (biz.loading || locations.loading) return <Loading />;
-  if (biz.error || locations.error) return <ErrorState message={biz.error ?? locations.error ?? undefined} onRetry={() => { biz.reload(); locations.reload(); }} />;
+  if ((biz.loading && !biz.data) || (locations.loading && !locations.data)) return <Loading />;
+  if ((biz.error && !biz.data) || (locations.error && !locations.data)) return <ErrorState message={biz.error ?? locations.error ?? undefined} onRetry={() => { biz.reload(); locations.reload(); }} />;
   if (!creating && !listing) return <ErrorState message="That branch was not found." onRetry={back} />;
 
   return (

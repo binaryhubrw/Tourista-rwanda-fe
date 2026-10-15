@@ -1,22 +1,25 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Gem, Star, Footprints, Plus, Upload } from 'lucide-react';
-import type { Interest, Location, LocationCategory, PriceLevel } from '@/types';
+import type { Location, LocationCategory } from '@/types';
 import { createLocation, createLocations, getLocations, type LocationInput } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ErrorState, ImageUpload, Input, Modal, Select, Textarea } from '@/components/ui';
+import { Badge, Button, ErrorState, Input, Modal, Select } from '@/components/ui';
 import { BulkImportModal, DataTable, PageHeader, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
-import { images } from '@/data/images';
 import { average, sum } from '@/utils/analytics';
 import { formatCompact } from '@/utils/format';
-import { cn } from '@/utils/cn';
 
-const CATEGORIES: LocationCategory[] = ['City', 'National Park', 'Lake', 'Town', 'Cultural Site', 'Hidden Gem'];
-const PROVINCES = ['City of Kigali', 'Northern Province', 'Southern Province', 'Eastern Province', 'Western Province'];
-const INTERESTS: Interest[] = ['Nature', 'Culture', 'Adventure', 'Food', 'Wildlife', 'History', 'Relaxation'];
+const DISTRICTS_BY_PROVINCE: Record<string, string[]> = {
+  'City of Kigali': ['Gasabo', 'Kicukiro', 'Nyarugenge'],
+  'Eastern Province': ['Bugesera', 'Gatsibo', 'Kayonza', 'Kirehe', 'Ngoma', 'Nyagatare', 'Rwamagana'],
+  'Northern Province': ['Burera', 'Gakenke', 'Gicumbi', 'Musanze', 'Rulindo'],
+  'Southern Province': ['Gisagara', 'Huye', 'Kamonyi', 'Muhanga', 'Nyamagabe', 'Nyanza', 'Nyaruguru', 'Ruhango'],
+  'Western Province': ['Karongi', 'Ngororero', 'Nyabihu', 'Nyamasheke', 'Rubavu', 'Rusizi', 'Rutsiro'],
+};
+const PROVINCES = Object.keys(DISTRICTS_BY_PROVINCE);
 // Rwanda's bounding box, to catch swapped or mistyped coordinates.
 const inRwanda = (lat: number, lng: number) => lat >= -2.85 && lat <= -1.04 && lng >= 28.85 && lng <= 30.9;
 
@@ -31,7 +34,7 @@ const columns: Column<Location>[] = [
 ];
 
 
-const blank = { name: '', category: 'Hidden Gem' as LocationCategory, district: '', province: PROVINCES[1], lat: '', lng: '', shortDescription: '', description: '', interests: ['Nature'] as Interest[], thingsToDo: '', priceLevel: '1', hiddenGem: true, photos: [] as string[] };
+const blank = { name: '', province: PROVINCES[0], district: DISTRICTS_BY_PROVINCE[PROVINCES[0]][0], lat: '', lng: '' };
 
 export default function AdminLocationsPage() {
   useDocumentTitle('Locations');
@@ -45,22 +48,15 @@ export default function AdminLocationsPage() {
   const [saving, setSaving] = useState(false);
 
   const all = data ?? [];
-  const categoryOptions = [...new Set([...CATEGORIES, ...all.map((l) => l.category)])];
   const provinceOptions = [...new Set([...PROVINCES, ...all.map((l) => l.province)])];
   const districtOptions = [...new Set(all.map((l) => l.district.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const importFields: ImportField[] = useMemo(() => [
-    { key: 'name', label: 'Name', required: true, example: 'Lake Muhazi' },
-    { key: 'category', label: 'Category', required: true, example: categoryOptions[0] ?? 'Lake', options: categoryOptions, hint: 'Use the Excel dropdown.' },
-    { key: 'district', label: 'District', required: true, example: districtOptions[0] ?? 'Rwamagana', options: districtOptions, strict: false, hint: districtOptions.length ? 'Use the dropdown, or type a new district.' : 'Type the district name.' },
+    { key: 'name', label: 'Name', required: true, example: 'Nyamata' },
+    { key: 'district', label: 'District', required: true, example: districtOptions[0] ?? 'Bugesera', options: districtOptions, strict: false, hint: districtOptions.length ? 'Use the dropdown, or type a new district.' : 'Type the district name.' },
     { key: 'province', label: 'Province', required: true, example: provinceOptions[0], options: provinceOptions, hint: 'Use the Excel dropdown.' },
-    { key: 'latitude', label: 'Latitude', required: true, example: '-1.85' },
-    { key: 'longitude', label: 'Longitude', required: true, example: '30.33' },
-    { key: 'shortDescription', label: 'Short description', required: true, example: 'A long, quiet lake for weekend escapes from Kigali.' },
-    { key: 'description', label: 'Description', example: 'Fishing villages, boat trips and lakeside fish grills.' },
-    { key: 'interests', label: 'Interests', example: INTERESTS.slice(0, 2).join('; '), options: INTERESTS, strict: false, hint: 'Use the dropdown, or list several separated by ;' },
-    { key: 'thingsToDo', label: 'Things to do', example: 'Boat trip; Birdwatching' },
-    { key: 'photoUrl', label: 'Photo URL', example: '', hint: 'Optional.' },
-  ], [categoryOptions, districtOptions, provinceOptions]);
+    { key: 'latitude', label: 'Latitude', required: true, example: '-2.15' },
+    { key: 'longitude', label: 'Longitude', required: true, example: '30.12' },
+  ], [districtOptions, provinceOptions]);
   const categories = [...new Set(all.map((l) => l.category))].sort();
   const list = useMemo(() => all.filter((l) => category === 'all' || l.category === category), [all, category]);
   const names = useMemo(() => new Set(all.map((l) => l.name.toLowerCase())), [all]);
@@ -71,20 +67,15 @@ export default function AdminLocationsPage() {
     const lng = Number(form.lng);
     if (form.name.trim().length < 2) e.name = 'Enter the name.';
     else if (names.has(form.name.trim().toLowerCase())) e.name = 'A location with this name already exists.';
-    if (form.district.trim().length < 2) e.district = 'Enter the district.';
+    if (!DISTRICTS_BY_PROVINCE[form.province]?.includes(form.district)) e.district = 'Choose a district in that province.';
     if (!form.lat || !form.lng || Number.isNaN(lat) || Number.isNaN(lng)) e.coords = 'Enter latitude and longitude as numbers.';
     else if (!inRwanda(lat, lng)) e.coords = 'Those coordinates are outside Rwanda. Latitude is about -1 to -2.8, longitude 28.9 to 30.9.';
-    if (form.shortDescription.trim().length < 20) e.shortDescription = 'At least 20 characters.';
-    if (!form.photos.length) e.photos = 'Add at least one photo.';
     setErrors(e);
     if (Object.keys(e).length) return;
     setSaving(true);
     try {
       const created = await createLocation({
-        name: form.name.trim(), category: form.category, district: form.district.trim(), province: form.province,
-        coordinates: { lat, lng }, shortDescription: form.shortDescription.trim(), description: form.description.trim() || form.shortDescription.trim(),
-        interests: form.interests, thingsToDo: form.thingsToDo.split(',').map((t) => t.trim()).filter(Boolean), sustainability: [],
-        image: form.photos[0], gallery: form.photos.slice(1), priceLevel: Number(form.priceLevel) as PriceLevel, isHiddenGem: form.hiddenGem,
+        name: form.name.trim(), district: form.district.trim(), province: form.province, coordinates: { lat, lng },
       });
       setData((l) => [created, ...(l ?? [])]);
       toast.success(`${created.name} added. It now appears on the map and in search.`);
@@ -97,34 +88,25 @@ export default function AdminLocationsPage() {
     }
   };
 
-  const split = (v?: string) => (v ?? '').split(/[;|]/).map((x) => x.trim()).filter(Boolean);
   const parseRow = (r: Record<string, string>, i: number, rows: Record<string, string>[]) => {
     const errs: string[] = [];
     const name = (r.name ?? '').trim();
-    const cat = (categoryOptions.find((c) => c.toLowerCase() === (r.category ?? '').trim().toLowerCase()) ?? CATEGORIES.find((c) => c.toLowerCase() === (r.category ?? '').trim().toLowerCase())) as LocationCategory | undefined;
     const provinceKey = (r.province ?? '').trim().toLowerCase();
     const province = provinceKey.length >= 4 ? provinceOptions.find((p) => p.toLowerCase() === provinceKey) ?? provinceOptions.find((p) => p.toLowerCase().includes(provinceKey)) : undefined;
     const lat = Number(r.latitude);
     const lng = Number(r.longitude);
-    const interests = split(r.interests).map((x) => INTERESTS.find((o) => o.toLowerCase() === x.toLowerCase()));
     if (name.length < 2) errs.push('Name is missing.');
     else if (names.has(name.toLowerCase())) errs.push('Already exists.');
     else if (rows.findIndex((x) => (x.name ?? '').trim().toLowerCase() === name.toLowerCase()) !== i) errs.push('Repeated in this file.');
-    if (!cat) errs.push(`Unknown category “${r.category ?? ''}”.`);
-    if ((r.district ?? '').trim().length < 2) errs.push('District is missing.');
+    const district = (r.district ?? '').trim();
+    const districtMatch = province ? DISTRICTS_BY_PROVINCE[province].find((d) => d.toLowerCase() === district.toLowerCase()) : undefined;
+    if (district.length < 2) errs.push('District is missing.');
+    else if (province && !districtMatch) errs.push(`${district} is not a district in ${province}.`);
     if (!province) errs.push(`Unknown province “${r.province ?? ''}”.`);
     if (!r.latitude || !r.longitude || Number.isNaN(lat) || Number.isNaN(lng)) errs.push('Latitude/longitude missing.');
     else if (!inRwanda(lat, lng)) errs.push('Coordinates are outside Rwanda.');
-    if ((r.shortDescription ?? '').trim().length < 20) errs.push('Short description under 20 characters.');
-    if (interests.some((x) => !x)) errs.push('Unknown interest.');
-    if (r.photoUrl && !/^https?:\/\//.test(r.photoUrl)) errs.push('Photo URL must start with https://');
-    if (errs.length || !cat || !province) return { errors: errs };
-    const value: LocationInput = {
-      name, category: cat, district: r.district.trim(), province, coordinates: { lat, lng },
-      shortDescription: r.shortDescription.trim(), description: (r.description ?? '').trim() || r.shortDescription.trim(),
-      interests: (interests.length ? interests : ['Nature']) as Interest[], thingsToDo: split(r.thingsToDo), sustainability: [],
-      image: r.photoUrl || images.hills, gallery: [], priceLevel: 1, isHiddenGem: cat === 'Hidden Gem',
-    };
+    if (errs.length || !province) return { errors: errs };
+    const value: LocationInput = { name, district: districtMatch ?? district, province, coordinates: { lat, lng } };
     return { value, errors: [] };
   };
 
@@ -180,33 +162,11 @@ export default function AdminLocationsPage() {
 
       <Modal open={adding && !!data} onClose={() => setAdding(false)} title="Add a location" size="lg" footer={<><Button variant="ghost" onClick={() => setAdding(false)}>Cancel</Button><Button onClick={save} loading={saving}>Add location</Button></>}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} />
-          <Select label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as LocationCategory, hiddenGem: e.target.value === 'Hidden Gem' || form.hiddenGem })} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
-          <Input label="District" required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} error={errors.district} />
-          <Select label="Province" value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} options={PROVINCES.map((p) => ({ value: p, label: p }))} />
+          <div className="sm:col-span-2"><Input label="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} /></div>
+          <Select label="Province" required value={form.province} onChange={(e) => { const province = e.target.value; setForm({ ...form, province, district: DISTRICTS_BY_PROVINCE[province][0] }); }} options={PROVINCES.map((p) => ({ value: p, label: p }))} />
+          <Select label="District" required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} error={errors.district} options={(DISTRICTS_BY_PROVINCE[form.province] ?? []).map((d) => ({ value: d, label: d }))} />
           <Input label="Latitude" inputMode="decimal" required placeholder="-1.95" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} error={errors.coords} />
           <Input label="Longitude" inputMode="decimal" required placeholder="30.06" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
-          <div className="sm:col-span-2"><Input label="Short description" required value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} error={errors.shortDescription} hint="Shown on cards and in search." /></div>
-          <div className="sm:col-span-2"><Textarea label="Full description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-          <fieldset className="sm:col-span-2">
-            <legend className="mb-2 text-sm font-semibold text-ink">Interests</legend>
-            <div className="flex flex-wrap gap-2">
-              {INTERESTS.map((i) => {
-                const on = form.interests.includes(i);
-                return (
-                  <label key={i} className={cn('cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium', on ? 'border-brand-600 bg-brand-50 text-brand-600' : 'border-slate-300 text-slate-700')}>
-                    <input type="checkbox" className="sr-only" checked={on} onChange={() => setForm({ ...form, interests: on ? form.interests.filter((x) => x !== i) : [...form.interests, i] })} />{i}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-          <Input label="Things to do" value={form.thingsToDo} onChange={(e) => setForm({ ...form, thingsToDo: e.target.value })} placeholder="Boat trip, Birdwatching" hint="Separate with commas." />
-          <Select label="Cost to visit" value={form.priceLevel} onChange={(e) => setForm({ ...form, priceLevel: e.target.value })} options={[{ value: '1', label: 'Budget' }, { value: '2', label: 'Mid-range' }, { value: '3', label: 'Premium' }]} />
-          <label className="flex items-center gap-2 text-sm font-semibold text-ink sm:col-span-2">
-            <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={form.hiddenGem} onChange={(e) => setForm({ ...form, hiddenGem: e.target.checked })} />Promote as a hidden gem
-          </label>
-          <div className="sm:col-span-2"><ImageUpload value={form.photos} onChange={(photos) => setForm({ ...form, photos })} error={errors.photos} required /></div>
         </div>
       </Modal>
 

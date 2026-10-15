@@ -9,7 +9,7 @@ export async function getLocationById(id: string): Promise<Location> {
   return api.get<Location>(`/locations/${id}/`);
 }
 
-export type LocationInput = Omit<Location, 'id' | 'rating' | 'reviewCount' | 'visitsLastYear' | 'createdAt'> & Partial<Pick<Location, 'visitsLastYear'>>;
+export type LocationInput = Pick<Location, 'name' | 'district' | 'province' | 'coordinates'>;
 
 export async function createLocations(inputs: LocationInput[]): Promise<Location[]> {
   return api.post<Location[]>('/locations/bulk/', inputs);
