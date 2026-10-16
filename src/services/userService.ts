@@ -9,6 +9,16 @@ export async function getUsers(): Promise<User[]> {
   return api.get<User[]>('/users/');
 }
 
+export interface AdminContact {
+  name: string;
+  phone: string;
+  email: string;
+}
+
+export async function getAdminContacts(): Promise<AdminContact[]> {
+  return api.get<AdminContact[]>('/users/admins/');
+}
+
 export async function deleteUsers(ids: string[]): Promise<void> {
   await Promise.all(ids.map((id) => api.delete(`/users/${id}/`)));
 }

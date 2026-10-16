@@ -2,6 +2,7 @@ export * from './Loading';
 export * from './Button';
 export * from './Input';
 export * from './DatePicker';
+export * from './CalendarCard';
 export * from './Badge';
 export * from './Modal';
 export * from './States';

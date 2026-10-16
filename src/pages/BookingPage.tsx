@@ -7,7 +7,7 @@ import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Badge, Button, ButtonLink, Container, DatePicker, ErrorState, Input, Loading, SmartImage, Textarea } from '@/components/ui';
+import { Badge, Button, ButtonLink, CalendarCard, Container, ErrorState, Input, Loading, SmartImage, Textarea } from '@/components/ui';
 import { formatDate, formatRwf, todayIso } from '@/utils/format';
 import { addDaysIso, guidedVisitPrice, periodNoun, pricingMode, quote } from '@/utils/pricing';
 import { assignVehiclePlates, remaining } from '@/utils/availability';
@@ -175,9 +175,15 @@ export default function BookingPage() {
     if (n != null) return Math.min(Math.max(1, n), Math.max(1, cap));
     return Math.min(2, Math.max(1, cap));
   };
+  const personCaps = services
+    .filter((s) => pricingMode(s.unit) === 'perPerson')
+    .map((s) => offeringLeft(s, data?.bookings ?? [], start, end))
+    .filter((n) => Number.isFinite(n))
+    .map((n) => Math.max(1, Math.floor(n)));
+  const guestLimit = personCaps.length ? Math.min(30, ...personCaps) : 30;
   const stayParty = services.filter((s) => pricingMode(s.unit) === 'stay').reduce((n, s) => n + partyOf(s.id), 0);
-  const otherParty = Math.max(0, ...services.filter((s) => pricingMode(s.unit) !== 'stay').map((s) => partyOf(s.id)));
-  const partySize = stayParty || otherParty || 1;
+  const otherParty = Math.max(0, ...services.filter((s) => pricingMode(s.unit) !== 'stay').map((s) => partyOf(s.id, guestLimit)));
+  const partySize = Math.max(1, Math.min(guestLimit, stayParty || otherParty || 1));
 
   const lines = useMemo(() => {
     if (!item || !span || !rangeReady) return [];
@@ -209,11 +215,8 @@ export default function BookingPage() {
     }
     if (step === 1) {
       if (!services.length) e.services = 'Choose at least one thing to book.';
-      if (needsPeople && partySize < 1) e.people = 'At least one guest.';
-      if (partySize > 30) e.people = 'Bookings are limited to 30 people. Contact the host for larger groups.';
       lines.forEach((line) => {
         if (line.priced.total <= 0) e.dates = 'Those dates do not cover a chargeable stay.';
-        if (line.units > line.left) e[line.service.id] = line.left > 0 ? `Only ${line.left} left for those dates.` : `${line.service.name} is booked during this date range.`;
       });
     }
     if (step === 2) {
@@ -291,13 +294,14 @@ export default function BookingPage() {
     );
   }
 
+  const isFree = (service: Service) => !rangeReady || offeringLeft(service, data.bookings, start, end) > 0;
   const grouped = [
     { title: 'Rooms', items: item.services.filter((service) => pricingMode(service.unit) === 'stay') },
     { title: 'Services', items: item.services.filter((service) => service.group === 'wellness') },
     { title: 'Food and drink', items: item.services.filter((service) => service.group === 'food') },
     { title: 'Vehicles', items: item.services.filter((service) => service.group === 'vehicle') },
     { title: 'Other', items: item.services.filter((service) => pricingMode(service.unit) !== 'stay' && service.group !== 'wellness' && service.group !== 'food' && service.group !== 'vehicle') },
-  ].filter((group) => group.items.length);
+  ].map((group) => ({ ...group, items: group.items.filter(isFree) })).filter((group) => group.items.length);
 
   return (
     <Container className="py-8 lg:py-12">
@@ -320,22 +324,26 @@ export default function BookingPage() {
             <div className="space-y-6">
               <p className="text-sm text-slate-600">Choose your date range first. Next you will only be able to book what is still free in those dates.</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePicker
+                <CalendarCard
                   label={needsStay ? 'Check-in' : 'From'}
-                  required min={todayIso()} value={start}
+                  value={start}
+                  min={todayIso()}
                   onChange={(iso) => {
                     setStart(iso);
                     if (needsStay && iso && (!end || end <= iso)) setEnd(addDaysIso(iso, 1));
                     else if (!needsStay && iso && end && end < iso) setEnd(iso);
                   }}
+                  rangeStart={start}
+                  rangeEnd={end}
                   error={errors.start}
                 />
-                <DatePicker
+                <CalendarCard
                   label={needsStay ? 'Check-out' : 'To'}
-                  required
-                  min={start ? (needsStay ? addDaysIso(start, 1) : start) : todayIso()}
                   value={end}
+                  min={start ? (needsStay ? addDaysIso(start, 1) : start) : todayIso()}
                   onChange={setEnd}
+                  rangeStart={start}
+                  rangeEnd={end}
                   error={errors.end}
                 />
               </div>
@@ -345,55 +353,40 @@ export default function BookingPage() {
           {step === 1 && (
             <div className="space-y-6">
               <p className="text-sm text-slate-600">
-                Availability for {formatDate(start)}{end && end !== start ? ` – ${formatDate(end)}` : ''}. Items already booked in this date range cannot be selected.
+                What is free for {formatDate(start)}{end && end !== start ? ` – ${formatDate(end)}` : ''}. Pick what you would like to book.
               </p>
-              {grouped.map((group) => (
+              {grouped.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-600">Nothing is available for those dates. Go back and try a different date range.</p>
+              ) : grouped.map((group) => (
                 <fieldset key={group.title} className="space-y-2">
                   <legend className="mb-2 text-sm font-semibold text-ink">{group.title}</legend>
                   {group.items.map((service) => {
                     const on = selected.includes(service.id);
                     const mode = pricingMode(service.unit);
                     const left = offeringLeft(service, data.bookings, start, end);
-                    const booked = Number.isFinite(left) && left <= 0;
                     const stock = stockOf(service, left);
                     const qtyMax = stock ?? 20;
                     const count = Math.min(counts[service.id] ?? 1, Math.max(qtyMax, 1));
                     const guestsMax = peopleCap(service, count, stock);
-                    const guestsCap = guestsMax ?? 30;
+                    const guestsCap = Math.min(guestsMax ?? 30, guestLimit, 30);
                     const guests = partyOf(service.id, guestsCap);
                     const showPeople = mode === 'stay' || asksForPeople(service);
                     const assignedPlates = lines.find((line) => line.service.id === service.id)?.plateNumbers;
                     return (
-                      <div key={service.id} className={cn(
-                        'rounded-2xl border-2 p-4',
-                        booked
-                          ? 'border-slate-400 bg-slate-300/90 bg-[repeating-linear-gradient(135deg,transparent_0_10px,rgba(15,23,42,0.08)_10px_20px)] opacity-80'
-                          : on ? 'border-brand-600 bg-brand-50/60' : 'border-slate-200',
-                      )}>
-                        <label className={cn('flex gap-3', booked ? 'cursor-not-allowed' : 'cursor-pointer')}>
-                          <input type="checkbox" className="mt-1 accent-brand-600 disabled:opacity-40" checked={on} disabled={booked} onChange={() => setSelected((current) => (on ? current.filter((serviceId) => serviceId !== service.id) : [...current, service.id]))} />
+                      <div key={service.id} className={cn('rounded-2xl border-2 p-4', on ? 'border-brand-600 bg-brand-50/60' : 'border-slate-200')}>
+                        <label className="flex cursor-pointer gap-3">
+                          <input type="checkbox" className="mt-1 accent-brand-600" checked={on} onChange={() => setSelected((current) => (on ? current.filter((serviceId) => serviceId !== service.id) : [...current, service.id]))} />
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-                              <span className="flex flex-wrap items-center gap-2">
-                                <span className={cn('font-semibold', booked ? 'text-slate-600' : 'text-ink')}>{service.name}</span>
-                                {booked && <Badge tone="neutral" className="bg-slate-600 text-white">Booked</Badge>}
-                              </span>
-                              <span className={cn('whitespace-nowrap font-semibold', booked ? 'text-slate-500' : 'text-ink')}>{service.brand ? `${service.brand} · ` : ''}{formatRwf(service.priceRwf)} <span className="text-sm font-normal text-slate-500">{service.unit}</span></span>
+                              <span className="font-semibold text-ink">{service.name}</span>
+                              <span className="whitespace-nowrap font-semibold text-ink">{service.brand ? `${service.brand} · ` : ''}{formatRwf(service.priceRwf)} <span className="text-sm font-normal text-slate-500">{service.unit}</span></span>
                             </span>
-                            <span className={cn('mt-1 block text-sm', booked ? 'text-slate-500' : 'text-slate-600')}>{service.description}</span>
+                            <span className="mt-1 block text-sm text-slate-600">{service.description}</span>
                             {service.group === 'vehicle' && (
                               <span className="mt-1 block text-sm font-medium text-slate-700">
                                 {vehicleCarry(service).label}
                                 {on && assignedPlates?.length ? <span className="block font-semibold tracking-wide text-ink">You are booking plate {platesPhrase(assignedPlates)}</span> : null}
                               </span>
-                            )}
-                            {booked && (
-                              <span className="mt-1 block text-sm font-semibold text-slate-700">
-                                Booked during this date range ({formatDate(start)} – {formatDate(end)}).
-                              </span>
-                            )}
-                            {!booked && Number.isFinite(left) && left < (service.available ?? left) && (
-                              <span className="mt-1 block text-sm text-slate-600">{left} left for these dates.</span>
                             )}
                           </span>
                         </label>
@@ -436,11 +429,6 @@ export default function BookingPage() {
               <Textarea label="Notes for the host" value={info.notes} onChange={(e) => setInfo({ ...info, notes: e.target.value })} placeholder="Arrival time, dietary needs, accessibility…" />
             </div>
           )}
-
-          <div className="mt-8 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-            {step > 0 ? <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setStep((s) => s - 1)}>Back</Button> : <span />}
-            {step < 2 ? <Button className="w-full sm:w-auto" onClick={next}>Continue</Button> : <Button className="w-full sm:w-auto" onClick={submitRequest} loading={submitting}>Send booking request</Button>}
-          </div>
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -463,9 +451,16 @@ export default function BookingPage() {
                 {end && <div className="flex justify-between gap-3"><dt className="text-slate-500">{needsStay ? 'Check-out' : 'To'}</dt><dd>{formatDate(end)}</dd></div>}
                 {lines[0] && (needsStay || needsRange) && <div className="flex justify-between gap-3"><dt className="text-slate-500">Length</dt><dd>{lines[0].priced.periods} {periodNoun(lines[0].mode, lines[0].priced.periods)}</dd></div>}
                 {needsPeople && <div className="flex justify-between gap-3"><dt className="text-slate-500">Guests</dt><dd>{partySize}</dd></div>}
-                <div className="flex justify-between border-t border-slate-100 pt-3 text-base"><dt className="font-semibold">Total</dt><dd className="font-display text-xl font-bold">{formatRwf(total)}</dd></div>
+                <div className="flex justify-between border-t border-slate-100 pt-3 text-base">
+                  <dt className="font-semibold">Total</dt>
+                  <dd className="font-display text-xl font-bold">{lines.length ? formatRwf(total) : <span className="font-sans text-base font-medium text-slate-400">Not yet booked</span>}</dd>
+                </div>
               </dl>
               <p className="mt-3 text-xs text-slate-500">No payment yet. After the host approves, you will have two hours to pay at least 30% from your Bookings page.</p>
+              <div className="mt-5 flex flex-col gap-2">
+                {step > 0 && <Button variant="ghost" className="w-full" onClick={() => setStep((s) => s - 1)}>Back</Button>}
+                {step < 2 ? <Button className="w-full" onClick={next}>Continue</Button> : <Button className="w-full" onClick={submitRequest} loading={submitting}>Send booking request</Button>}
+              </div>
             </div>
           </div>
         </aside>

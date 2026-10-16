@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { getBookingById, getBusinessesByOwner, getPayoutForBusiness, updateBookingStatus } from '@/services';
+import { getBookingById, getBusinessesByOwner, getPayoutForBusiness, updateBookingStatus, getAdminContacts } from '@/services';
 import { confirmHostReceivedPayment, hostDecideBooking, submitOfflinePayment } from '@/services/bookingService';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -14,7 +14,7 @@ import { OfflinePaymentForm } from '@/components/payment/OfflinePaymentForm';
 import { bookingLines } from '@/utils/availability';
 import { platesPhrase } from '@/utils/catalog';
 import { formatDate, formatRwf } from '@/utils/format';
-import { paidToward, paymentMethodLabel, remainingDue } from '@/utils/payment';
+import { paidToward, paymentMethodLabel, remainingDue, formatMobile } from '@/utils/payment';
 
 const targetHref = (type: string, id: string) => (type === 'experience' ? `/experiences/${id}` : type === 'location' ? `/explore?location=${id}#explore-listings` : `/businesses/${id}`);
 
@@ -34,6 +34,7 @@ export default function BookingDetailsPage() {
     return booking;
   }, [id, user?.id, user?.role]);
   const payout = useAsync(() => (booking?.businessId ? getPayoutForBusiness(booking.businessId) : Promise.resolve(null)), [booking?.businessId]);
+  const admins = useAsync(getAdminContacts, []);
   const [paying, setPaying] = useState(false);
   const [busy, setBusy] = useState(false);
   useDocumentTitle(booking ? `Booking ${booking.id.toUpperCase()}` : 'Booking');
@@ -48,6 +49,8 @@ export default function BookingDetailsPage() {
   const canPay = user.role === 'tourist' && remaining > 0 && ['AwaitingPayment', 'PaymentReview', 'Confirmed'].includes(booking.status);
   const canCancel = !['Canceled', 'Declined', 'Refunded', 'Confirmed', 'RefundPending'].includes(booking.status) && user.role !== 'admin';
   const host = user.role === 'business_owner' || user.role === 'staff';
+  const adminPhones = (admins.data ?? []).map((a) => a.phone).filter(Boolean);
+  const adminEmails = (admins.data ?? []).map((a) => a.email).filter(Boolean);
 
   const onPaid = async (input: Parameters<typeof submitOfflinePayment>[1]) => {
     await submitOfflinePayment(booking.id, input);
@@ -124,6 +127,45 @@ export default function BookingDetailsPage() {
               </dl>
             ) : (
               <p className="mt-3 text-sm text-slate-600">{bookingStatusLabel[booking.status]}. Payment is off-platform after the host approves.</p>
+            )}
+            {!booking.payment && user.role === 'tourist' && !['Canceled', 'Declined', 'Expired', 'Refunded'].includes(booking.status) && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <h3 className="font-display text-base font-bold text-ink">Payment Confirmation Procedure</h3>
+                {payout.data && (payout.data.mtnNumber || payout.data.airtelNumber || payout.data.bankAccount) && (
+                  <div className="mt-3 rounded-xl bg-white/70 p-3">
+                    <p className="text-sm font-semibold text-ink">Pay to {payout.data.businessName}</p>
+                    <ul className="mt-1 space-y-1 text-sm text-slate-700">
+                      {payout.data.mtnNumber && <li>MTN Mobile Money: <span className="font-semibold text-ink">{formatMobile(payout.data.mtnNumber)}</span></li>}
+                      {payout.data.airtelNumber && <li>Airtel Money: <span className="font-semibold text-ink">{formatMobile(payout.data.airtelNumber)}</span></li>}
+                      {payout.data.bankAccount && <li>Bank account: <span className="font-semibold tracking-wide text-ink">{payout.data.bankAccount}</span></li>}
+                    </ul>
+                  </div>
+                )}
+                <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-slate-700">
+                  <li>Complete the payment using the details provided above.</li>
+                  <li>
+                    After payment, please contact us on:{' '}
+                    {adminPhones.length > 0
+                      ? adminPhones.map((phone, i) => (
+                          <span key={phone}>
+                            {i > 0 ? ', ' : ''}
+                            <a href={`tel:${phone.replace(/\s+/g, '')}`} className="font-semibold text-brand-700 hover:underline">{phone}</a>
+                          </span>
+                        ))
+                      : adminEmails.length > 0
+                        ? adminEmails.map((mail, i) => (
+                            <span key={mail}>
+                              {i > 0 ? ', ' : ''}
+                              <a href={`mailto:${mail}`} className="font-semibold text-brand-700 hover:underline">{mail}</a>
+                            </span>
+                          ))
+                        : 'our support team'}
+                    .
+                  </li>
+                  <li>Your booking will remain Pending until the payment has been verified. Once verified, your booking status will be updated to Confirmed, and you will receive a confirmation notification.</li>
+                </ol>
+                <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm text-slate-700"><strong className="font-semibold text-ink">Important:</strong> If payment is not completed and confirmed within the 120-minute reservation window, your pending booking will automatically expire, and the reserved items or services will become available to other customers.</p>
+              </div>
             )}
             {booking.payment && (
               <div className="mt-5">
