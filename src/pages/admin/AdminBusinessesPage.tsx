@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Clock, Leaf, Star, Plus, Upload } from 'lucide-react';
+import { Building2, Clock, Eye, EyeOff, Leaf, Star, Plus, Trash2, Upload } from 'lucide-react';
 import type { ApprovalStatus, Booking, Business, BusinessCategory, PriceLevel, SustainabilityBadge, User } from '@/types';
-import { createBusiness, createBusinesses, getBookings, getBusinesses, getLocations, getUsers } from '@/services';
+import { createBusiness, createBusinesses, deleteBusiness, getBookings, getBusinesses, getLocations, getUsers, setBusinessActive } from '@/services';
 import type { BusinessInput } from '@/services/businessService';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Button, ErrorState, Loading, Modal, Select } from '@/components/ui';
-import { BulkImportModal, DataTable, FilterTabs, ListingApprovalBadge, PageHeader, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
+import { Button, ConfirmModal, ErrorState, Loading, Modal, Select } from '@/components/ui';
+import { BulkImportModal, DataTable, FilterTabs, ListingApprovalBadge, PageHeader, RowMenu, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
 import { ListingReviewActions } from '@/components/business/ListingReviewActions';
 import { listingApproval } from '@/utils/approval';
 import { BADGE_OPTIONS, BUSINESS_CATEGORIES, BusinessForm, PROPERTY_TYPES } from '../business/BusinessForm';
@@ -29,6 +29,8 @@ interface CompanyRow {
   kinds: string;
   districts: string;
   categories: BusinessCategory[];
+  listingIds: string[];
+  active: boolean;
   branchCount: number;
   vehicleCount: number;
   bookingCount: number;
@@ -62,6 +64,8 @@ function companyRows(listings: Business[], owners: User[], bookings: Booking[]):
       kinds,
       districts,
       categories: [...new Set(branches.map((branch) => branch.category))],
+      listingIds: branches.map((branch) => branch.id),
+      active: branches.every((branch) => branch.active !== false),
       branchCount: branches.length,
       vehicleCount: branches.reduce((sum, branch) => sum + fleetCount(branch.services), 0),
       bookingCount: mine.length,
@@ -131,6 +135,10 @@ export default function AdminBusinessesPage() {
   const [adding, setAdding] = useQueryFlag('new');
   const [importing, setImporting] = useQueryFlag('import');
   const [saving, setSaving] = useState(false);
+  const [statusAction, setStatusAction] = useState<{ kind: 'deactivate' | 'activate'; row: CompanyRow } | null>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [deleting, setDeleting] = useState<CompanyRow | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const all = data?.businesses ?? [];
   const destinations = useMemo(() => {
@@ -171,6 +179,38 @@ export default function AdminBusinessesPage() {
       toast.error(errorMessage(e));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const runStatus = async () => {
+    if (!statusAction) return;
+    setStatusBusy(true);
+    try {
+      const results = await Promise.all(statusAction.row.listingIds.map((id) => setBusinessActive(id, statusAction.kind === 'activate')));
+      const byId = new Map(results.map((b) => [b.id, b]));
+      setData((d) => d && { ...d, businesses: d.businesses.map((b) => byId.get(b.id) ?? b) });
+      toast.success(statusAction.kind === 'activate' ? `${statusAction.row.name} is visible to travellers again.` : `${statusAction.row.name} is hidden from travellers.`);
+      setStatusAction(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const runDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try {
+      await Promise.all(deleting.listingIds.map((id) => deleteBusiness(id)));
+      const ids = new Set(deleting.listingIds);
+      setData((d) => d && { ...d, businesses: d.businesses.filter((b) => !ids.has(b.id)) });
+      toast.success(`${deleting.name} was deleted.`);
+      setDeleting(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -290,7 +330,18 @@ export default function AdminBusinessesPage() {
           }
           exportFileName="businesses"
           emptyTitle="No businesses"
-          rowActions={(row) => <ListingViewLink to={row.href} name={row.name} />}
+          rowActions={(row) => (
+            <div className="flex items-center justify-end gap-1">
+              <ListingViewLink to={row.href} name={row.name} />
+              <RowMenu
+                label={`Actions for ${row.name}`}
+                items={[
+                  { label: row.active ? 'Deactivate' : 'Activate', icon: row.active ? EyeOff : Eye, onSelect: () => setStatusAction({ kind: row.active ? 'deactivate' : 'activate', row }) },
+                  { label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => setDeleting(row) },
+                ]}
+              />
+            </div>
+          )}
         />
       ) : (
         <DataTable
@@ -317,6 +368,32 @@ export default function AdminBusinessesPage() {
       </Modal>
 
       <BulkImportModal open={importing && !!data} onClose={() => setImporting(false)} entity="businesses" fields={importFields} parse={parseRow} describe={(r) => r.name ?? ''} onImport={importRows} />
+
+      <ConfirmModal
+        open={!!statusAction}
+        title={statusAction?.kind === 'activate' ? `Activate ${statusAction.row.name}?` : `Deactivate ${statusAction?.row.name}?`}
+        message={statusAction?.kind === 'activate'
+          ? 'All of this company’s branches will be visible to travellers again.'
+          : 'All of this company’s branches will be hidden from travellers and search. You, the owner and staff still see them.'}
+        confirmLabel={statusAction?.kind === 'activate' ? 'Activate' : 'Deactivate'}
+        acknowledge={statusAction?.kind === 'deactivate' ? `I understand ${statusAction?.row.name} will be hidden from travellers.` : undefined}
+        variant={statusAction?.kind === 'activate' ? 'primary' : 'danger'}
+        loading={statusBusy}
+        onConfirm={runStatus}
+        onCancel={() => setStatusAction(null)}
+      />
+
+      <ConfirmModal
+        open={!!deleting}
+        title={`Delete ${deleting?.name ?? ''}?`}
+        message="This permanently removes the company and all of its branches from Tourista. Past bookings and reviews stay on record. This cannot be undone — use Deactivate if you only want to hide it."
+        confirmLabel="Delete"
+        acknowledge={deleting ? `I understand ${deleting.name} will be permanently deleted.` : undefined}
+        variant="danger"
+        loading={deleteBusy}
+        onConfirm={runDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </>
   );
 }

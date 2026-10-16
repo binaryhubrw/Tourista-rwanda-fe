@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X, AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
@@ -68,9 +68,15 @@ interface ConfirmProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
+  /** When set, a checkbox with this label must be ticked before the action can be confirmed. */
+  acknowledge?: string;
+  variant?: 'danger' | 'primary';
 }
 
-export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, onCancel, loading }: ConfirmProps) {
+export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, onCancel, loading, acknowledge, variant = 'danger' }: ConfirmProps) {
+  const [checked, setChecked] = useState(false);
+  useEffect(() => { if (open) setChecked(false); }, [open]);
+
   return (
     <Modal
       open={open}
@@ -80,7 +86,7 @@ export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, on
       footer={
         <>
           <Button variant="ghost" onClick={onCancel}>Keep it</Button>
-          <Button variant="danger" onClick={onConfirm} loading={loading}>{confirmLabel}</Button>
+          <Button variant={variant} onClick={onConfirm} loading={loading} disabled={!!acknowledge && !checked}>{confirmLabel}</Button>
         </>
       }
     >
@@ -88,6 +94,17 @@ export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, on
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden />
         <p className="text-slate-600">{message}</p>
       </div>
+      {acknowledge && (
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => setChecked(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span>{acknowledge}</span>
+        </label>
+      )}
     </Modal>
   );
 }

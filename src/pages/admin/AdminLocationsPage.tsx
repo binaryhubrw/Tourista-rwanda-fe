@@ -20,6 +20,10 @@ const DISTRICTS_BY_PROVINCE: Record<string, string[]> = {
   'Western Province': ['Karongi', 'Ngororero', 'Nyabihu', 'Nyamasheke', 'Rubavu', 'Rusizi', 'Rutsiro'],
 };
 const PROVINCES = Object.keys(DISTRICTS_BY_PROVINCE);
+// District choices carry their province, so a bulk row can only pick a district that belongs to one.
+const DISTRICT_CHOICES = PROVINCES
+  .flatMap((p) => DISTRICTS_BY_PROVINCE[p].map((d) => `${d} (${p})`))
+  .sort((a, b) => a.localeCompare(b));
 // Rwanda's bounding box, to catch swapped or mistyped coordinates.
 const inRwanda = (lat: number, lng: number) => lat >= -2.85 && lat <= -1.04 && lng >= 28.85 && lng <= 30.9;
 
@@ -48,15 +52,13 @@ export default function AdminLocationsPage() {
   const [saving, setSaving] = useState(false);
 
   const all = data ?? [];
-  const provinceOptions = [...new Set([...PROVINCES, ...all.map((l) => l.province)])];
-  const districtOptions = [...new Set(all.map((l) => l.district.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const importFields: ImportField[] = useMemo(() => [
-    { key: 'name', label: 'Name', required: true, example: 'Nyamata' },
-    { key: 'district', label: 'District', required: true, example: districtOptions[0] ?? 'Bugesera', options: districtOptions, strict: false, hint: districtOptions.length ? 'Use the dropdown, or type a new district.' : 'Type the district name.' },
-    { key: 'province', label: 'Province', required: true, example: provinceOptions[0], options: provinceOptions, hint: 'Use the Excel dropdown.' },
-    { key: 'latitude', label: 'Latitude', required: true, example: '-2.15' },
-    { key: 'longitude', label: 'Longitude', required: true, example: '30.12' },
-  ], [districtOptions, provinceOptions]);
+    { key: 'name', label: 'Name', required: true, example: 'Kacyiru' },
+    { key: 'province', label: 'Province', required: true, example: PROVINCES[0], options: PROVINCES, hint: 'Pick one of Rwanda’s 5 provinces from the dropdown.' },
+    { key: 'district', label: 'District', required: true, example: `${DISTRICTS_BY_PROVINCE[PROVINCES[0]][0]} (${PROVINCES[0]})`, options: DISTRICT_CHOICES, hint: 'Pick the district — each option shows its province, and it must be the same province you chose.' },
+    { key: 'latitude', label: 'Latitude', required: true, example: '-1.95' },
+    { key: 'longitude', label: 'Longitude', required: true, example: '30.06' },
+  ], []);
   const categories = [...new Set(all.map((l) => l.category))].sort();
   const list = useMemo(() => all.filter((l) => category === 'all' || l.category === category), [all, category]);
   const names = useMemo(() => new Set(all.map((l) => l.name.toLowerCase())), [all]);
@@ -92,13 +94,13 @@ export default function AdminLocationsPage() {
     const errs: string[] = [];
     const name = (r.name ?? '').trim();
     const provinceKey = (r.province ?? '').trim().toLowerCase();
-    const province = provinceKey.length >= 4 ? provinceOptions.find((p) => p.toLowerCase() === provinceKey) ?? provinceOptions.find((p) => p.toLowerCase().includes(provinceKey)) : undefined;
+    const province = provinceKey.length >= 4 ? PROVINCES.find((p) => p.toLowerCase() === provinceKey) ?? PROVINCES.find((p) => p.toLowerCase().includes(provinceKey)) : undefined;
     const lat = Number(r.latitude);
     const lng = Number(r.longitude);
     if (name.length < 2) errs.push('Name is missing.');
     else if (names.has(name.toLowerCase())) errs.push('Already exists.');
     else if (rows.findIndex((x) => (x.name ?? '').trim().toLowerCase() === name.toLowerCase()) !== i) errs.push('Repeated in this file.');
-    const district = (r.district ?? '').trim();
+    const district = (r.district ?? '').trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
     const districtMatch = province ? DISTRICTS_BY_PROVINCE[province].find((d) => d.toLowerCase() === district.toLowerCase()) : undefined;
     if (district.length < 2) errs.push('District is missing.');
     else if (province && !districtMatch) errs.push(`${district} is not a district in ${province}.`);

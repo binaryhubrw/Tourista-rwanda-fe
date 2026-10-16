@@ -11,3 +11,4 @@ export * from './PageHeader';
 export * from './charts';
 export * from './BulkImportModal';
 export * from './AddNewMenu';
+export * from './RowMenu';

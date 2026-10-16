@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plane, Building2, UserPlus, Trash2, Upload, Plus } from 'lucide-react';
+import { Users, Plane, Building2, UserPlus, Trash2, Upload, Plus, UserCheck, UserX } from 'lucide-react';
 import type { User, UserRole } from '@/types';
-import { createUser, createUsers, deleteUsers, getUsers, type UserInput } from '@/services';
+import { createUser, createUsers, deleteUsers, getUsers, setUserActive, type UserInput } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Avatar, Badge, Button, ConfirmModal, ErrorState, Input, Modal, Select } from '@/components/ui';
-import { BulkImportModal, DataTable, FilterTabs, PageHeader, StatCard, StatGrid, roleLabel, type Column, type ImportField } from '@/components/dashboard';
+import { BulkImportModal, DataTable, FilterTabs, PageHeader, RowMenu, StatCard, StatGrid, roleLabel, type Column, type ImportField } from '@/components/dashboard';
 import { byMonth, periodTrend } from '@/utils/analytics';
 import { formatDate } from '@/utils/format';
 
@@ -36,6 +36,7 @@ const columns: Column<User>[] = [
   },
   { id: 'email', header: 'Email', exportValue: (u) => u.email, cell: (u) => <span className="text-slate-600">{u.email}</span> },
   { id: 'role', header: 'Role', sortValue: (u) => roleLabel[u.role], cell: (u) => <Badge tone={roleTone[u.role]}>{roleLabel[u.role]}</Badge> },
+  { id: 'status', header: 'Status', sortValue: (u) => (u.active === false ? 0 : 1), cell: (u) => <Badge tone={u.active === false ? 'danger' : 'success'}>{u.active === false ? 'Inactive' : 'Active'}</Badge> },
   { id: 'country', header: 'Country', sortValue: (u) => u.country ?? '', cell: (u) => u.country ?? '—' },
   { id: 'joined', header: 'Joined', sortValue: (u) => u.joinedAt, cell: (u) => <span className="whitespace-nowrap text-slate-500">{formatDate(u.joinedAt)}</span> },
 ];
@@ -49,6 +50,7 @@ export default function AdminUsersPage() {
   const { data, loading, error, reload, setData } = useAsync(getUsers);
   const [filter, setFilter] = useState<RoleFilter>('all');
   const [removing, setRemoving] = useState<{ rows: User[]; done: () => void } | null>(null);
+  const [statusAction, setStatusAction] = useState<{ kind: 'deactivate' | 'activate'; row: User } | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useQueryFlag('new');
   const [importing, setImporting] = useQueryFlag('import');
@@ -84,6 +86,21 @@ export default function AdminUsersPage() {
       toast.success(`${ids.length} account${ids.length > 1 ? 's' : ''} removed.`);
       removing.done();
       setRemoving(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runStatus = async () => {
+    if (!statusAction) return;
+    setBusy(true);
+    try {
+      const updated = await setUserActive(statusAction.row.id, statusAction.kind === 'activate');
+      setData((l) => l?.map((u) => (u.id === updated.id ? updated : u)));
+      toast.success(statusAction.kind === 'activate' ? `${updated.name} can log in again.` : `${updated.name} is deactivated.`);
+      setStatusAction(null);
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -183,6 +200,19 @@ export default function AdminUsersPage() {
           />
         }
         exportFileName="users"
+        rowActions={(u) => {
+          const self = u.id === me!.id;
+          const deactivated = u.active === false;
+          return (
+            <RowMenu
+              label={`Actions for ${u.name}`}
+              items={[
+                { label: deactivated ? 'Activate' : 'Deactivate', icon: deactivated ? UserCheck : UserX, disabled: self, onSelect: () => setStatusAction({ kind: deactivated ? 'activate' : 'deactivate', row: u }) },
+                { label: 'Delete', icon: Trash2, tone: 'danger', disabled: self, onSelect: () => setRemoving({ rows: [u], done: () => {} }) },
+              ]}
+            />
+          );
+        }}
         bulkActions={(rows, clear) => {
           const removable = rows.filter((u) => u.id !== me!.id);
           return <Button size="sm" variant="danger" disabled={!removable.length} onClick={() => setRemoving({ rows: removable, done: clear })}><Trash2 className="h-4 w-4" aria-hidden />Remove {removable.length || ''}</Button>;
@@ -208,9 +238,24 @@ export default function AdminUsersPage() {
         title={`Remove ${removing?.rows.length ?? 0} account${removing && removing.rows.length > 1 ? 's' : ''}?`}
         message="These people will lose access to Tourista. Their bookings and reviews stay on record. Your own account is never included."
         confirmLabel="Remove"
+        acknowledge="I understand these accounts will be permanently removed."
         loading={busy}
         onConfirm={remove}
         onCancel={() => setRemoving(null)}
+      />
+
+      <ConfirmModal
+        open={!!statusAction}
+        title={statusAction?.kind === 'activate' ? `Activate ${statusAction.row.name}?` : `Deactivate ${statusAction?.row.name}?`}
+        message={statusAction?.kind === 'activate'
+          ? 'They will be able to log in again straight away.'
+          : 'They will not be able to log in until you activate them again. Their bookings and reviews stay on record.'}
+        confirmLabel={statusAction?.kind === 'activate' ? 'Activate' : 'Deactivate'}
+        acknowledge={statusAction?.kind === 'deactivate' ? `I understand ${statusAction?.row.name} will be locked out of their account.` : undefined}
+        variant={statusAction?.kind === 'activate' ? 'primary' : 'danger'}
+        loading={busy}
+        onConfirm={runStatus}
+        onCancel={() => setStatusAction(null)}
       />
     </>
   );

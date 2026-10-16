@@ -30,7 +30,13 @@ export async function getPayoutForBusiness(businessId: string): Promise<PayoutTa
   return api.get<PayoutTarget>(`/businesses/${businessId}/payout/`);
 }
 
-export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'createdAt' | 'approvalStatus' | 'rejectionReason' | 'submittedAt' | 'reviewedAt' | 'reviewedBy'>;
+export type BusinessInput = Omit<Business, 'id' | 'rating' | 'reviewCount' | 'createdAt' | 'approvalStatus' | 'rejectionReason' | 'submittedAt' | 'reviewedAt' | 'reviewedBy' | 'active'>;
+
+export async function setBusinessActive(id: string, active: boolean): Promise<Business> {
+  const updated = await api.patch<Business>(`/businesses/${id}/active/`, { active });
+  announceCatalog();
+  return updated;
+}
 
 export async function approveBusiness(id: string): Promise<Business> {
   const updated = await api.post<Business>(`/businesses/${id}/approve/`, {});
@@ -60,4 +66,9 @@ export async function createBusinesses(inputs: BusinessInput[]): Promise<Busines
   const created = await api.post<Business[]>('/businesses/bulk/', inputs);
   announceCatalog();
   return created;
+}
+
+export async function deleteBusiness(id: string): Promise<void> {
+  await api.delete(`/businesses/${id}/`);
+  announceCatalog();
 }

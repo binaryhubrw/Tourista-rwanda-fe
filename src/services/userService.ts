@@ -23,6 +23,10 @@ export async function deleteUsers(ids: string[]): Promise<void> {
   await Promise.all(ids.map((id) => api.delete(`/users/${id}/`)));
 }
 
+export async function setUserActive(id: string, active: boolean): Promise<User> {
+  return api.patch<User>(`/users/${id}/`, { active });
+}
+
 export interface UserInput {
   name: string;
   email: string;
