@@ -83,8 +83,7 @@ export default function StaffPage() {
     const e: Record<string, string> = {};
     if (form.name.trim().length < 2) e.name = 'Enter their name.';
     if (!form.email.includes('@')) e.email = 'Enter an email they will log in with.';
-    if (editing === 'new' && form.password.length < 6) e.password = 'At least 6 characters.';
-    if (editing !== 'new' && form.password && form.password.length < 6) e.password = 'At least 6 characters.';
+    if (form.password && form.password.length < 6) e.password = 'At least 6 characters.';
     const clash = form.listings.map((id) => businesses.find((b) => b.id === id)).filter((b) => b && takenManager(b.id));
     if (clash.length) e.listings = clash.length === 1 ? `${clash[0]!.name} already has a manager.` : 'A branch can only have one manager.';
     if (!form.listings.length) e.listings = businesses.every((b) => takenManager(b.id))
@@ -96,14 +95,14 @@ export default function StaffPage() {
     const payload = {
       name: form.name.trim(),
       email: form.email.trim(),
-      password: form.password,
+      ...(form.password ? { password: form.password } : {}),
       phone: form.phone.trim() || undefined,
       assignedListingIds: form.listings,
     };
     try {
       if (editing === 'new') await createStaff(payload);
       else await updateStaff(editing.id, payload);
-      toast.success(editing === 'new' ? `${form.name.trim()} can now log in and manage the assigned branches.` : 'Staff details saved.');
+      toast.success(editing === 'new' ? `${form.name.trim()} was added. A unique password was generated and emailed to them.` : 'Staff details saved.');
       setEditing(null);
       await team.reload();
     } catch (err) {
@@ -181,7 +180,7 @@ export default function StaffPage() {
           </div>
         )}
         emptyTitle="No staff yet"
-        emptyMessage="Add someone and assign branches. They will log in with the email and password you set."
+        emptyMessage="Add someone and assign branches. We email each new manager a unique temporary password to sign in."
         emptyAction={<Button onClick={() => open('new')}>Add staff</Button>}
       />
       <Modal
@@ -193,7 +192,9 @@ export default function StaffPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><Input label="Full name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} /></div>
           <Input label="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={errors.email} hint="This is their login." />
-          <Input label="Password" type="password" required={editing === 'new'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} hint={editing === 'new' ? 'At least 6 characters.' : 'Leave blank to keep the current password.'} />
+          {editing === 'new'
+            ? <p className="self-end pb-2 text-xs text-slate-500">No password needed — we generate a unique one for each manager and email it to them.</p>
+            : <Input label="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} hint="Leave blank to keep the current password." />}
           <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           <fieldset className="sm:col-span-2">
             <legend className="mb-2 text-sm font-semibold text-ink">Assigned branches</legend>

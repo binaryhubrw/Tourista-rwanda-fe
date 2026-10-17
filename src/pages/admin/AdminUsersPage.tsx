@@ -45,7 +45,7 @@ const columns: Column<User>[] = [
   { id: 'joined', header: 'Joined', sortValue: (u) => u.joinedAt, cell: (u) => <span className="whitespace-nowrap text-slate-500">{formatDate(u.joinedAt)}</span> },
 ];
 
-const blank = { name: '', email: '', role: 'tourist' as UserRole, phone: '', country: 'Rwanda', password: '' };
+const blank = { name: '', email: '', role: 'tourist' as UserRole, phone: '', country: 'Rwanda' };
 
 export default function AdminUsersPage() {
   useDocumentTitle('Users');
@@ -74,7 +74,6 @@ export default function AdminUsersPage() {
     { key: 'role', label: 'Role', example: ROLE_OPTIONS[0], options: ROLE_OPTIONS, hint: 'Use the Excel dropdown.' },
     { key: 'phone', label: 'Phone', example: '+250 788 555 010' },
     { key: 'country', label: 'Country', example: countries[0] ?? 'Rwanda', options: countries, strict: false, hint: 'Use the dropdown, or type a new country.' },
-    { key: 'password', label: 'Password', example: 'welcome123', hint: 'At least 6 characters. Leave empty to generate one.' },
   ], [countries]);
   const list = useMemo(() => all.filter((u) => filter === 'all' || u.role === filter), [all, filter]);
   const newUsers = periodTrend(all, (u) => u.joinedAt, () => 1, 90);
@@ -122,7 +121,6 @@ export default function AdminUsersPage() {
     if (form.name.trim().length < 2) e.name = 'Enter the full name.';
     if (!isEmail(form.email)) e.email = 'Enter a valid email address.';
     else if (existing.has(form.email.trim().toLowerCase())) e.email = 'An account with this email already exists.';
-    if (form.password && form.password.length < 6) e.password = 'At least 6 characters.';
     setErrors(e);
     if (Object.keys(e).length) return;
     setBusy(true);
@@ -133,12 +131,51 @@ export default function AdminUsersPage() {
         role: form.role,
         phone: form.phone.trim() || undefined,
         country: form.country.trim() || undefined,
-        password: form.password.trim() || undefined,
       });
       setData((l) => [created, ...(l ?? [])]);
-      toast.success(`${created.name} added as ${roleLabel[created.role].toLowerCase()}. A temporary password was emailed to them.`);
+      toast.success(`${created.name} added as ${roleLabel[created.role].toLowerCase()}. A unique password was generated and emailed to them.`);
       setAdding(false);
       setForm(blank);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openEdit = (u: User) => {
+    setErrors({});
+    setForm({
+      name: u.name,
+      email: u.email,
+      role: ROLES.includes(u.role) ? u.role : 'tourist',
+      phone: u.phone ?? '',
+      country: u.country ?? 'Rwanda',
+    });
+    setEditingUser(u);
+  };
+
+  const saveEdit = async () => {
+    if (!editingUser) return;
+    const e: Record<string, string> = {};
+    if (form.name.trim().length < 2) e.name = 'Enter the full name.';
+    if (!isEmail(form.email)) e.email = 'Enter a valid email address.';
+    else if (existing.has(form.email.trim().toLowerCase()) && form.email.trim().toLowerCase() !== editingUser.email.toLowerCase()) e.email = 'An account with this email already exists.';
+    setErrors(e);
+    if (Object.keys(e).length) return;
+    setBusy(true);
+    try {
+      const patch: Parameters<typeof updateUser>[1] = {
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim() || undefined,
+        country: form.country.trim() || undefined,
+      };
+      if (ROLES.includes(editingUser.role)) patch.role = form.role;
+      const updated = await updateUser(editingUser.id, patch);
+      setData((l) => l?.map((u) => (u.id === updated.id ? updated : u)));
+      toast.success(`${updated.name}'s details were saved.`);
+      setEditingUser(null);
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -155,8 +192,7 @@ export default function AdminUsersPage() {
     else if (existing.has(email)) errs.push('Email already registered.');
     else if (rows.findIndex((x) => (x.email ?? '').trim().toLowerCase() === email) !== i) errs.push('Email repeated in this file.');
     if (!role) errs.push(`Unknown role “${r.role}”.`);
-    if (r.password && r.password.length < 6) errs.push('Password under 6 characters.');
-    const value: UserInput | undefined = errs.length ? undefined : { name: r.name.trim(), email, role: role!, phone: r.phone?.trim(), country: r.country?.trim(), password: r.password || undefined };
+    const value: UserInput | undefined = errs.length ? undefined : { name: r.name.trim(), email, role: role!, phone: r.phone?.trim(), country: r.country?.trim() };
     return { value, errors: errs };
   };
 
@@ -212,6 +248,7 @@ export default function AdminUsersPage() {
         rowActions={(u) => (
           <RowMenu
             items={[
+              { label: 'Edit', onSelect: () => openEdit(u) },
               u.active === false
                 ? { label: 'Activate', icon: CheckCircle2, onSelect: () => openToggle(u) }
                 : { label: 'Deactivate', icon: Ban, tone: 'danger', disabled: u.id === me?.id, onSelect: () => openToggle(u) },
@@ -233,7 +270,32 @@ export default function AdminUsersPage() {
           <Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })} options={ROLES.map((r) => ({ value: r, label: roleLabel[r] }))} />
           <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+250 788 000 000" />
           <Input label="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-          <div className="sm:col-span-2"><Input label="Temporary password" type="text" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} hint="At least 6 characters. Leave empty to generate one and send a reset link." /></div>
+          <p className="text-xs text-slate-500 sm:col-span-2">No password needed — we generate a unique one for every account and email it to them.</p>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title={`Edit ${editingUser?.name ?? 'user'}`}
+        footer={<><Button variant="ghost" onClick={() => setEditingUser(null)}>Cancel</Button><Button onClick={saveEdit} loading={busy}>Save changes</Button></>}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2"><Input label="Full name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} /></div>
+          <Input label="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={errors.email} />
+          {editingUser && ROLES.includes(editingUser.role) ? (
+            <Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })} options={ROLES.map((r) => ({ value: r, label: roleLabel[r] }))} />
+          ) : (
+            editingUser && (
+              <div>
+                <span className="mb-2 block text-sm font-semibold text-ink">Role</span>
+                <Badge tone={roleTone[editingUser.role]}>{roleLabel[editingUser.role]}</Badge>
+              </div>
+            )
+          )}
+          <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+250 788 000 000" />
+          <Input label="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+          <p className="text-xs text-slate-500 sm:col-span-2">Passwords can't be edited here. Ask the person to use “Forgot password” on the login page if they need a reset link.</p>
         </div>
       </Modal>
 
