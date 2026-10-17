@@ -64,7 +64,7 @@ export default function BusinessBookingsPage() {
             <PageHeader title="My traveller bookings" intro="Bookings you made as a traveller." />
             <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
               <Button variant="ghost" size="sm" onClick={() => setTraveller(false)}>Business view</Button>
-              <Button variant="primary" size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+              <Button variant="primary" size="sm" onClick={() => setTraveller(true)}>My Bookings</Button>
             </div>
           </div>
         )}

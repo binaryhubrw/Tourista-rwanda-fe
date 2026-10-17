@@ -82,7 +82,7 @@ export default function RefundsPage() {
             {showViewToggle && (
               <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
                 <Button variant={asTraveller ? 'ghost' : 'primary'} size="sm" onClick={() => setTraveller(false)}>Business view</Button>
-                <Button variant={asTraveller ? 'primary' : 'ghost'} size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+                <Button variant={asTraveller ? 'primary' : 'ghost'} size="sm" onClick={() => setTraveller(true)}>My refunds</Button>
               </div>
             )}
             {asTraveller && <ButtonLink to={`${base}/refunds/new`}>Ask for a refund</ButtonLink>}

@@ -144,7 +144,9 @@ function freeOnDay(service: Service, bookings: Booking[], iso: string) {
 /** True when a traveller can still book this offering for the trip. Rooms and cars need every night; meals and extras need any day in the stay. */
 export function isAvailableInRange(service: Service, bookings: Booking[], start?: string, end?: string, listingId?: string) {
   const mine = bookingsForListingId(bookings, listingId);
-  if (!start) return openToday(service, mine);
+  // Without a chosen date range we keep every offering visible: something booked today can still
+  // be booked for another date, so we do not hide it from the listings.
+  if (!start) return true;
   const span = inventoryWindow(service, start, end ?? '');
   if (span.end <= span.start) return false;
   const days = eachIso(span.start, span.end);

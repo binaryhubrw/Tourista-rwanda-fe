@@ -69,7 +69,7 @@ export default function PaymentsPage() {
       <PageHeader title="Payments" intro="Transfers happen outside Tourista. This list is the proof, host confirmation and refund trail." action={showViewToggle ? (
         <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
           <Button variant={asTraveller ? 'ghost' : 'primary'} size="sm" onClick={() => setTraveller(false)}>Business view</Button>
-          <Button variant={asTraveller ? 'primary' : 'ghost'} size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+          <Button variant={asTraveller ? 'primary' : 'ghost'} size="sm" onClick={() => setTraveller(true)}>My Payments</Button>
         </div>
       ) : undefined} />
       <StatGrid>

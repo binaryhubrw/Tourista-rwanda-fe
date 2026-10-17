@@ -439,10 +439,6 @@ export default function BookingPage() {
             </div>
           )}
 
-          <div className="mt-8 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-            {step > 0 ? <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setStep((s) => s - 1)}>Back</Button> : <span />}
-            {step < 2 ? <Button className="w-full sm:w-auto" onClick={next}>Continue</Button> : <Button className="w-full sm:w-auto" onClick={submitRequest} loading={submitting}>Send booking request</Button>}
-          </div>
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -465,9 +461,13 @@ export default function BookingPage() {
                 {end && <div className="flex justify-between gap-3"><dt className="text-slate-500">{needsStay ? 'Check-out' : 'To'}</dt><dd>{formatDate(end)}</dd></div>}
                 {lines[0] && (needsStay || needsRange) && <div className="flex justify-between gap-3"><dt className="text-slate-500">Length</dt><dd>{lines[0].priced.periods} {periodNoun(lines[0].mode, lines[0].priced.periods)}</dd></div>}
                 {needsPeople && <div className="flex justify-between gap-3"><dt className="text-slate-500">Guests</dt><dd>{partySize}</dd></div>}
-                <div className="flex justify-between border-t border-slate-100 pt-3 text-base"><dt className="font-semibold">Total</dt><dd className="font-display text-xl font-bold">{formatRwf(total)}</dd></div>
+                <div className="flex justify-between border-t border-slate-100 pt-3 text-base"><dt className="font-semibold">Total</dt><dd className="font-display text-xl font-bold">{lines.length ? formatRwf(total) : '—'}</dd></div>
               </dl>
               <p className="mt-3 text-xs text-slate-500">No payment yet. After the host approves, you will have two hours to pay at least 30% from your Bookings page.</p>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                {step > 0 ? <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setStep((s) => s - 1)}>Back</Button> : <span />}
+                {step < 2 ? <Button className="w-full sm:w-auto" onClick={next}>Continue</Button> : <Button className="w-full sm:w-auto" onClick={submitRequest} loading={submitting}>Send booking request</Button>}
+              </div>
             </div>
           </div>
         </aside>
