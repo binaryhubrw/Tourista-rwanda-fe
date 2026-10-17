@@ -1,18 +1,20 @@
 import { Link } from 'react-router-dom';
+import { cn } from '@/utils/cn';
 
-/** `compact` shows only the mark (used by the collapsed dashboard sidebar). */
-export function Logo({ light = false, compact = false }: { light?: boolean; compact?: boolean }) {
+/** `compact` shows only the mark (used by the collapsed dashboard sidebar). `small` shrinks it for tight spaces. */
+export function Logo({ light = false, compact = false, small = false }: { light?: boolean; compact?: boolean; small?: boolean }) {
+  const size = small ? 40 : 48;
   return (
-    <Link to="/explore" className="flex items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600" aria-label="Tourista Rwanda home">
+    <Link to="/explore" className={`flex items-center ${small ? 'gap-2' : 'gap-2.5'} rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600`} aria-label="Tourista Rwanda home">
       <img
         src="/logo.jpeg"
         alt="Tourista Rwanda"
-        width={48}
-        height={48}
-        className="h-12 w-12 shrink-0 rounded-lg object-contain"
+        width={size}
+        height={size}
+        className={cn('shrink-0 rounded-lg object-contain', small ? 'h-10 w-10' : 'h-12 w-12')}
       />
       {!compact && (
-        <span className={`whitespace-nowrap font-display text-xl font-extrabold tracking-tight sm:text-2xl ${light ? 'text-white' : 'text-brand-600'}`}>
+        <span className={`whitespace-nowrap font-display font-extrabold tracking-tight ${small ? 'text-lg' : 'text-xl sm:text-2xl'} ${light ? 'text-white' : 'text-brand-600'}`}>
           Tourista Rwanda
         </span>
       )}

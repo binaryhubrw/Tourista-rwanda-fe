@@ -10,7 +10,6 @@ import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button, ButtonLink, ErrorState, Loading, Modal } from '@/components/ui';
 import { InvoiceActions } from '@/components/payment/InvoiceActions';
-import { ReceiptActions } from '@/components/payment/ReceiptActions';
 import { BookingStatusBadge, bookingStatusLabel, PageHeader } from '@/components/dashboard';
 import { OfflinePaymentForm } from '@/components/payment/OfflinePaymentForm';
 import { bookingLines } from '@/utils/availability';
@@ -126,12 +125,9 @@ export default function BookingDetailsPage() {
             ) : (
               <p className="mt-3 text-sm text-slate-600">{bookingStatusLabel[booking.status]}. Payment is off-platform after the host approves.</p>
             )}
-            {booking.payment && (
-              <div className="mt-5 space-y-3">
-                <InvoiceActions bookingId={booking.id} />
-                <ReceiptActions bookingId={booking.id} />
-              </div>
-            )}
+            <div className="mt-5">
+              <InvoiceActions bookingId={booking.id} />
+            </div>
             <div className="mt-5 flex flex-wrap gap-2">
               {canPay && <Button onClick={() => setPaying(true)}>{paid ? 'Add another payment' : 'Proceed to payment'}</Button>}
               {host && booking.status === 'Pending' && (

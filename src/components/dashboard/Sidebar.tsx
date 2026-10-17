@@ -54,8 +54,8 @@ export function Sidebar({ sections, collapsed, onToggleCollapsed, mobileOpen, on
       >
         {/* Brand */}
         <div className={cn('flex h-16 shrink-0 items-center gap-2 border-b border-white/20 px-4', collapsed && 'lg:justify-center lg:px-0')}>
-          <div className={cn(collapsed && 'lg:hidden')}><Logo light /></div>
-          <div className={cn('hidden', collapsed && 'lg:block')}><Logo light compact /></div>
+          <div className={cn(collapsed && 'lg:hidden')}><Logo light small /></div>
+          <div className={cn('hidden', collapsed && 'lg:block')}><Logo light compact small /></div>
           <button onClick={onMobileClose} className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-white hover:bg-white/10 lg:hidden" aria-label="Close menu">
             <X className="h-5 w-5" />
           </button>
