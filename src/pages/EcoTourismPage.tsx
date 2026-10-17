@@ -28,7 +28,7 @@ const conservation = [
 
 export default function EcoTourismPage() {
   useDocumentTitle('Eco-Tourism');
-  const stays = useAsync(async () => (await (getBusinesses())).filter((b) => b.category === 'Accommodation' || b.badges.includes('Eco-certified')).slice(0, 6));
+  const stays = useAsync(async () => (await getBusinesses({ approvalStatus: 'approved' })).filter((b) => b.category === 'Accommodation' || b.badges.includes('Eco-certified')).slice(0, 6));
 
   return (
     <>

@@ -8,8 +8,8 @@ import { STATUS_COLORS } from './charts';
 export const bookingStatusLabel: Record<BookingStatus, string> = {
   Pending: 'Awaiting host',
   Declined: 'Declined',
-  OwnerApproved: 'Pending payment',
-  AwaitingPayment: 'Pending payment',
+  OwnerApproved: 'Pay now',
+  AwaitingPayment: 'Pay now',
   PaymentReview: 'Proof sent',
   Confirmed: 'Confirmed',
   Canceled: 'Canceled',

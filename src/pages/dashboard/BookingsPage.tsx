@@ -12,21 +12,22 @@ import { BookingViewLink, bookingColumns, bookingSearchText, statusOptions, type
 import { sum } from '@/utils/analytics';
 import { formatDate, formatRwf, formatRwfShort, todayIso } from '@/utils/format';
 
-const columns = bookingColumns(['target', 'date', 'units', 'total', 'status', 'payment', 'created'], { detailsBase: '/dashboard/bookings' });
 const canCancel = (b: Booking) => b.status !== 'Canceled' && b.date >= todayIso();
 const needsPayment = (b: Booking) => b.status === 'AwaitingPayment';
 
-export default function BookingsPage() {
+export default function BookingsPage({ detailsBase = '/dashboard/bookings', paymentsBase = '/dashboard/payments', viewer, heading = true }: { detailsBase?: string; paymentsBase?: string; viewer?: 'traveller'; heading?: boolean } = {}) {
   useDocumentTitle('My bookings');
   const { user } = useAuth();
   const toast = useToast();
-  const { data, loading, error, reload, setData } = useAsync(() => getBookings({ userId: user!.id }), [user?.id]);
+  // `scope=traveller` returns the caller's own bookings, whether they are a tourist or a host viewing as one.
+  const { data, loading, error, reload, setData } = useAsync(() => getBookings({ scope: 'traveller' }), [user?.id]);
   const [filter, setFilter] = useState<StatusFilter>('All');
   const [cancelling, setCancelling] = useState<{ rows: Booking[]; done?: () => void } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const all = data ?? [];
-  const list = useMemo(() => all.filter((b) => filter === 'All' || b.status === filter), [all, filter]);
+const all = data ?? [];
+const columns = useMemo(() => bookingColumns(['target', 'date', 'units', 'total', 'status', 'payment', 'created'], { detailsBase }), [detailsBase]);
+const list = useMemo(() => all.filter((b) => filter === 'All' || b.status === filter), [all, filter]);
   const upcoming = all.filter((b) => b.status === 'Confirmed' && b.date >= todayIso()).sort((a, b) => a.date.localeCompare(b.date));
   const unpaid = all.filter(needsPayment);
 
@@ -56,7 +57,7 @@ export default function BookingsPage() {
 
   return (
     <>
-      <PageHeader title="Bookings" intro="Send a request, wait for the host, then pay at least 30% from an approved booking. Transfers happen outside Tourista." action={<ButtonLink to="/explore" variant="secondary">Book something new</ButtonLink>} />
+      {heading && <PageHeader title="Bookings" intro="Send a request, wait for the host, then pay at least 30% from an approved booking. Transfers happen outside Tourista." action={<ButtonLink to="/explore" variant="secondary">Book something new</ButtonLink>} />}
 
       <StatGrid>
         <StatCard label="All bookings" icon={CalendarCheck} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed`} />
@@ -85,8 +86,8 @@ export default function BookingsPage() {
         }}
         rowActions={(b) => (
           <div className="flex items-center justify-end gap-2">
-            <BookingViewLink to={`/dashboard/bookings/${b.id}`} />
-            {needsPayment(b) && <ButtonLink size="sm" to={`/dashboard/payments/${b.id}`}><CreditCard className="h-4 w-4" aria-hidden />Pay now</ButtonLink>}
+            <BookingViewLink to={`${detailsBase}/${b.id}${viewer ? `?viewer=${viewer}` : ''}`} />
+            {needsPayment(b) && <ButtonLink size="sm" to={`${paymentsBase}/${b.id}${viewer ? `?viewer=${viewer}` : ''}`}><CreditCard className="h-4 w-4" aria-hidden />Pay now</ButtonLink>}
             {canCancel(b) && <button onClick={() => setCancelling({ rows: [b] })} className="text-sm font-semibold text-red-600 hover:underline">Cancel</button>}
           </div>
         )}

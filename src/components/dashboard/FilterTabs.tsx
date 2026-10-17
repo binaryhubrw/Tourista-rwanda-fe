@@ -19,10 +19,10 @@ export function FilterTabs<T extends string>({ value, options, onChange, label }
             role="radio"
             aria-checked={active}
             onClick={() => onChange(o.value)}
-            className={cn('inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors', active ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink')}
+            className={cn('inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors', active ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-ink')}
           >
             {o.label}
-            {o.count !== undefined && <span className={cn('rounded-md px-1.5 text-xs tabular-nums', active ? 'bg-brand-50 text-brand-600' : 'bg-slate-200/70 text-slate-600')}>{o.count}</span>}
+            {o.count !== undefined && <span className={cn('rounded-md px-1.5 text-xs tabular-nums', active ? 'bg-white/25 text-white' : 'bg-slate-200/70 text-slate-600')}>{o.count}</span>}
           </button>
         );
       })}

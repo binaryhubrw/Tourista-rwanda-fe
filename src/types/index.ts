@@ -26,7 +26,7 @@ export interface User {
   assignedListingIds?: string[];
   /** Staff only. */
   title?: string;
-  /** When false the account is deactivated and cannot log in. */
+  /** Staff only: when false they cannot log in. */
   active?: boolean;
   preferences?: {
     bookingEmails?: boolean;
@@ -193,7 +193,7 @@ export interface Business {
   submittedAt?: string;
   reviewedAt?: string;
   reviewedBy?: string;
-  /** Admin can deactivate a listing to hide it from travellers. Missing means active. */
+  /** false = hidden from travellers by an admin (still visible to owner and admins). Missing means active. */
   active?: boolean;
 }
 

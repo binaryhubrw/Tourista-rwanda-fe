@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X, AlertTriangle } from 'lucide-react';
+import { cn } from '@/utils/cn';
 import { Button } from './Button';
 
 interface ModalProps {
@@ -68,14 +69,20 @@ interface ConfirmProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
-  /** When set, a checkbox with this label must be ticked before the action can be confirmed. */
-  acknowledge?: string;
+  /** `danger` (default) is red; `primary` is the brand colour, for non-destructive confirmations. */
   variant?: 'danger' | 'primary';
+  /** When set, the person must tick this box before Confirm becomes available. */
+  acknowledge?: string;
+  /** Forces Confirm to stay disabled (for example until a required reason is typed). */
+  confirmDisabled?: boolean;
+  cancelLabel?: string;
+  children?: ReactNode;
 }
 
-export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, onCancel, loading, acknowledge, variant = 'danger' }: ConfirmProps) {
+export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, onCancel, loading, variant = 'danger', acknowledge, confirmDisabled, cancelLabel = 'Keep it', children }: ConfirmProps) {
   const [checked, setChecked] = useState(false);
   useEffect(() => { if (open) setChecked(false); }, [open]);
+  const danger = variant === 'danger';
 
   return (
     <Modal
@@ -85,22 +92,23 @@ export function ConfirmModal({ open, title, message, confirmLabel, onConfirm, on
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onCancel}>Keep it</Button>
-          <Button variant={variant} onClick={onConfirm} loading={loading} disabled={!!acknowledge && !checked}>{confirmLabel}</Button>
+          <Button variant="ghost" onClick={onCancel}>{cancelLabel}</Button>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading} disabled={(!!acknowledge && !checked) || confirmDisabled}>{confirmLabel}</Button>
         </>
       }
     >
       <div className="flex gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden />
+        <AlertTriangle className={cn('mt-0.5 h-5 w-5 shrink-0', danger ? 'text-red-600' : 'text-brand-600')} aria-hidden />
         <p className="text-slate-600">{message}</p>
       </div>
+      {children && <div className="mt-4">{children}</div>}
       {acknowledge && (
-        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={checked}
             onChange={(e) => setChecked(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
           />
           <span>{acknowledge}</span>
         </label>

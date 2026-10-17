@@ -6,8 +6,9 @@ import { DataTable, FilterTabs, PageHeader, RefundStageBadge, StatCard, StatGrid
 import { getBookings, getBusinessesByOwner, getRefunds } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useViewerMode } from '@/hooks/useViewerMode';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
-import { ButtonLink, ErrorState, Loading } from '@/components/ui';
+import { Button, ButtonLink, ErrorState, Loading } from '@/components/ui';
 import { PaymentViewLink } from '@/pages/shared/tableColumns';
 import { formatDate, formatRwf, formatRwfShort } from '@/utils/format';
 import { refundIsRequested } from '@/utils/refund';
@@ -18,19 +19,23 @@ export default function RefundsPage() {
   useDocumentTitle('Refunds');
   const { user } = useAuth();
   const base = dashboardPathFor(user!.role);
+  const { isHost, asTraveller, setTraveller } = useViewerMode();
   const { data, loading, error, reload } = useAsync(async () => {
     if (user!.role === 'admin') {
       const [refunds, bookings] = await Promise.all([getRefunds(), getBookings()]);
       return { refunds, bookings };
     }
-    if (user!.role === 'tourist') {
-      const [refunds, bookings] = await Promise.all([getRefunds(), getBookings({ userId: user!.id })]);
+    if (asTraveller) {
+      const [refunds, bookings] = await Promise.all([getRefunds('traveller'), getBookings({ scope: 'traveller' })]);
       return { refunds, bookings };
     }
     const listings = await getBusinessesByOwner(user!.ownerId ?? user!.id);
-    const [refunds, bookings] = await Promise.all([getRefunds(), getBookings({ businessIds: listings.map((b) => b.id) })]);
+    const [refunds, bookings] = await Promise.all([
+      getRefunds(),
+      getBookings({ businessIds: listings.map((b) => b.id) }),
+    ]);
     return { refunds, bookings };
-  }, [user?.id, user?.role]);
+  }, [user?.id, user?.role, asTraveller]);
   const [filter, setFilter] = useState<Filter>('all');
 
   const rows = data?.refunds ?? [];
@@ -51,12 +56,12 @@ export default function RefundsPage() {
       id: 'id', header: 'Refund', sortValue: (r) => r.id,
       cell: (r) => (
         <div>
-          <Link to={`${base}/refunds/${r.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{r.id.toUpperCase()}</Link>
+          <Link to={`${base}/refunds/${r.id}${asTraveller ? '?viewer=traveller' : ''}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{r.id.toUpperCase()}</Link>
           <p className="text-xs text-slate-500">{bookingOf(r.bookingId)?.targetName ?? r.bookingId}</p>
         </div>
       ),
     },
-    { id: 'who', header: user?.role === 'tourist' ? 'Branch' : 'Guest', sortValue: (r) => bookingOf(r.bookingId)?.customerName ?? '', cell: (r) => user?.role === 'tourist' ? (bookingOf(r.bookingId)?.targetName ?? '—') : (bookingOf(r.bookingId)?.customerName ?? '—') },
+    { id: 'who', header: asTraveller ? 'Branch' : 'Guest', sortValue: (r) => bookingOf(r.bookingId)?.customerName ?? '', cell: (r) => (asTraveller ? (bookingOf(r.bookingId)?.targetName ?? '—') : (bookingOf(r.bookingId)?.customerName ?? '—')) },
     { id: 'amount', header: 'Amount', align: 'right', sortValue: (r) => r.amountRwf, cell: (r) => <span className="font-semibold tabular-nums">{formatRwf(r.amountRwf)}</span> },
     { id: 'status', header: 'Status', sortValue: (r) => r.status, cell: (r) => <RefundStageBadge status={r.status} /> },
     { id: 'when', header: 'Requested', sortValue: (r) => r.steps[0]?.at ?? '', cell: (r) => <span className="whitespace-nowrap text-slate-500">{formatDate(r.steps[0]?.at ?? '')}</span> },
@@ -65,12 +70,24 @@ export default function RefundsPage() {
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (loading) return <Loading />;
 
+  const showViewToggle = isHost;
+
   return (
     <>
       <PageHeader
         title="Refunds"
-        intro={user?.role === 'admin' ? 'Approve or reject traveller requests. Hosts return the money after you approve.' : user?.role === 'tourist' ? 'Ask for a refund on a confirmed payment. Admin approves, then the host returns the money.' : 'When admin approves a guest refund, open it and send the money to the traveller’s account.'}
-        action={user?.role === 'tourist' ? <ButtonLink to={`${base}/refunds/new`}>Ask for a refund</ButtonLink> : undefined}
+        intro={user?.role === 'admin' ? 'Approve or reject traveller requests. Hosts return the money after you approve.' : asTraveller ? 'Ask for a refund on a confirmed payment. Admin approves, then the host returns the money.' : 'When admin approves a guest refund, open it and send the money to the traveller’s account.'}
+        action={
+          <>
+            {showViewToggle && (
+              <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
+                <Button variant={asTraveller ? 'ghost' : 'primary'} size="sm" onClick={() => setTraveller(false)}>Business view</Button>
+                <Button variant={asTraveller ? 'primary' : 'ghost'} size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+              </div>
+            )}
+            {asTraveller && <ButtonLink to={`${base}/refunds/new`}>Ask for a refund</ButtonLink>}
+          </>
+        }
       />
       <StatGrid>
         <StatCard label="All refunds" icon={RotateCcw} value={money()} hint={`${rows.length} request${rows.length === 1 ? '' : 's'}`} />
@@ -103,11 +120,11 @@ export default function RefundsPage() {
         }
         rowActions={(r) => (
           <div className="flex justify-end gap-1">
-            <PaymentViewLink to={`${base}/refunds/${r.id}`} label="View refund details" />
+            <PaymentViewLink to={`${base}/refunds/${r.id}${asTraveller ? '?viewer=traveller' : ''}`} label="View refund details" />
           </div>
         )}
         emptyTitle="No refunds yet"
-        emptyMessage={user?.role === 'tourist' ? 'When a host has confirmed your payment, you can ask for a refund here.' : user?.role === 'admin' ? 'Refund requests from travellers appear here for you to approve or reject.' : 'Approved refunds appear here so you can send the money and mark them completed.'}
+        emptyMessage={asTraveller ? 'When a host has confirmed your payment, you can ask for a refund here.' : user?.role === 'admin' ? 'Refund requests from travellers appear here for you to approve or reject.' : 'Approved refunds appear here so you can send the money and mark them completed.'}
       />
     </>
   );

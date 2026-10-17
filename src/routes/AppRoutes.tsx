@@ -145,6 +145,7 @@ export function AppRoutes() {
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="payments/:id" element={<PaymentDetailsPage />} />
             <Route path="refunds" element={<RefundsPage />} />
+            <Route path="refunds/new" element={<RefundRequestPage />} />
             <Route path="refunds/:id" element={<RefundDetailsPage />} />
             <Route path="reviews" element={<BusinessReviewsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />

@@ -1,5 +1,5 @@
 import type { Booking, Business, Experience, Interest, Location, PriceLevel, Service } from '@/types';
-import { availableServices, isAvailableInRange } from '@/utils/availability';
+import { availableServices, hasAvailability, isAvailableInRange } from '@/utils/availability';
 import { pricingMode } from '@/utils/pricing';
 
 export type ExploreKind = 'destination' | 'experience' | 'accommodation' | 'restaurant' | 'guide' | 'business' | 'service' | 'vehicle';
@@ -251,9 +251,7 @@ export function buildExploreItems(
   const start = range?.start || undefined;
   const end = range?.end || undefined;
   const provinceOf = (locationId: string) => locations.find((l) => l.id === locationId)?.province ?? 'Rwanda';
-  // Every approved business must appear on the landing page, even when it is fully booked today —
-  // a traveller can still book another date. Availability only narrows the list inside a scope.
-  const openBusinesses = businesses;
+  const openBusinesses = businesses.filter((business) => hasAvailability(business, bookings, start, end));
   const vehicleItems = businesses.flatMap((business) =>
     availableServices(business.services, bookings, start, end, business.id)
       .filter((service) => service.group === 'vehicle')

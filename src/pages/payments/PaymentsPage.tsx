@@ -5,8 +5,9 @@ import type { Booking, PaymentLedgerStatus } from '@/types';
 import { getBookings, getBusinessesByOwner, getRefunds } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useViewerMode } from '@/hooks/useViewerMode';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
-import { ErrorState, Loading } from '@/components/ui';
+import { Button, ErrorState, Loading } from '@/components/ui';
 import { DataTable, FilterTabs, PageHeader, PaymentLedgerBadge, StatCard, StatGrid, type Column } from '@/components/dashboard';
 import { PaymentViewLink } from '@/pages/shared/tableColumns';
 import { formatDate, formatRwf, formatRwfShort } from '@/utils/format';
@@ -18,15 +19,16 @@ export default function PaymentsPage() {
   useDocumentTitle('Payments');
   const { user } = useAuth();
   const base = dashboardPathFor(user!.role);
+  const { isHost, asTraveller, setTraveller } = useViewerMode();
   const { data, loading, error, reload } = useAsync(async () => {
-    const bookings = user!.role === 'tourist'
-      ? await getBookings({ userId: user!.id })
-      : user!.role === 'admin'
-        ? await getBookings()
+    const bookings = user!.role === 'admin'
+      ? await getBookings()
+      : asTraveller
+        ? await getBookings({ scope: 'traveller' })
         : await getBookings({ businessIds: (await getBusinessesByOwner(user!.ownerId ?? user!.id)).map((b) => b.id) });
-    const refunds = await getRefunds();
+    const refunds = await getRefunds(asTraveller ? 'traveller' : undefined);
     return { bookings, refunds };
-  }, [user?.id, user?.role]);
+  }, [user?.id, user?.role, asTraveller]);
   const [filter, setFilter] = useState<Filter>('all');
   const refunds = data?.refunds ?? [];
   const statusOf = (b: Booking) => paymentDisplayStatus(b, refunds);
@@ -39,12 +41,12 @@ export default function PaymentsPage() {
       id: 'ref', header: 'Payment', sortValue: (b) => b.payment?.reference ?? b.id,
       cell: (b) => (
         <div>
-          <Link to={`${base}/payments/${b.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.payment?.reference ?? b.id.toUpperCase()}</Link>
+          <Link to={`${base}/payments/${b.id}${asTraveller ? '?view=traveller' : ''}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">{b.payment?.reference ?? b.id.toUpperCase()}</Link>
           <p className="text-xs text-slate-500">{b.targetName}</p>
         </div>
       ),
     },
-    { id: 'who', header: user?.role === 'tourist' ? 'Host branch' : 'Guest', sortValue: (b) => (user?.role === 'tourist' ? b.targetName : b.customerName), cell: (b) => (user?.role === 'tourist' ? b.targetName : b.customerName) },
+    { id: 'who', header: asTraveller ? 'Host branch' : 'Guest', sortValue: (b) => (asTraveller ? b.targetName : b.customerName), cell: (b) => (asTraveller ? b.targetName : b.customerName) },
     { id: 'method', header: 'Method', sortValue: (b) => b.payment?.method ?? '', cell: (b) => b.payment ? paymentMethodShort[b.payment.method] : '—' },
     { id: 'amount', header: 'Amount', align: 'right', sortValue: (b) => b.payment?.amountRwf ?? 0, cell: (b) => <span className="font-semibold tabular-nums">{formatRwf(b.payment?.amountRwf ?? 0)}</span> },
     { id: 'status', header: 'Status', sortValue: (b) => statusOf(b) ?? '', cell: (b) => { const status = statusOf(b); return status ? <PaymentLedgerBadge status={status} /> : '—'; } },
@@ -60,9 +62,16 @@ export default function PaymentsPage() {
     (status ? rows.filter((b) => statusOf(b) === status) : rows).reduce((sum, b) => sum + paid(b), 0),
   );
 
+  const showViewToggle = isHost;
+
   return (
     <>
-      <PageHeader title="Payments" intro="Transfers happen outside Tourista. This list is the proof, host confirmation and refund trail." />
+      <PageHeader title="Payments" intro="Transfers happen outside Tourista. This list is the proof, host confirmation and refund trail." action={showViewToggle ? (
+        <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
+          <Button variant={asTraveller ? 'ghost' : 'primary'} size="sm" onClick={() => setTraveller(false)}>Business view</Button>
+          <Button variant={asTraveller ? 'primary' : 'ghost'} size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+        </div>
+      ) : undefined} />
       <StatGrid>
         <StatCard label="Total payments" icon={Wallet} value={money()} hint={`${rows.length} with proof`} />
         <StatCard label="Pending payment" icon={Clock} tone="amber" value={money('pending')} hint={n('pending') ? `${n('pending')} waiting for the host` : 'Nothing waiting'} />
@@ -94,7 +103,7 @@ export default function PaymentsPage() {
         }
         rowActions={(b) => (
           <div className="flex items-center justify-end gap-2">
-            <PaymentViewLink to={`${base}/payments/${b.id}`} />
+            <PaymentViewLink to={`${base}/payments/${b.id}${asTraveller ? '?view=traveller' : ''}`} />
           </div>
         )}
         emptyTitle="No payments yet"

@@ -67,7 +67,7 @@ export default function MapPage() {
   useDocumentTitle('Map');
   const toast = useToast();
   const { data, loading, error, reload } = useAsync(async () => {
-    const [locations, businesses] = await Promise.all([getLocations(), getBusinesses()]);
+    const [locations, businesses] = await Promise.all([getLocations(), getBusinesses({ approvalStatus: 'approved' })]);
     return { locations, businesses };
   });
 
@@ -161,8 +161,8 @@ export default function MapPage() {
             <Button size="sm" variant="ghost" onClick={locate} loading={locating}><Crosshair className="h-4 w-4" aria-hidden />Near me</Button>
           </div>
           <div className="grid grid-cols-2 gap-1 rounded-full bg-slate-100 p-1 lg:hidden" role="tablist" aria-label="View">
-            <button role="tab" aria-selected={mobileView === 'map'} onClick={() => setMobileView('map')} className={cn('flex h-9 items-center justify-center gap-1.5 rounded-full text-sm font-semibold', mobileView === 'map' && 'bg-white shadow-sm text-brand-600')}><MapIcon className="h-4 w-4" />Map</button>
-            <button role="tab" aria-selected={mobileView === 'list'} onClick={() => setMobileView('list')} className={cn('flex h-9 items-center justify-center gap-1.5 rounded-full text-sm font-semibold', mobileView === 'list' && 'bg-white shadow-sm text-brand-600')}><List className="h-4 w-4" />List</button>
+            <button role="tab" aria-selected={mobileView === 'map'} onClick={() => setMobileView('map')} className={cn('flex h-9 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors', mobileView === 'map' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-ink')}><MapIcon className="h-4 w-4" />Map</button>
+            <button role="tab" aria-selected={mobileView === 'list'} onClick={() => setMobileView('list')} className={cn('flex h-9 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors', mobileView === 'list' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-ink')}><List className="h-4 w-4" />List</button>
           </div>
         </div>
         <div className={cn('flex-1 overflow-y-auto', mobileView === 'map' && 'hidden lg:block')}>

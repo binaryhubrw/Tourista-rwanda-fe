@@ -22,7 +22,7 @@ type CardItem =
 export default function BusinessesPage() {
   useDocumentTitle('Listings & services');
   const { data, loading, error, reload } = useAsync(async () => {
-    const [businesses, bookings] = await Promise.all([getBusinesses(), getAvailability()]);
+    const [businesses, bookings] = await Promise.all([getBusinesses({ approvalStatus: 'approved' }), getAvailability()]);
     return { businesses, bookings };
   });
   const [kind, setKind] = useState<(typeof kinds)[number]>('All');

@@ -17,7 +17,7 @@ export default function LocationDetailsPage() {
   const { id = '' } = useParams();
   const { data: location, loading, error, reload } = useAsync(() => getLocationById(id), [id]);
   const related = useAsync(async () => {
-    const [locations, experiences, businesses] = await Promise.all([getLocations(), getExperiences(), getBusinesses()]);
+    const [locations, experiences, businesses] = await Promise.all([getLocations(), getExperiences(), getBusinesses({ approvalStatus: 'approved' })]);
     return { locations, experiences, businesses };
   }, [id]);
   const [activeImg, setActiveImg] = useState(0);

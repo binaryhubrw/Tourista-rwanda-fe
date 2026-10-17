@@ -1,4 +1,4 @@
-import type { Booking, BookingStatus, Payment, PaymentMethod, User } from '@/types';
+import type { Booking, BookingStatus, Payment, PaymentMethod } from '@/types';
 import { api, apiBlob } from './apiClient';
 
 export async function getBookingById(id: string): Promise<Booking> {
@@ -13,8 +13,9 @@ export async function getAvailability(filter: { businessId?: string; targetId?: 
   return api.get<Booking[]>(query ? `/bookings/availability/?${query}` : '/bookings/availability/');
 }
 
-export async function getBookings(filter: { userId?: string; businessIds?: string[] } = {}): Promise<Booking[]> {
+export async function getBookings(filter: { userId?: string; businessIds?: string[]; scope?: 'traveller' } = {}): Promise<Booking[]> {
   const qs = new URLSearchParams();
+  if (filter.scope) qs.set('scope', filter.scope);
   if (filter.userId) qs.set('userId', filter.userId);
   if (filter.businessIds?.length) qs.set('businessIds', filter.businessIds.join(','));
   const query = qs.toString();
@@ -66,10 +67,6 @@ export async function submitOfflinePayment(
     screenshot: input.screenshot,
     amountRwf: input.amountRwf,
   });
-}
-
-export function bookingBelongsToUser(booking: Pick<Booking, 'userId' | 'customerEmail'>, user: Pick<User, 'id' | 'email'>) {
-  return booking.userId === user.id || booking.customerEmail.toLowerCase() === user.email.toLowerCase();
 }
 
 export async function downloadBookingInvoice(id: string) {

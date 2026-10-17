@@ -72,7 +72,7 @@ export default function RefundRequestPage() {
   const [params] = useSearchParams();
   const base = dashboardPathFor(user!.role);
   const { data, loading, error, reload } = useAsync(async () => {
-    const [bookings, refunds] = await Promise.all([getBookings({ userId: user!.id }), getRefunds()]);
+    const [bookings, refunds] = await Promise.all([getBookings({ scope: 'traveller' }), getRefunds('traveller')]);
     return { bookings, refunds };
   }, [user?.id]);
   const bookings = data?.bookings;
@@ -142,7 +142,7 @@ export default function RefundRequestPage() {
         receiveName,
       });
       toast.success('Refund requested. Admin will process it.');
-      navigate(`${base}/refunds/${refund.id}`);
+      navigate(`${base}/refunds/${refund.id}?viewer=traveller`);
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -155,7 +155,7 @@ export default function RefundRequestPage() {
 
   return (
     <>
-      <Link to={`${base}/refunds`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All refunds</Link>
+      <Link to={`${base}/refunds?viewer=traveller`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All refunds</Link>
       <PageHeader title="Request a refund" intro="Select the confirmed payment on the left. The full amount you paid is refunded to the account you give on the right." />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]">
@@ -215,7 +215,7 @@ export default function RefundRequestPage() {
               <p className="text-sm text-slate-600">
                 {booking.targetName} already has a refund of {formatRwf(openOnSelected.amountRwf)}. Open that request instead of starting another.
               </p>
-              <ButtonLink to={`${base}/refunds/${openOnSelected.id}`}>Open this refund</ButtonLink>
+              <ButtonLink to={`${base}/refunds/${openOnSelected.id}?viewer=traveller`}>Open this refund</ButtonLink>
             </div>
           ) : booking.payment?.status === 'Refunded' ? (
             <div className="space-y-4">

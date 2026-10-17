@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Clock, Eye, EyeOff, Leaf, Star, Plus, Trash2, Upload } from 'lucide-react';
+import { Building2, Clock, Leaf, Star, Plus, Upload, Ban, CheckCircle2, Trash2 } from 'lucide-react';
 import type { ApprovalStatus, Booking, Business, BusinessCategory, PriceLevel, SustainabilityBadge, User } from '@/types';
-import { createBusiness, createBusinesses, deleteBusiness, getBookings, getBusinesses, getLocations, getUsers, setBusinessActive } from '@/services';
+import { approveBusiness, createBusiness, createBusinesses, deleteBusiness, getBookings, getBusinesses, getLocations, getUsers, setBusinessActive, setBusinessesActive } from '@/services';
 import type { BusinessInput } from '@/services/businessService';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Button, ConfirmModal, ErrorState, Loading, Modal, Select } from '@/components/ui';
+import { Badge, Button, ConfirmModal, ErrorState, Loading, Modal, Select, Textarea } from '@/components/ui';
 import { BulkImportModal, DataTable, FilterTabs, ListingApprovalBadge, PageHeader, RowMenu, StatCard, StatGrid, type Column, type ImportField } from '@/components/dashboard';
 import { ListingReviewActions } from '@/components/business/ListingReviewActions';
 import { listingApproval } from '@/utils/approval';
@@ -29,9 +29,9 @@ interface CompanyRow {
   kinds: string;
   districts: string;
   categories: BusinessCategory[];
-  listingIds: string[];
-  active: boolean;
+  branchIds: string[];
   branchCount: number;
+  deactivated: number;
   vehicleCount: number;
   bookingCount: number;
   subscriptionRwf: number;
@@ -64,9 +64,9 @@ function companyRows(listings: Business[], owners: User[], bookings: Booking[]):
       kinds,
       districts,
       categories: [...new Set(branches.map((branch) => branch.category))],
-      listingIds: branches.map((branch) => branch.id),
-      active: branches.every((branch) => branch.active !== false),
+      branchIds: branches.map((branch) => branch.id),
       branchCount: branches.length,
+      deactivated: branches.filter((branch) => branch.active === false).length,
       vehicleCount: branches.reduce((sum, branch) => sum + fleetCount(branch.services), 0),
       bookingCount: mine.length,
       subscriptionRwf: subscriptionsPaid(mine),
@@ -87,10 +87,19 @@ const columns: Column<CompanyRow>[] = [
   { id: 'owner', header: 'Owner', sortValue: (row) => row.ownerName, cell: (row) => row.ownerName },
   { id: 'kind', header: 'Kind', sortValue: (row) => row.kinds, cell: (row) => <span className="whitespace-nowrap">{row.kinds}</span> },
   { id: 'districts', header: 'Districts', sortValue: (row) => row.districts, cell: (row) => row.districts },
-  { id: 'branches', header: 'Branches', align: 'right', sortValue: (row) => row.branchCount, cell: (row) => <span className="tabular-nums">{row.branchCount}</span> },
+  { id: 'branches', header: 'Total branches', align: 'right', sortValue: (row) => row.branchCount, cell: (row) => <span className="tabular-nums">{row.branchCount}</span> },
   { id: 'vehicles', header: 'Vehicles', align: 'right', sortValue: (row) => row.vehicleCount, cell: (row) => <span className="tabular-nums">{row.vehicleCount}</span> },
   { id: 'bookings', header: 'Bookings', align: 'right', sortValue: (row) => row.bookingCount, cell: (row) => <span className="tabular-nums">{row.bookingCount}</span> },
   { id: 'fees', header: 'Subscriptions paid', align: 'right', sortValue: (row) => row.subscriptionRwf, cell: (row) => <span className="whitespace-nowrap tabular-nums">{formatRwf(row.subscriptionRwf)}</span> },
+  {
+    id: 'status', header: 'Status', sortValue: (row) => row.deactivated,
+    exportValue: (row) => (row.deactivated === 0 ? 'Active' : row.deactivated === row.branchCount ? 'Deactivated' : 'Partially deactivated'),
+    cell: (row) => (row.deactivated === 0
+      ? <Badge tone="success">Active</Badge>
+      : row.deactivated === row.branchCount
+        ? <Badge tone="danger">Deactivated</Badge>
+        : <Badge tone="warning">{row.deactivated}/{row.branchCount} hidden</Badge>),
+  },
   { id: 'rating', header: 'Rating', align: 'right', sortValue: (row) => row.rating, cell: (row) => <span className="tabular-nums">{row.rating ? row.rating.toFixed(1) : 'New'}</span> },
 ];
 
@@ -101,8 +110,9 @@ const reviewColumns = (owners: User[]): Column<Business>[] => [
       <p className="text-xs text-slate-500">{listingKindOf(b)} · {b.district}</p>
     </div>
   ) },
+  { id: 'company', header: 'Company', sortValue: (b) => { const o = owners.find((x) => x.id === b.ownerId); return o?.businessName?.trim() || o?.name || b.ownerName; }, cell: (b) => { const o = owners.find((x) => x.id === b.ownerId); return <span className="font-medium text-ink">{o?.businessName?.trim() || o?.name || b.ownerName}</span>; } },
   { id: 'owner', header: 'Owner', sortValue: (b) => b.ownerName, cell: (b) => owners.find((o) => o.id === b.ownerId)?.name || b.ownerName },
-  { id: 'status', header: 'Status', sortValue: (b) => listingApproval(b), cell: (b) => <ListingApprovalBadge status={listingApproval(b)} /> },
+  { id: 'status', header: 'Status', sortValue: (b) => (b.active === false ? 'hidden' : listingApproval(b)), cell: (b) => (b.active === false ? <Badge tone="danger">Hidden</Badge> : <ListingApprovalBadge status={listingApproval(b)} />) },
   { id: 'submitted', header: 'Submitted', sortValue: (b) => b.submittedAt ?? b.createdAt, cell: (b) => <span className="whitespace-nowrap text-slate-500">{formatDate(b.submittedAt ?? b.createdAt)}</span> },
   { id: 'reason', header: 'Notes', cell: (b) => b.rejectionReason ? <span className="line-clamp-2 max-w-xs text-sm text-slate-600">{b.rejectionReason}</span> : '—' },
 ];
@@ -130,15 +140,19 @@ export default function AdminBusinessesPage() {
     return { businesses, locations, owners: users.filter((u) => u.role === 'business_owner'), bookings };
   });
   const [params, setParams] = useSearchParams();
-  const review = (['pending', 'approved', 'rejected'].includes(params.get('review') ?? '') ? params.get('review') : 'all') as ApprovalStatus | 'all';
+  const reviewParam = params.get('review') ?? '';
+  const review: ApprovalStatus | 'hidden' | 'all' = reviewParam === 'rejected' ? 'hidden' : (['pending', 'approved', 'hidden'].includes(reviewParam) ? reviewParam : 'all') as ApprovalStatus | 'hidden' | 'all';
   const [category, setCategory] = useState<'all' | BusinessCategory>('all');
   const [adding, setAdding] = useQueryFlag('new');
   const [importing, setImporting] = useQueryFlag('import');
   const [saving, setSaving] = useState(false);
-  const [statusAction, setStatusAction] = useState<{ kind: 'deactivate' | 'activate'; row: CompanyRow } | null>(null);
-  const [statusBusy, setStatusBusy] = useState(false);
-  const [deleting, setDeleting] = useState<CompanyRow | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [toggling, setToggling] = useState<CompanyRow | null>(null);
+  const [removing, setRemoving] = useState<CompanyRow | null>(null);
+  const [branchToggle, setBranchToggle] = useState<Business | null>(null);
+  const [branchRemove, setBranchRemove] = useState<Business | null>(null);
+  const [branchApprove, setBranchApprove] = useState<Business | null>(null);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const all = data?.businesses ?? [];
   const destinations = useMemo(() => {
@@ -173,44 +187,13 @@ export default function AdminBusinessesPage() {
     try {
       const created = await createBusiness({ ...input, ownerName: input.ownerName.replace(/ \(you\)$/, '') });
       setData((d) => d && { ...d, businesses: [created, ...d.businesses] });
-      toast.success(`${created.name} is now listed. The owner can add rooms and prices.`);
+      toast.success(`${created.name} was created and is waiting for review.`);
       setAdding(false);
+      setReview('pending');
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const runStatus = async () => {
-    if (!statusAction) return;
-    setStatusBusy(true);
-    try {
-      const results = await Promise.all(statusAction.row.listingIds.map((id) => setBusinessActive(id, statusAction.kind === 'activate')));
-      const byId = new Map(results.map((b) => [b.id, b]));
-      setData((d) => d && { ...d, businesses: d.businesses.map((b) => byId.get(b.id) ?? b) });
-      toast.success(statusAction.kind === 'activate' ? `${statusAction.row.name} is visible to travellers again.` : `${statusAction.row.name} is hidden from travellers.`);
-      setStatusAction(null);
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setStatusBusy(false);
-    }
-  };
-
-  const runDelete = async () => {
-    if (!deleting) return;
-    setDeleteBusy(true);
-    try {
-      await Promise.all(deleting.listingIds.map((id) => deleteBusiness(id)));
-      const ids = new Set(deleting.listingIds);
-      setData((d) => d && { ...d, businesses: d.businesses.filter((b) => !ids.has(b.id)) });
-      toast.success(`${deleting.name} was deleted.`);
-      setDeleting(null);
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setDeleteBusy(false);
     }
   };
 
@@ -272,15 +255,102 @@ export default function AdminBusinessesPage() {
   const has = (badge: SustainabilityBadge) => all.filter((b) => b.badges.includes(badge)).length;
   const rated = companies.filter((row) => row.rating > 0);
   const pending = all.filter((b) => listingApproval(b) === 'pending');
-  const rejected = all.filter((b) => listingApproval(b) === 'rejected');
-  const reviewList = review === 'all' ? all : all.filter((b) => listingApproval(b) === review);
-  const setReview = (value: ApprovalStatus | 'all') => {
+  const hidden = all.filter((b) => listingApproval(b) === 'rejected' || b.active === false);
+  const live = all.filter((b) => listingApproval(b) === 'approved' && b.active !== false);
+  const reviewList = review === 'all' ? all : review === 'hidden' ? hidden : review === 'approved' ? live : all.filter((b) => listingApproval(b) === review);
+  const setReview = (value: ApprovalStatus | 'hidden' | 'all') => {
     const next = new URLSearchParams(params);
     if (value === 'all') next.delete('review');
     else next.set('review', value);
     setParams(next, { replace: true });
   };
   const patchListing = (next: Business) => setData((d) => d && { ...d, businesses: d.businesses.map((item) => (item.id === next.id ? next : item)) });
+
+  const openToggle = (row: CompanyRow) => { setReason(''); setToggling(row); };
+
+  const toggleActive = async () => {
+    if (!toggling) return;
+    const active = toggling.deactivated === toggling.branchCount;
+    setBusy(true);
+    try {
+      await setBusinessesActive(toggling.branchIds, active, active ? undefined : (reason.trim() || undefined));
+      const ids = toggling.branchIds;
+      setData((d) => d && { ...d, businesses: d.businesses.map((b) => (ids.includes(b.id) ? { ...b, active } : b)) });
+      toast.success(active ? `${toggling.name} is visible to travellers again.` : `${toggling.name} was hidden from travellers.`);
+      setToggling(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeCompany = async () => {
+    if (!removing) return;
+    const ids = removing.branchIds;
+    setBusy(true);
+    try {
+      await Promise.all(ids.map((id) => deleteBusiness(id)));
+      setData((d) => d && { ...d, businesses: d.businesses.filter((b) => !ids.includes(b.id)) });
+      toast.success(`${removing.name} was removed.`);
+      setRemoving(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openBranchToggle = (b: Business) => { setReason(''); setBranchToggle(b); };
+
+  const toggleBranchActive = async () => {
+    if (!branchToggle) return;
+    const active = branchToggle.active === false;
+    setBusy(true);
+    try {
+      const updated = await setBusinessActive(branchToggle.id, active, active ? undefined : (reason.trim() || undefined));
+      patchListing(updated);
+      toast.success(active ? `${updated.name} is visible to travellers again.` : `${updated.name} was hidden from travellers.`);
+      setBranchToggle(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const approveBranch = async () => {
+    if (!branchApprove) return;
+    const approved = listingApproval(branchApprove) === 'rejected';
+    setBusy(true);
+    try {
+      let updated = branchApprove;
+      if (approved) updated = await approveBusiness(branchApprove.id);
+      if (updated.active === false) updated = await setBusinessActive(branchApprove.id, true);
+      patchListing(updated);
+      toast.success(`${updated.name} is visible to travellers again.`);
+      setBranchApprove(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeBranch = async () => {
+    if (!branchRemove) return;
+    setBusy(true);
+    try {
+      await deleteBusiness(branchRemove.id);
+      setData((d) => d && { ...d, businesses: d.businesses.filter((b) => b.id !== branchRemove.id) });
+      toast.success(`${branchRemove.name} was removed.`);
+      setBranchRemove(null);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <>
@@ -295,7 +365,7 @@ export default function AdminBusinessesPage() {
 
       <StatGrid>
         <StatCard label="Businesses" icon={Building2} value={companies.length} hint={`${all.length} branch${all.length === 1 ? '' : 'es'}`} />
-        <StatCard label="Awaiting review" icon={Clock} tone="amber" value={pending.length} hint={rejected.length ? `${rejected.length} sent back` : 'Owner listings not yet live'} to="/admin/businesses?review=pending" />
+        <StatCard label="Awaiting review" icon={Clock} tone="amber" value={pending.length} hint={hidden.length ? `${hidden.length} hidden` : 'Owner listings not yet live'} to="/admin/businesses?review=pending" />
         <StatCard label="Eco-certified" icon={Leaf} tone="teal" value={has('Eco-certified')} hint={companies.length ? `${Math.round((has('Eco-certified') / Math.max(all.length, 1)) * 100)}% of branches` : undefined} />
         <StatCard label="Average rating" icon={Star} tone="violet" value={rated.length ? average(rated.map((row) => row.rating)).toFixed(2) : '—'} hint={`${has('Women-led')} women-led`} />
       </StatGrid>
@@ -308,8 +378,8 @@ export default function AdminBusinessesPage() {
           options={[
             { value: 'all', label: 'Companies' },
             { value: 'pending', label: 'Awaiting review', count: pending.length },
-            { value: 'rejected', label: 'Needs changes', count: rejected.length },
-            { value: 'approved', label: 'Live', count: all.filter((b) => listingApproval(b) === 'approved').length },
+            { value: 'hidden', label: 'Hidden', count: hidden.length },
+            { value: 'approved', label: 'Live branches', count: live.length },
           ]}
         />
       </div>
@@ -334,10 +404,11 @@ export default function AdminBusinessesPage() {
             <div className="flex items-center justify-end gap-1">
               <ListingViewLink to={row.href} name={row.name} />
               <RowMenu
-                label={`Actions for ${row.name}`}
                 items={[
-                  { label: row.active ? 'Deactivate' : 'Activate', icon: row.active ? EyeOff : Eye, onSelect: () => setStatusAction({ kind: row.active ? 'deactivate' : 'activate', row }) },
-                  { label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => setDeleting(row) },
+                  row.deactivated === row.branchCount
+                    ? { label: 'Show to travellers', icon: CheckCircle2, onSelect: () => openToggle(row) }
+                    : { label: 'Hide from travellers', icon: Ban, tone: 'danger', onSelect: () => openToggle(row) },
+                  { label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => setRemoving(row) },
                 ]}
               />
             </div>
@@ -353,11 +424,29 @@ export default function AdminBusinessesPage() {
           searchText={(b) => `${b.name} ${b.ownerName} ${b.district} ${listingKindOf(b)} ${b.rejectionReason ?? ''}`}
           searchPlaceholder="Search listings"
           exportFileName={`listings-${review}`}
-          emptyTitle={review === 'pending' ? 'Nothing waiting' : review === 'rejected' ? 'No listings sent back' : 'No live listings'}
+          emptyTitle={review === 'pending' ? 'Nothing waiting' : review === 'hidden' ? 'No hidden branches' : 'No live branches'}
           rowActions={(b) => (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <ListingViewLink to={`/admin/businesses/${b.id}/branch`} name={b.name} />
-              <ListingReviewActions listing={b} onUpdated={patchListing} />
+              {review === 'approved' ? (
+                <RowMenu
+                  items={[
+                    b.active === false
+                      ? { label: 'Show to travellers', icon: CheckCircle2, onSelect: () => openBranchToggle(b) }
+                      : { label: 'Hide from travellers', icon: Ban, tone: 'danger', onSelect: () => openBranchToggle(b) },
+                    { label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => setBranchRemove(b) },
+                  ]}
+                />
+              ) : review === 'hidden' ? (
+                <RowMenu
+                  items={[
+                    { label: 'Activate', icon: CheckCircle2, onSelect: () => setBranchApprove(b) },
+                    { label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => setBranchRemove(b) },
+                  ]}
+                />
+              ) : (
+                <ListingReviewActions listing={b} onUpdated={patchListing} />
+              )}
             </div>
           )}
         />
@@ -370,29 +459,88 @@ export default function AdminBusinessesPage() {
       <BulkImportModal open={importing && !!data} onClose={() => setImporting(false)} entity="businesses" fields={importFields} parse={parseRow} describe={(r) => r.name ?? ''} onImport={importRows} />
 
       <ConfirmModal
-        open={!!statusAction}
-        title={statusAction?.kind === 'activate' ? `Activate ${statusAction.row.name}?` : `Deactivate ${statusAction?.row.name}?`}
-        message={statusAction?.kind === 'activate'
-          ? 'All of this company’s branches will be visible to travellers again.'
-          : 'All of this company’s branches will be hidden from travellers and search. You, the owner and staff still see them.'}
-        confirmLabel={statusAction?.kind === 'activate' ? 'Activate' : 'Deactivate'}
-        acknowledge={statusAction?.kind === 'deactivate' ? `I understand ${statusAction?.row.name} will be hidden from travellers.` : undefined}
-        variant={statusAction?.kind === 'activate' ? 'primary' : 'danger'}
-        loading={statusBusy}
-        onConfirm={runStatus}
-        onCancel={() => setStatusAction(null)}
+        open={!!toggling}
+        variant={toggling && toggling.deactivated === toggling.branchCount ? 'primary' : 'danger'}
+        title={toggling && toggling.deactivated === toggling.branchCount ? `Show ${toggling.name} to travellers?` : `Hide ${toggling?.name} from travellers?`}
+        message={toggling && toggling.deactivated === toggling.branchCount
+          ? `All ${toggling?.branchCount} branch${toggling?.branchCount === 1 ? '' : 'es'} will appear in search and can be booked again.`
+          : `${toggling?.branchCount === 1 ? 'This listing' : `All ${toggling?.branchCount} branches`} will disappear from travellers’ search and cannot be booked, but you keep full access. We email the owner your reason below.`}
+        confirmLabel={toggling && toggling.deactivated === toggling.branchCount ? 'Show to travellers' : 'Hide from travellers'}
+        acknowledge={toggling && toggling.deactivated === toggling.branchCount ? undefined : 'I understand travellers will not see this business.'}
+        confirmDisabled={!!toggling && toggling.deactivated !== toggling.branchCount && !reason.trim()}
+        loading={busy}
+        onConfirm={toggleActive}
+        onCancel={() => setToggling(null)}
+      >
+        {toggling && toggling.deactivated !== toggling.branchCount && (
+          <Textarea
+            label="Reason (emailed to the owner)"
+            value={reason}
+            maxLength={500}
+            onChange={(e) => setReason(e.target.value)}
+            hint="Required. It is included in the email we send the owner."
+            placeholder="e.g. This listing broke our content rules. Update it and reply to this email."
+          />
+        )}
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={!!removing}
+        title={`Delete ${removing?.name}?`}
+        message={`This permanently removes ${removing?.branchCount === 1 ? 'the listing' : `all ${removing?.branchCount} branches`}. Existing bookings and reviews keep their copy of the name. This cannot be undone.`}
+        confirmLabel="Delete"
+        acknowledge="I understand this cannot be undone."
+        loading={busy}
+        onConfirm={removeCompany}
+        onCancel={() => setRemoving(null)}
       />
 
       <ConfirmModal
-        open={!!deleting}
-        title={`Delete ${deleting?.name ?? ''}?`}
-        message="This permanently removes the company and all of its branches from Tourista. Past bookings and reviews stay on record. This cannot be undone — use Deactivate if you only want to hide it."
+        open={!!branchToggle}
+        variant={branchToggle?.active === false ? 'primary' : 'danger'}
+        title={branchToggle?.active === false ? `Show ${branchToggle?.name} to travellers?` : `Hide ${branchToggle?.name} from travellers?`}
+        message={branchToggle?.active === false
+          ? 'This listing will appear in search and can be booked again.'
+          : `${branchToggle?.name ?? 'This listing'} will disappear from travellers’ search and cannot be booked, but you keep full access. We email the owner your reason below.`}
+        confirmLabel={branchToggle?.active === false ? 'Show to travellers' : 'Hide from travellers'}
+        acknowledge={branchToggle?.active === false ? undefined : 'I understand travellers will not see this listing.'}
+        confirmDisabled={branchToggle?.active !== false && !reason.trim()}
+        loading={busy}
+        onConfirm={toggleBranchActive}
+        onCancel={() => setBranchToggle(null)}
+      >
+        {branchToggle?.active !== false && (
+          <Textarea
+            label="Reason (emailed to the owner)"
+            value={reason}
+            maxLength={500}
+            onChange={(e) => setReason(e.target.value)}
+            hint="Required. It is included in the email we send the owner."
+            placeholder="e.g. This listing broke our content rules. Update it and reply to this email."
+          />
+        )}
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={!!branchRemove}
+        title={`Delete ${branchRemove?.name}?`}
+        message="This permanently removes the listing. Existing bookings and reviews keep their copy of the name. This cannot be undone."
         confirmLabel="Delete"
-        acknowledge={deleting ? `I understand ${deleting.name} will be permanently deleted.` : undefined}
-        variant="danger"
-        loading={deleteBusy}
-        onConfirm={runDelete}
-        onCancel={() => setDeleting(null)}
+        acknowledge="I understand this cannot be undone."
+        loading={busy}
+        onConfirm={removeBranch}
+        onCancel={() => setBranchRemove(null)}
+      />
+
+      <ConfirmModal
+        open={!!branchApprove}
+        variant="primary"
+        title={`Activate ${branchApprove?.name}?`}
+        message="It will appear in search and can be booked by travellers right away."
+        confirmLabel="Activate"
+        loading={busy}
+        onConfirm={approveBranch}
+        onCancel={() => setBranchApprove(null)}
       />
     </>
   );

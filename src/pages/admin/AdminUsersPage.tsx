@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plane, Building2, UserPlus, Trash2, Upload, Plus, UserCheck, UserX } from 'lucide-react';
+import { Users, Plane, Building2, UserPlus, Trash2, Upload, Plus, Ban, CheckCircle2 } from 'lucide-react';
 import type { User, UserRole } from '@/types';
-import { createUser, createUsers, deleteUsers, getUsers, setUserActive, type UserInput } from '@/services';
+import { createUser, createUsers, deleteUsers, getUsers, updateUser, type UserInput } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Avatar, Badge, Button, ConfirmModal, ErrorState, Input, Modal, Select } from '@/components/ui';
+import { Avatar, Badge, Button, ConfirmModal, ErrorState, Input, Modal, Select, Textarea } from '@/components/ui';
 import { BulkImportModal, DataTable, FilterTabs, PageHeader, RowMenu, StatCard, StatGrid, roleLabel, type Column, type ImportField } from '@/components/dashboard';
 import { byMonth, periodTrend } from '@/utils/analytics';
 import { formatDate } from '@/utils/format';
@@ -36,7 +36,11 @@ const columns: Column<User>[] = [
   },
   { id: 'email', header: 'Email', exportValue: (u) => u.email, cell: (u) => <span className="text-slate-600">{u.email}</span> },
   { id: 'role', header: 'Role', sortValue: (u) => roleLabel[u.role], cell: (u) => <Badge tone={roleTone[u.role]}>{roleLabel[u.role]}</Badge> },
-  { id: 'status', header: 'Status', sortValue: (u) => (u.active === false ? 0 : 1), cell: (u) => <Badge tone={u.active === false ? 'danger' : 'success'}>{u.active === false ? 'Inactive' : 'Active'}</Badge> },
+  {
+    id: 'status', header: 'Status', sortValue: (u) => (u.active === false ? 'Deactivated' : 'Active'),
+    exportValue: (u) => (u.active === false ? 'Deactivated' : 'Active'),
+    cell: (u) => (u.active === false ? <Badge tone="danger">Deactivated</Badge> : <Badge tone="success">Active</Badge>),
+  },
   { id: 'country', header: 'Country', sortValue: (u) => u.country ?? '', cell: (u) => u.country ?? '—' },
   { id: 'joined', header: 'Joined', sortValue: (u) => u.joinedAt, cell: (u) => <span className="whitespace-nowrap text-slate-500">{formatDate(u.joinedAt)}</span> },
 ];
@@ -50,9 +54,11 @@ export default function AdminUsersPage() {
   const { data, loading, error, reload, setData } = useAsync(getUsers);
   const [filter, setFilter] = useState<RoleFilter>('all');
   const [removing, setRemoving] = useState<{ rows: User[]; done: () => void } | null>(null);
-  const [statusAction, setStatusAction] = useState<{ kind: 'deactivate' | 'activate'; row: User } | null>(null);
+  const [toggling, setToggling] = useState<User | null>(null);
+  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useQueryFlag('new');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [importing, setImporting] = useQueryFlag('import');
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -93,14 +99,17 @@ export default function AdminUsersPage() {
     }
   };
 
-  const runStatus = async () => {
-    if (!statusAction) return;
+  const openToggle = (u: User) => { setReason(''); setToggling(u); };
+
+  const toggleActive = async () => {
+    if (!toggling) return;
+    const active = toggling.active === false;
     setBusy(true);
     try {
-      const updated = await setUserActive(statusAction.row.id, statusAction.kind === 'activate');
+      const updated = await updateUser(toggling.id, { active, reason: active ? undefined : (reason.trim() || undefined) });
       setData((l) => l?.map((u) => (u.id === updated.id ? updated : u)));
-      toast.success(statusAction.kind === 'activate' ? `${updated.name} can log in again.` : `${updated.name} is deactivated.`);
-      setStatusAction(null);
+      toast.success(active ? `${updated.name} can sign in again.` : `${updated.name} was deactivated.`);
+      setToggling(null);
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -127,7 +136,7 @@ export default function AdminUsersPage() {
         password: form.password.trim() || undefined,
       });
       setData((l) => [created, ...(l ?? [])]);
-      toast.success(`${created.name} added as ${roleLabel[created.role].toLowerCase()}.`);
+      toast.success(`${created.name} added as ${roleLabel[created.role].toLowerCase()}. A temporary password was emailed to them.`);
       setAdding(false);
       setForm(blank);
     } catch (err) {
@@ -200,19 +209,16 @@ export default function AdminUsersPage() {
           />
         }
         exportFileName="users"
-        rowActions={(u) => {
-          const self = u.id === me!.id;
-          const deactivated = u.active === false;
-          return (
-            <RowMenu
-              label={`Actions for ${u.name}`}
-              items={[
-                { label: deactivated ? 'Activate' : 'Deactivate', icon: deactivated ? UserCheck : UserX, disabled: self, onSelect: () => setStatusAction({ kind: deactivated ? 'activate' : 'deactivate', row: u }) },
-                { label: 'Delete', icon: Trash2, tone: 'danger', disabled: self, onSelect: () => setRemoving({ rows: [u], done: () => {} }) },
-              ]}
-            />
-          );
-        }}
+        rowActions={(u) => (
+          <RowMenu
+            items={[
+              u.active === false
+                ? { label: 'Activate', icon: CheckCircle2, onSelect: () => openToggle(u) }
+                : { label: 'Deactivate', icon: Ban, tone: 'danger', disabled: u.id === me?.id, onSelect: () => openToggle(u) },
+              { label: 'Delete', icon: Trash2, tone: 'danger', disabled: u.id === me?.id, onSelect: () => setRemoving({ rows: [u], done: () => {} }) },
+            ]}
+          />
+        )}
         bulkActions={(rows, clear) => {
           const removable = rows.filter((u) => u.id !== me!.id);
           return <Button size="sm" variant="danger" disabled={!removable.length} onClick={() => setRemoving({ rows: removable, done: clear })}><Trash2 className="h-4 w-4" aria-hidden />Remove {removable.length || ''}</Button>;
@@ -238,25 +244,36 @@ export default function AdminUsersPage() {
         title={`Remove ${removing?.rows.length ?? 0} account${removing && removing.rows.length > 1 ? 's' : ''}?`}
         message="These people will lose access to Tourista. Their bookings and reviews stay on record. Your own account is never included."
         confirmLabel="Remove"
-        acknowledge="I understand these accounts will be permanently removed."
         loading={busy}
         onConfirm={remove}
         onCancel={() => setRemoving(null)}
       />
 
       <ConfirmModal
-        open={!!statusAction}
-        title={statusAction?.kind === 'activate' ? `Activate ${statusAction.row.name}?` : `Deactivate ${statusAction?.row.name}?`}
-        message={statusAction?.kind === 'activate'
-          ? 'They will be able to log in again straight away.'
-          : 'They will not be able to log in until you activate them again. Their bookings and reviews stay on record.'}
-        confirmLabel={statusAction?.kind === 'activate' ? 'Activate' : 'Deactivate'}
-        acknowledge={statusAction?.kind === 'deactivate' ? `I understand ${statusAction?.row.name} will be locked out of their account.` : undefined}
-        variant={statusAction?.kind === 'activate' ? 'primary' : 'danger'}
+        open={!!toggling}
+        variant={toggling?.active === false ? 'primary' : 'danger'}
+        title={toggling?.active === false ? `Activate ${toggling?.name}?` : `Deactivate ${toggling?.name}?`}
+        message={toggling?.active === false
+          ? 'They will be able to sign in and use Tourista again right away.'
+          : `${toggling?.name ?? 'This person'} will be signed out and blocked from logging in. Their bookings, reviews and listings stay on record. We email them your reason below.`}
+        confirmLabel={toggling?.active === false ? 'Activate' : 'Deactivate'}
+        acknowledge={toggling?.active === false ? undefined : 'I understand this person will lose access immediately.'}
+        confirmDisabled={toggling?.active !== false && !reason.trim()}
         loading={busy}
-        onConfirm={runStatus}
-        onCancel={() => setStatusAction(null)}
-      />
+        onConfirm={toggleActive}
+        onCancel={() => setToggling(null)}
+      >
+        {toggling?.active !== false && (
+          <Textarea
+            label="Reason (emailed to them)"
+            value={reason}
+            maxLength={500}
+            onChange={(e) => setReason(e.target.value)}
+            hint="Required. It is included in the email we send them."
+            placeholder="e.g. This account broke our community rules. Reply to this email if you think it is a mistake."
+          />
+        )}
+      </ConfirmModal>
     </>
   );
 }

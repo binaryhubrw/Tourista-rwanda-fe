@@ -62,6 +62,7 @@ interface Props {
   amountRwf: number;
   alreadyPaid?: number;
   payout: PayoutTarget | null | undefined;
+  payoutLoading?: boolean;
   onSubmit: (input: {
     method: PaymentMethod;
     senderName: string;
@@ -73,7 +74,8 @@ interface Props {
   }) => Promise<void>;
 }
 
-export function OfflinePaymentForm({ amountRwf, alreadyPaid = 0, payout, onSubmit }: Props) {
+export function OfflinePaymentForm({ amountRwf, alreadyPaid = 0, payout, payoutLoading = false, onSubmit }: Props) {
+  const methods = METHODS.filter((m) => payoutAccountFor(payout, m.id));
   const remaining = Math.max(0, amountRwf - alreadyPaid);
   const first = alreadyPaid <= 0;
   const floor = first ? minDue(amountRwf) : 1;
@@ -153,29 +155,35 @@ export function OfflinePaymentForm({ amountRwf, alreadyPaid = 0, payout, onSubmi
 
       <fieldset>
         <legend className="mb-2 text-sm font-semibold text-ink">1. How did you send the money?</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {METHODS.map((m) => {
-            const active = method === m.id;
-            const acc = payoutAccountFor(payout, m.id);
-            return (
-              <label key={m.id} className={cn('relative flex cursor-pointer flex-col gap-2 rounded-2xl border-2 p-3.5 transition-colors', active ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:border-brand-300')}>
-                <input type="radio" name="pay-method" className="sr-only" checked={active} onChange={() => { setMethod(m.id); setErrors({}); }} />
-                <span className="flex items-center gap-2">
-                  <m.Logo className="shrink-0 rounded-md shadow-sm" />
-                  <span className="text-sm font-bold leading-tight text-ink">{m.title}</span>
-                </span>
-                {m.id === 'card' && (
-                  <span className="flex items-center gap-1.5" aria-label="Visa and Mastercard">
-                    <VisaLogo className="h-3.5" /><MastercardLogo className="h-4" />
+        {methods.length > 0 ? (
+          <div className={cn('grid gap-2', methods.length >= 3 ? 'sm:grid-cols-3' : methods.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-1')}>
+            {methods.map((m) => {
+              const active = method === m.id;
+              const acc = payoutAccountFor(payout, m.id);
+              return (
+                <label key={m.id} className={cn('relative flex cursor-pointer flex-col gap-2 rounded-2xl border-2 p-3.5 transition-colors', active ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:border-brand-300')}>
+                  <input type="radio" name="pay-method" className="sr-only" checked={active} onChange={() => { setMethod(m.id); setErrors({}); }} />
+                  <span className="flex items-center gap-2">
+                    <m.Logo className="shrink-0 rounded-md shadow-sm" />
+                    <span className="text-sm font-bold leading-tight text-ink">{m.title}</span>
                   </span>
-                )}
-                <span className="text-xs text-slate-500">{m.how}</span>
-                <span className="font-mono text-[11px] text-slate-600">{acc ? formatPayAccount(m.id, acc) : 'Not published yet'}</span>
-                {active && <CheckCircle2 className="absolute right-2 top-2 h-4 w-4 text-brand-600" aria-hidden />}
-              </label>
-            );
-          })}
-        </div>
+                  {m.id === 'card' && (
+                    <span className="flex items-center gap-1.5" aria-label="Visa and Mastercard">
+                      <VisaLogo className="h-3.5" /><MastercardLogo className="h-4" />
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-500">{m.how}</span>
+                  <span className="font-mono text-[11px] text-slate-600">{acc ? formatPayAccount(m.id, acc) : 'Not published yet'}</span>
+                  {active && <CheckCircle2 className="absolute right-2 top-2 h-4 w-4 text-brand-600" aria-hidden />}
+                </label>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+            {payoutLoading ? 'Loading payment options…' : 'This host has not published a payment account yet. Contact the host before sending money.'}
+          </p>
+        )}
         {errors.method && <p className="mt-2 text-sm text-red-600">{errors.method}</p>}
       </fieldset>
 

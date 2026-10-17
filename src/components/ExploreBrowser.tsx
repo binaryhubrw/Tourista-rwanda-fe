@@ -96,7 +96,7 @@ export function ExploreBrowser({ showSearch = true, featuredFirst = false }: { s
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, loading, error, reload } = useAsync(async () => {
-    const [locations, businesses, bookings] = await Promise.all([getLocations(), getBusinesses(), getAvailability()]);
+    const [locations, businesses, bookings] = await Promise.all([getLocations(), getBusinesses({ approvalStatus: 'approved' }), getAvailability()]);
     return { locations, businesses, bookings };
   });
 

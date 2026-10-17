@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Clock, ShieldCheck } from 'lucide-react';
 import { approveRefund, cancelRefund, completeRefund, getBookingById, getRefundById, rejectRefund } from '@/services';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { isHostRole, isTravellerQuery } from '@/hooks/useViewerMode';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button, ConfirmModal, ErrorState, Loading, Textarea } from '@/components/ui';
@@ -52,6 +53,8 @@ export default function RefundDetailsPage() {
   const { user } = useAuth();
   const toast = useToast();
   const base = dashboardPathFor(user!.role);
+  const [searchParams] = useSearchParams();
+  const asTraveller = user?.role === 'tourist' || (isHostRole(user?.role) && isTravellerQuery(searchParams));
   const { data, loading, error, reload } = useAsync(async () => {
     const refund = await getRefundById(id);
     const booking = await getBookingById(refund.bookingId);
@@ -69,8 +72,8 @@ export default function RefundDetailsPage() {
   const { booking } = data;
   const refund = data.refund;
   const admin = user.role === 'admin';
-  const tourist = user.role === 'tourist';
-  const host = user.role === 'business_owner' || user.role === 'staff';
+  const tourist = asTraveller;
+  const host = isHostRole(user.role) && !asTraveller;
   const lines = bookingLines(booking);
   const plates = lines.flatMap((line) => line.plateNumbers ?? []);
   const waitingAdmin = refund.status === 'requested' || refund.status === 'owner_review' || refund.status === 'admin_review';
@@ -109,7 +112,7 @@ export default function RefundDetailsPage() {
 
   return (
     <>
-      <Link to={`${base}/refunds`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All refunds</Link>
+      <Link to={`${base}/refunds${asTraveller ? '?viewer=traveller' : ''}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All refunds</Link>
       <PageHeader title={refund.id.toUpperCase()} intro={booking.targetName} action={<RefundStageBadge status={refund.status} />} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_380px]">
@@ -196,8 +199,8 @@ export default function RefundDetailsPage() {
             </div>
             <p className="mt-4 flex items-start gap-2 text-xs text-slate-500"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden />Money is returned outside Tourista to the account on this request.</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Link to={`${base}/payments/${booking.id}`} className="text-sm font-semibold text-brand-600 hover:underline">Open payment</Link>
-              <Link to={`${base}/bookings/${booking.id}`} className="text-sm font-semibold text-brand-600 hover:underline">Open booking</Link>
+              <Link to={`${base}/payments/${booking.id}${asTraveller ? '?view=traveller' : ''}`} className="text-sm font-semibold text-brand-600 hover:underline">Open payment</Link>
+              <Link to={`${base}/bookings/${booking.id}${asTraveller ? '?viewer=traveller' : ''}`} className="text-sm font-semibold text-brand-600 hover:underline">Open booking</Link>
             </div>
           </section>
 

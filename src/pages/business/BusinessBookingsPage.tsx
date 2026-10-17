@@ -12,6 +12,8 @@ import { sum } from '@/utils/analytics';
 import { formatRwfShort, todayIso } from '@/utils/format';
 import { useOwnerActivity } from './useOwnerBusinesses';
 import { useAuth } from '@/context/AuthContext';
+import { useViewerMode } from '@/hooks/useViewerMode';
+import BookingsPage from '../dashboard/BookingsPage';
 
 /** Upcoming bookings that can still be declined (paid ones are refunded). */
 const canDecline = (b: Booking) => b.status !== 'Canceled' && b.date >= todayIso();
@@ -22,10 +24,13 @@ export default function BusinessBookingsPage() {
   const { user } = useAuth();
   const { data, loading, error, reload, setData } = useOwnerActivity();
   const [filter, setFilter] = useState<StatusFilter>('All');
-  const [declining, setDeclining] = useState<{ rows: Booking[]; done?: () => void } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [declining, setDeclining] = useState<{ rows: Booking[]; done?: () => void } | null>(null);
+  const { isHost, view, setTraveller } = useViewerMode();
+  const isTravellerView = view === 'traveller';
 
-  const multipleListings = (data?.businesses.length ?? 0) > 1;
+  const showViewToggle = isHost;
+  const multipleListings = showViewToggle ? (data?.businesses.length ?? 0) > 1 : false;
   const columns = useMemo(() => bookingColumns(multipleListings ? ['guest', 'target', 'service', 'date', 'units', 'total', 'status', 'payment'] : ['guest', 'service', 'date', 'units', 'total', 'status', 'payment'], { detailsBase: '/business-dashboard/bookings' }), [multipleListings]);
   const all = data?.bookings ?? [];
   const list = useMemo(() => all.filter((b) => filter === 'All' || b.status === filter), [all, filter]);
@@ -51,6 +56,23 @@ export default function BusinessBookingsPage() {
     }
   };
 
+  if (isTravellerView) {
+    return (
+      <>
+        {showViewToggle && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <PageHeader title="My traveller bookings" intro="Bookings you made as a traveller." />
+            <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
+              <Button variant="ghost" size="sm" onClick={() => setTraveller(false)}>Business view</Button>
+              <Button variant="primary" size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+            </div>
+          </div>
+        )}
+        <BookingsPage detailsBase="/business-dashboard/bookings" paymentsBase="/business-dashboard/payments" viewer="traveller" heading={false} />
+      </>
+    );
+  }
+
   if (error) return <ErrorState message={error} onRetry={reload} />;
 
   if (!loading && !data?.businesses.length) {
@@ -65,7 +87,12 @@ export default function BusinessBookingsPage() {
 
   return (
     <>
-      <PageHeader title="Bookings" intro="Approve or decline new requests. Once you approve, the guest has two hours to pay at least 30%. Confirm when their transfer arrives." />
+      <PageHeader title="Bookings" intro="Approve or decline new requests. Once you approve, the guest has two hours to pay at least 30%. Confirm when their transfer arrives." action={(
+        <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
+          <Button variant={'primary'} size="sm" onClick={() => setTraveller(false)}>Business view</Button>
+          <Button variant={'ghost'} size="sm" onClick={() => setTraveller(true)}>Traveller view</Button>
+        </div>
+      )} />
 
       <StatGrid>
         <StatCard label="All bookings" icon={CalendarCheck} loading={loading} value={all.length} hint={`${all.filter((b) => b.status === 'Confirmed').length} confirmed and paid`} />

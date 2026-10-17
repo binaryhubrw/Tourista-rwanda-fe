@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Clock, RotateCcw, ShieldCheck } from 'lucide-react';
 import { getBookingById, getPayoutForBusiness, getRefunds } from '@/services';
 import { confirmHostReceivedPayment, submitOfflinePayment } from '@/services/bookingService';
 import { minDue } from '@/utils/lifecycle';
 import { useAsync, errorMessage } from '@/hooks/useAsync';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { isHostRole, isTravellerQuery } from '@/hooks/useViewerMode';
 import { useAuth, dashboardPathFor } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Badge, Button, ButtonLink, ErrorState, Loading } from '@/components/ui';
@@ -38,13 +39,18 @@ export default function PaymentDetailsPage() {
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const base = dashboardPathFor(user!.role);
+  const asTraveller = user?.role === 'tourist' || (isHostRole(user?.role) && isTravellerQuery(searchParams));
   const { data, loading, error, reload } = useAsync(async () => {
-    const [booking, refunds] = await Promise.all([getBookingById(id), getRefunds()]);
+    const [booking, refunds] = await Promise.all([getBookingById(id), getRefunds(asTraveller ? 'traveller' : undefined)]);
     return { booking, refunds };
-  }, [id, user?.id, user?.role]);
+  }, [id, user?.id, user?.role, asTraveller]);
   const booking = data?.booking;
-  const payout = useAsync(() => (booking?.businessId ? getPayoutForBusiness(booking.businessId) : Promise.resolve(null)), [booking?.businessId]);
+  const payout = useAsync(() => {
+    const bid = booking?.businessId ?? (booking?.targetType === 'business' ? booking.targetId : undefined);
+    return bid ? getPayoutForBusiness(bid) : Promise.resolve(null);
+  }, [booking?.businessId, booking?.targetType, booking?.targetId]);
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0);
   useDocumentTitle(booking ? `Payment ${booking.payment?.reference ?? booking.id}` : 'Payment');
@@ -62,8 +68,8 @@ export default function PaymentDetailsPage() {
   const refund = refunds.find((r) => r.bookingId === booking.id && !refundIsClosed(r.status))
     ?? refunds.find((r) => r.bookingId === booking.id);
   const display = paymentDisplayStatus(booking, refunds);
-  const host = user.role === 'business_owner' || user.role === 'staff';
-  const tourist = user.role === 'tourist';
+  const host = isHostRole(user.role) && !asTraveller;
+  const tourist = asTraveller;
   const lines = bookingLines(booking);
   const due = minDue(booking.totalRwf);
   const paid = paidToward(booking);
@@ -91,14 +97,14 @@ export default function PaymentDetailsPage() {
     toast.success(remainingDue(updated) > 0
       ? 'Proof sent. You can add another payment from this list for the balance.'
       : 'Proof sent. The host will confirm when the money arrives.');
-    navigate(`${base}/payments`);
+    navigate(`${base}/payments${asTraveller ? '?view=traveller' : ''}`);
   };
 
   const title = booking.payment?.reference ?? (canPay ? 'Pay the host' : 'Payment');
 
   return (
     <>
-      <Link to={`${base}/payments`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All payments</Link>
+      <Link to={`${base}/payments${asTraveller ? '?view=traveller' : ''}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"><ChevronLeft className="h-4 w-4" aria-hidden />All payments</Link>
       <PageHeader
         title={title}
         intro={booking.targetName}
@@ -154,7 +160,7 @@ export default function PaymentDetailsPage() {
                     : <>Balance {formatRwf(remaining)}. Send another transfer to finish the booking.</>}
                 </p>
               </div>
-              <OfflinePaymentForm amountRwf={booking.totalRwf} alreadyPaid={paid} payout={payout.data} onSubmit={onPaid} />
+              <OfflinePaymentForm amountRwf={booking.totalRwf} alreadyPaid={paid} payout={payout.data} payoutLoading={payout.loading} onSubmit={onPaid} />
             </>
           )}
 
@@ -200,7 +206,7 @@ export default function PaymentDetailsPage() {
 
           {!booking.payment && !canPay && (
             <p className="text-sm text-slate-600">
-              {user.role !== 'tourist' && booking.status === 'AwaitingPayment'
+              {!asTraveller && booking.status === 'AwaitingPayment'
                 ? `Waiting for the traveller. Window: ${remainingLabel(booking.paymentDueAt)}.`
                 : 'No transfer has been recorded yet. The traveller pays after the host approves the booking.'}
             </p>
@@ -216,7 +222,7 @@ export default function PaymentDetailsPage() {
             </ButtonLink>
           )}
           {refund && tourist && (
-            <ButtonLink to={`${base}/refunds/${refund.id}`} variant="ghost" className="mt-3">Open refund {refund.id.toUpperCase()}</ButtonLink>
+            <ButtonLink to={`${base}/refunds/${refund.id}${asTraveller ? '?viewer=traveller' : ''}`} variant="ghost" className="mt-3">Open refund {refund.id.toUpperCase()}</ButtonLink>
           )}
         </section>
       </div>

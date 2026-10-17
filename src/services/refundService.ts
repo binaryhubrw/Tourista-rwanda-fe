@@ -11,8 +11,8 @@ export type RefundRequestInput = {
   receiveName: string;
 };
 
-export async function getRefunds(): Promise<Refund[]> {
-  return api.get<Refund[]>('/refunds/');
+export async function getRefunds(scope?: 'traveller'): Promise<Refund[]> {
+  return api.get<Refund[]>(scope ? `/refunds/?scope=${scope}` : '/refunds/');
 }
 
 export async function getRefundById(id: string): Promise<Refund> {
