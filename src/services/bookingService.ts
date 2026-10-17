@@ -76,3 +76,11 @@ export async function downloadBookingInvoice(id: string) {
 export async function emailBookingInvoice(id: string) {
   return api.post<{ sentTo: string }>(`/bookings/${id}/invoice/send/`, {});
 }
+
+export async function downloadBookingReceipt(id: string) {
+  return apiBlob(`/bookings/${id}/receipt/`);
+}
+
+export async function emailBookingReceipt(id: string) {
+  return api.post<{ sentTo: string }>(`/bookings/${id}/receipt/send/`, {});
+}

@@ -12,6 +12,7 @@ import { useToast } from '@/context/ToastContext';
 import { Badge, Button, ButtonLink, ErrorState, Loading } from '@/components/ui';
 import { BookingStatusBadge, PageHeader, PaymentLedgerBadge } from '@/components/dashboard';
 import { InvoiceActions } from '@/components/payment/InvoiceActions';
+import { ReceiptActions } from '@/components/payment/ReceiptActions';
 import { OfflinePaymentForm } from '@/components/payment/OfflinePaymentForm';
 import { AirtelLogo, CardIcon, MtnLogo } from '@/components/payment/PaymentIcons';
 import { bookingLines } from '@/utils/availability';
@@ -141,8 +142,9 @@ export default function PaymentDetailsPage() {
               <p className="mt-4 flex items-start gap-2 text-xs text-slate-500"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden />Pay the host outside Tourista. You can split the total: 30% first, then add payments until it is complete.</p>
               <Link to={`${base}/bookings/${booking.id}`} className="mt-4 inline-flex text-sm font-semibold text-brand-600 hover:underline">Open booking</Link>
               {booking.payment && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-3">
                   <InvoiceActions bookingId={booking.id} />
+                  <ReceiptActions bookingId={booking.id} />
                 </div>
               )}
             </div>
